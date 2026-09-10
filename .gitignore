@@ -1,0 +1,9 @@
+.venv/
+models/
+*.wav
+*.mp3
+*.m4a
+*.ogg
+*.webm
+*.json
+__pycache__/
