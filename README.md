@@ -40,9 +40,12 @@ Once this works, the next step is wrapping this script in a tiny API that the Ex
 
 ## Try the Browser UI
 
-The local browser UI is the next validation step: it records audio in the browser,
-uploads it to a local-only API, and displays the resulting transcript. Recordings
-are stored in a temporary directory only while they are being transcribed.
+The local browser UI is a student lecture library. Its persistent sidebar has
+two primary actions: **New recording** and **New folder**. New recordings are
+saved as unfiled items with a timestamped default name; drag them into a course
+folder later, or move them back to Unfiled. Each recording saves its audio and
+raw transcript on this computer. The saved data is stored under `data/`, which
+is intentionally excluded from Git.
 
 ```powershell
 .\.venv\Scripts\python -m uvicorn app:app --reload
@@ -57,3 +60,8 @@ The UI offers three locally-run English models: `tiny.en` for speed, `base.en`
 as the default balance, and `small.en` for higher accuracy. Each model is
 downloaded only the first time you select it. Start with the same recording in
 each mode and compare the transcript and elapsed time before choosing a default.
+
+Recordings receive a timestamped default title when no name is entered, and can
+be renamed later. Use **Delete recording** in the app to remove its transcript
+and saved audio from this computer. See [the prototype design notes](docs/DESIGN.md)
+for the product and interaction decisions behind this version.

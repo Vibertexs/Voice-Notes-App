@@ -7,13 +7,13 @@ from time import perf_counter
 from faster_whisper import WhisperModel
 
 
-@lru_cache(maxsize=3)
+@lru_cache(maxsize=1)
 def load_model(
     model_name: str,
     device: str,
     compute_type: str,
 ) -> WhisperModel:
-    """Load each selected model once per server process."""
+    """Reuse the active model while keeping local memory use predictable."""
     return WhisperModel(model_name, device=device, compute_type=compute_type)
 
 
