@@ -3,9 +3,8 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
-from time import perf_counter
 
-from faster_whisper import WhisperModel
+from transcription import transcribe_audio
 
 
 def parse_args() -> argparse.Namespace:
@@ -50,35 +49,13 @@ def main() -> None:
     if not audio_path.exists():
         raise SystemExit(f"Audio file does not exist: {audio_path}")
 
-    started_at = perf_counter()
-    model = WhisperModel(args.model, device=args.device, compute_type=args.compute_type)
-    segments, info = model.transcribe(
-        str(audio_path),
-        beam_size=5,
+    result = transcribe_audio(
+        audio_path,
+        model_name=args.model,
+        device=args.device,
+        compute_type=args.compute_type,
         language=args.language,
-        vad_filter=True,
     )
-
-    transcript_segments = [
-        {
-            "start": round(segment.start, 2),
-            "end": round(segment.end, 2),
-            "text": segment.text.strip(),
-        }
-        for segment in segments
-    ]
-    text = " ".join(segment["text"] for segment in transcript_segments).strip()
-
-    result = {
-        "audio": str(audio_path),
-        "model": args.model,
-        "language": info.language,
-        "language_probability": round(info.language_probability, 4),
-        "duration_seconds": round(info.duration, 2),
-        "elapsed_seconds": round(perf_counter() - started_at, 2),
-        "text": text,
-        "segments": transcript_segments,
-    }
 
     print(json.dumps(result, indent=2))
 

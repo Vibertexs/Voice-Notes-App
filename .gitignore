@@ -7,3 +7,5 @@ models/
 *.webm
 *.json
 __pycache__/
+pip-install*.log
+server*.log

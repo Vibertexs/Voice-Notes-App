@@ -37,3 +37,23 @@ The command should print JSON with:
 - `elapsed_seconds`: transcription runtime
 
 Once this works, the next step is wrapping this script in a tiny API that the Expo app can call after recording audio.
+
+## Try the Browser UI
+
+The local browser UI is the next validation step: it records audio in the browser,
+uploads it to a local-only API, and displays the resulting transcript. Recordings
+are stored in a temporary directory only while they are being transcribed.
+
+```powershell
+.\.venv\Scripts\python -m uvicorn app:app --reload
+```
+
+Then open http://127.0.0.1:8000, allow microphone access, record a short note,
+and select **Stop & transcribe**. This development server is intentionally bound
+to your computer; do not expose it to the internet without authentication,
+HTTPS, and stronger upload controls.
+
+The UI offers three locally-run English models: `tiny.en` for speed, `base.en`
+as the default balance, and `small.en` for higher accuracy. Each model is
+downloaded only the first time you select it. Start with the same recording in
+each mode and compare the transcript and elapsed time before choosing a default.
