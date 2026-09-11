@@ -27,14 +27,14 @@
       button:disabled { cursor: not-allowed; opacity: .45; }
       [hidden] { display: none !important; }
 
-      .app { width: min(91rem, calc(100% - 2.5rem)); min-height: calc(100vh - 2.5rem); display: grid; grid-template-columns: 17.25rem minmax(0, 1fr); margin: 1.25rem auto; overflow: hidden; border: 1px solid rgba(255,255,255,.72); border-radius: 1.4rem; background: rgba(255,255,255,.24); box-shadow: 0 1.5rem 4.5rem rgba(32,71,126,.22); backdrop-filter: blur(26px) saturate(145%); -webkit-backdrop-filter: blur(26px) saturate(145%); }
-      .sidebar { position: sticky; top: 1.25rem; height: calc(100vh - 2.5rem); display: flex; flex-direction: column; overflow-y: auto; padding: 1.25rem .75rem; border-right: 1px solid rgba(255,255,255,.5); background: rgba(255,255,255,.42); backdrop-filter: blur(28px); -webkit-backdrop-filter: blur(28px); }
-      .identity { display: flex; align-items: center; gap: .7rem; padding: .25rem .55rem 1.25rem; }
+      .app { width: min(72rem, calc(100% - 2.5rem)); min-height: calc(100vh - 2.5rem); margin: 1.25rem auto; border: 1px solid rgba(255,255,255,.72); border-radius: 1.4rem; background: rgba(255,255,255,.24); box-shadow: 0 1.5rem 4.5rem rgba(32,71,126,.22); backdrop-filter: blur(26px) saturate(145%); -webkit-backdrop-filter: blur(26px) saturate(145%); }
+      .topbar { position: sticky; top: 0; z-index: 4; width: min(64rem, 100%); min-height: 5rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin: 0 auto; padding: 1rem clamp(1.1rem, 4vw, 2.5rem); border-bottom: 1px solid rgba(255,255,255,.48); background: rgba(226,241,255,.62); backdrop-filter: blur(22px) saturate(150%); -webkit-backdrop-filter: blur(22px) saturate(150%); }
+      .identity { display: flex; align-items: center; gap: .7rem; }
       .identity-mark { width: 2rem; height: 2rem; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.72); border-radius: .68rem; color: white; background: linear-gradient(145deg, #56a1ff, #1167dc); box-shadow: 0 .45rem 1rem rgba(26,109,221,.25); font-size: .95rem; font-weight: 700; }
       .identity h1 { margin: 0; font-size: 1rem; letter-spacing: -.02em; }
       .identity p { margin: .12rem 0 0; color: var(--muted); font-size: .76rem; }
 
-      .create { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; padding: 0 .15rem 1.2rem; }
+      .top-actions { position: relative; display: flex; align-items: center; gap: .5rem; }
       .button { min-height: 2.35rem; padding: .55rem .7rem; border-radius: .55rem; font-size: .85rem; font-weight: 600; transition: background .15s ease, color .15s ease, border-color .15s ease; }
       .button.primary { color: white; background: var(--blue); }
       .button.primary:hover { background: var(--blue-pressed); }
@@ -42,23 +42,16 @@
       .button.secondary:hover { background: rgba(255,255,255,.82); }
       .button.danger { color: #c52c37; border: 1px solid rgba(255,255,255,.62); background: rgba(255,240,241,.65); }
       .button.danger:hover { background: rgba(255,232,234,.9); }
-      .create .button { text-align: left; white-space: nowrap; }
       .create-symbol { margin-right: .18rem; font-size: 1rem; }
+      .home-button { padding: .45rem .55rem; border-radius: .5rem; color: var(--ink); background: transparent; font-size: .87rem; font-weight: 650; }
+      .home-button:hover { background: rgba(255,255,255,.48); }
+      .recent-menu { position: absolute; top: calc(100% + .55rem); right: 3.8rem; width: min(23rem, calc(100vw - 2rem)); overflow: hidden; border: 1px solid rgba(255,255,255,.78); border-radius: .9rem; background: rgba(240,248,255,.88); box-shadow: 0 1rem 2.5rem rgba(49,82,130,.2); backdrop-filter: blur(22px) saturate(150%); -webkit-backdrop-filter: blur(22px) saturate(150%); }
+      .recent-menu h2 { margin: 0; padding: .85rem .95rem .65rem; color: var(--muted); font-size: .7rem; font-weight: 750; letter-spacing: .07em; text-transform: uppercase; }
+      .recent-menu .list { max-height: min(22rem, 55vh); overflow-y: auto; border: 0; border-top: 1px solid var(--soft-line); border-radius: 0; background: transparent; box-shadow: none; backdrop-filter: none; }
+      .recent-empty { padding: .2rem .95rem 1rem; color: var(--muted); font-size: .85rem; }
 
-      .nav-label { margin: 1.1rem .65rem .35rem; color: var(--muted); font-size: .68rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
-      .nav-list { display: grid; gap: .1rem; }
-      .nav-row { width: 100%; min-height: 2.2rem; overflow: hidden; padding: .44rem .6rem; border-radius: .45rem; color: #3a3a3c; background: transparent; text-align: left; text-overflow: ellipsis; white-space: nowrap; font-size: .88rem; font-weight: 500; transition: background .15s ease; }
-      .nav-row:hover { background: rgba(255,255,255,.43); }
-      .nav-row.selected { color: #005ccf; background: var(--blue-wash); font-weight: 600; }
-      .nav-row .nav-icon { display: inline-block; width: 1.35rem; color: #7e7e85; text-align: center; }
-      .nav-row .nav-icon.folder { color: #ba8b00; }
-      .nav-row .nav-icon.recording { color: var(--blue); font-size: .75rem; }
-      .nav-row small { display: block; overflow: hidden; padding-left: 1.35rem; color: var(--muted); text-overflow: ellipsis; white-space: nowrap; font-size: .69rem; }
-      .nav-empty { padding: .35rem .65rem; color: #8e8e93; font-size: .78rem; }
-      .sidebar-note { margin: auto .55rem .1rem; padding-top: 1.2rem; color: #86868b; font-size: .72rem; line-height: 1.45; }
-
-      main { min-width: 0; padding: clamp(1.5rem, 4vw, 3.75rem); background: rgba(255,255,255,.12); }
-      .view { width: min(53rem, 100%); margin: 0 auto; }
+      main { min-width: 0; padding: clamp(1.5rem, 4vw, 3.25rem); background: rgba(255,255,255,.1); }
+      .view { width: min(60rem, 100%); margin: 0 auto; }
       .breadcrumb { display: flex; align-items: center; flex-wrap: wrap; gap: .32rem; min-height: 1.55rem; color: var(--muted); font-size: .82rem; }
       .breadcrumb button { padding: .08rem .14rem; border-radius: .25rem; color: #4e4e52; background: transparent; }
       .breadcrumb button:hover { color: var(--blue); }
@@ -69,13 +62,21 @@
       .titlebar .button { flex: 0 0 auto; }
       .folder-actions { display: flex; align-items: flex-start; gap: .5rem; }
       .section-title { margin: 1.85rem 0 .65rem; color: var(--muted); font-size: .75rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+      .capture-launch { display: grid; justify-items: center; gap: .5rem; margin: 2.75rem 0 0; padding: clamp(1.65rem, 4vw, 2.4rem) 1rem; border: 1px solid rgba(255,255,255,.73); border-radius: 1.15rem; background: rgba(255,255,255,.36); box-shadow: inset 0 1px rgba(255,255,255,.65), 0 .9rem 2rem rgba(57,96,154,.1); text-align: center; backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
+      .capture-launch h3 { margin: 0; font-size: 1.25rem; letter-spacing: -.025em; }
+      .capture-launch p { max-width: 29rem; margin: 0; color: var(--muted); line-height: 1.45; }
+      .record-now { min-height: 3.15rem; margin-top: .65rem; padding: .7rem 1.35rem; border: 1px solid rgba(255,255,255,.65); border-radius: 99rem; color: white; background: var(--blue); box-shadow: 0 .75rem 1.5rem rgba(30,111,226,.3); font-size: 1rem; font-weight: 700; transition: transform .16s ease, background .16s ease; }
+      .record-now:hover { transform: translateY(-.1rem); background: var(--blue-pressed); }
 
-      .return-target { display: flex; align-items: center; gap: .8rem; min-height: 4.3rem; margin-bottom: 1.45rem; padding: .72rem .9rem; border: 1px solid var(--line); border-radius: .85rem; color: #38383c; background: var(--surface); box-shadow: inset 0 1px rgba(255,255,255,.64); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); transition: border-color .15s ease, background .15s ease; }
-      .return-target .return-icon { width: 2.25rem; height: 2.25rem; display: grid; flex: 0 0 auto; place-items: center; border-radius: 50%; color: var(--blue); background: var(--blue-wash); font-size: 1.05rem; }
-      .return-target strong, .return-target span:last-child { display: block; }
-      .return-target strong { font-size: .91rem; }
-      .return-target span:last-child { margin-top: .1rem; color: var(--muted); font-size: .8rem; }
-      .return-target.drop-target, .drop-target { border-color: #6ba8ff; background: var(--blue-wash); }
+      .parent-target { width: 100%; min-height: 4.5rem; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr) auto; align-items: center; gap: .8rem; margin-bottom: 1.45rem; padding: .75rem .9rem; border: 1px solid var(--line); border-radius: .9rem; color: #38383c; background: var(--surface); box-shadow: inset 0 1px rgba(255,255,255,.64); text-align: left; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); transition: border-color .15s ease, background .15s ease, transform .15s ease; }
+      .parent-target:hover { background: rgba(255,255,255,.77); transform: translateY(-1px); }
+      .parent-icon { width: 2.35rem; height: 1.9rem; position: relative; border-radius: .3rem .45rem .45rem .45rem; background: rgba(87,151,235,.2); }
+      .parent-icon::before { content: ""; position: absolute; top: -.28rem; left: .15rem; width: .95rem; height: .4rem; border-radius: .22rem .22rem 0 0; background: rgba(87,151,235,.2); }
+      .parent-target strong, .parent-target span:last-child { display: block; }
+      .parent-target strong { overflow: hidden; font-size: .93rem; text-overflow: ellipsis; white-space: nowrap; }
+      .parent-target .parent-copy { margin-top: .1rem; color: var(--muted); font-size: .8rem; }
+      .parent-arrow { color: #8b98aa; font-size: 1.35rem; }
+      .parent-target.drop-target, .drop-target { border-color: #6ba8ff; background: var(--blue-wash); }
 
       .list { overflow: hidden; border: 1px solid var(--line); border-radius: .85rem; background: var(--surface); box-shadow: inset 0 1px rgba(255,255,255,.65), 0 .6rem 1.5rem rgba(80,112,162,.08); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
       .list-row { width: 100%; min-height: 4.1rem; display: grid; grid-template-columns: 2.2rem minmax(0, 1fr) auto; align-items: center; gap: .7rem; padding: .7rem .9rem; border-bottom: 1px solid var(--soft-line); color: var(--ink); background: transparent; text-align: left; transition: background .12s ease; }
@@ -86,21 +87,8 @@
       .row-title { overflow: hidden; font-size: .94rem; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
       .row-meta { margin-top: .14rem; overflow: hidden; color: var(--muted); font-size: .78rem; text-overflow: ellipsis; white-space: nowrap; }
       .row-chevron { color: #9d9da2; font-size: 1.25rem; }
-      .empty { padding: 1rem .15rem; color: var(--muted); font-size: .9rem; }
-      .folder-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr)); gap: .85rem; }
-      .folder-tile { position: relative; aspect-ratio: 1; display: flex; flex-direction: column; justify-content: space-between; padding: .95rem; overflow: hidden; border: 1px solid rgba(255,255,255,.78); border-radius: 1rem; color: var(--ink); background: rgba(255,255,255,.54); box-shadow: inset 0 1px rgba(255,255,255,.74), 0 .75rem 1.7rem rgba(77,111,165,.11); text-align: left; backdrop-filter: blur(18px) saturate(135%); -webkit-backdrop-filter: blur(18px) saturate(135%); transition: transform .18s ease, background .18s ease, box-shadow .18s ease; }
-      .folder-tile:hover { transform: translateY(-.22rem); background: rgba(255,255,255,.72); box-shadow: inset 0 1px rgba(255,255,255,.82), 0 1rem 2.1rem rgba(67,100,152,.17); }
-      .folder-tile[data-color="blue"] { --folder: #2b86f2; --folder-soft: #d8ecff; }
-      .folder-tile[data-color="violet"] { --folder: #7655dd; --folder-soft: #e8e0ff; }
-      .folder-tile[data-color="coral"] { --folder: #e35d67; --folder-soft: #ffe0e1; }
-      .folder-tile[data-color="amber"] { --folder: #c58a00; --folder-soft: #fff0c1; }
-      .folder-tile[data-color="mint"] { --folder: #159a7c; --folder-soft: #d5f5ed; }
-      .folder-tile[data-color="slate"] { --folder: #64748b; --folder-soft: #e6edf4; }
-      .tile-icon { width: 2.4rem; height: 2rem; position: relative; border-radius: .32rem .48rem .48rem .48rem; background: var(--folder); box-shadow: 0 .35rem .7rem color-mix(in srgb, var(--folder), transparent 72%); }
-      .tile-icon::before { content: ""; position: absolute; top: -.32rem; left: .16rem; width: 1rem; height: .45rem; border-radius: .25rem .25rem 0 0; background: var(--folder); }
-      .tile-color { width: .64rem; height: .64rem; border-radius: 50%; background: var(--folder); box-shadow: 0 0 0 .18rem var(--folder-soft); }
-      .tile-name { overflow: hidden; color: #233349; font-size: .91rem; font-weight: 680; line-height: 1.25; text-overflow: ellipsis; white-space: nowrap; }
-      .tile-meta { display: flex; align-items: center; justify-content: space-between; color: #66768b; font-size: .72rem; }
+      .empty { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem .15rem; color: var(--muted); font-size: .9rem; }
+      .empty .button { flex: 0 0 auto; }
       .dragging { opacity: .45; }
 
       .panel { width: min(34rem, 100%); padding: clamp(1.25rem, 4vw, 2rem); border: 1px solid var(--line); border-radius: 1rem; background: var(--surface); box-shadow: inset 0 1px rgba(255,255,255,.7), 0 1rem 2.4rem rgba(65,99,148,.12); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
@@ -113,6 +101,59 @@
       input:focus, select:focus { border-color: var(--blue); outline: none; }
       .actions { display: flex; flex-wrap: wrap; align-items: center; gap: .55rem; margin-top: 1.25rem; }
       .status { min-height: 1.3rem; margin-top: .8rem; color: #4a4a4e; font-size: .86rem; }
+      .capture-panel { width: min(42rem, 100%); text-align: left; }
+      .capture-panel .location { margin-top: .8rem; }
+      .capture-panel > p { max-width: 34rem; margin: .7rem 0 0; }
+      .recording-options { display: grid; grid-template-columns: 1fr 1fr; gap: .8rem; margin-top: 1.15rem; }
+      .recording-options label { margin-top: 0; }
+      .capture-cancel { margin-top: 1rem; }
+
+      /* Recorder: tap to record, tap to pause/resume, slide to discard while paused */
+      .transport { --rec: #ff3b30; --wave-idle: #a9b5c6; --ease: cubic-bezier(.3, .7, .2, 1); --spring: cubic-bezier(.3, .7, .2, 1.15); margin-top: 1.25rem; padding: 1.25rem 1.25rem 1.1rem; border: 1px solid rgba(255,255,255,.78); border-radius: 1.2rem; background: rgba(255,255,255,.5); box-shadow: inset 0 1px rgba(255,255,255,.7), 0 1rem 2.2rem rgba(57,96,154,.12); text-align: center; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+      .phase-label { color: var(--muted); font-size: .8rem; font-weight: 650; letter-spacing: .02em; transition: color .25s ease; }
+      .phase-label::before { content: ""; display: none; width: .45rem; height: .45rem; margin-right: .4rem; vertical-align: .08rem; border-radius: 50%; background: currentColor; animation: blink 1.2s ease-in-out infinite; }
+      .transport[data-phase="recording"] .phase-label { color: var(--rec); }
+      .transport[data-phase="recording"] .phase-label::before { display: inline-block; }
+      .recording-timer { margin-top: .15rem; color: var(--ink); font-size: clamp(2.6rem, 8vw, 3.3rem); font-weight: 300; letter-spacing: -.02em; line-height: 1.1; font-variant-numeric: tabular-nums; }
+      .transport[data-phase="paused"] .recording-timer { animation: blink 1.6s ease-in-out infinite; }
+      .waveform { display: block; width: 100%; height: 3.6rem; margin: 1rem 0 1.25rem; -webkit-mask-image: linear-gradient(90deg, transparent, #000 30%); mask-image: linear-gradient(90deg, transparent, #000 30%); }
+      .transport-controls { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; }
+      .shutter { position: relative; grid-column: 2; width: 5.25rem; height: 5.25rem; display: grid; place-items: center; padding: 0; border-radius: 50%; background: transparent; -webkit-tap-highlight-color: transparent; }
+      .shutter:disabled { opacity: 1; cursor: progress; }
+      .shutter::before { content: ""; position: absolute; inset: 0; border: 4px solid rgba(23,32,45,.14); border-radius: 50%; transition: border-color .3s ease; }
+      .shutter::after { content: ""; position: absolute; inset: -2px; border: 2px solid var(--rec); border-radius: 50%; opacity: 0; pointer-events: none; }
+      .shutter-glyph { position: relative; width: 4.1rem; height: 4.1rem; border-radius: 50%; background-color: var(--rec); box-shadow: 0 .4rem 1rem rgba(255,59,48,.28); transition: width .4s var(--ease), height .4s var(--ease), border-radius .4s var(--ease), background-color .25s ease, box-shadow .25s ease, transform .15s ease; }
+      .shutter-glyph::before, .shutter-glyph::after { content: ""; position: absolute; top: 0; bottom: 0; width: .56rem; border-radius: .2rem; background: var(--rec); opacity: 0; transition: opacity .2s ease; }
+      .shutter-glyph::before { left: 0; }
+      .shutter-glyph::after { right: 0; }
+      .shutter:active:not(:disabled) .shutter-glyph { transform: scale(.9); }
+      .transport[data-phase="recording"] .shutter-glyph { width: 1.75rem; height: 1.9rem; border-radius: .25rem; background-color: transparent; box-shadow: none; }
+      .transport[data-phase="recording"] .shutter-glyph::before, .transport[data-phase="recording"] .shutter-glyph::after { opacity: 1; }
+      .transport[data-phase="recording"] .shutter::after { animation: ring-pulse 1.8s var(--ease) infinite; }
+      .transport[data-phase="paused"] .shutter::before { border-color: rgba(255,59,48,.35); }
+      .transport[data-phase="saving"] .shutter-glyph, .transport[data-phase="discarding"] .shutter-glyph { width: 1.6rem; height: 1.6rem; background-color: rgba(23,32,45,.16); box-shadow: none; }
+      .transport[data-phase="saving"] .shutter::before { border-color: rgba(23,32,45,.08); border-top-color: var(--blue); animation: spin .9s linear infinite; }
+      .finish-group { position: relative; grid-column: 3; justify-self: center; opacity: 0; transform: translateX(-1rem) scale(.6); transition: opacity .25s ease, transform .4s var(--spring); }
+      .transport[data-phase="recording"] .finish-group, .transport[data-phase="paused"] .finish-group { opacity: 1; transform: none; }
+      .finish-button { width: 3.25rem; height: 3.25rem; display: grid; place-items: center; padding: 0; border: 1px solid rgba(255,255,255,.8); border-radius: 50%; color: var(--blue); background: rgba(255,255,255,.75); box-shadow: 0 .4rem 1rem rgba(57,96,154,.14); transition: transform .15s ease, background .15s ease; -webkit-tap-highlight-color: transparent; }
+      .finish-button:hover { background: #fff; }
+      .finish-button:active { transform: scale(.9); }
+      .finish-caption { position: absolute; top: 100%; left: 50%; margin-top: .35rem; color: var(--muted); font-size: .72rem; font-weight: 600; transform: translateX(-50%); }
+      .transport-hint { min-height: 1.2rem; margin: 1.1rem 0 0; color: var(--muted); font-size: .82rem; text-align: center; }
+      .discard-reveal { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows .45s var(--ease), opacity .25s ease; }
+      .transport[data-phase="paused"] .discard-reveal { grid-template-rows: 1fr; opacity: 1; }
+      .discard-inner { min-height: 0; overflow: hidden; }
+      .discard-slider { --x: 0px; --p: 0; position: relative; height: 3.5rem; margin-top: 1rem; overflow: hidden; border-radius: 99rem; background: rgba(104,129,162,.14); box-shadow: inset 0 1px 2px rgba(40,60,90,.08); touch-action: none; user-select: none; -webkit-user-select: none; }
+      .discard-fill { position: absolute; inset: 0 auto 0 0; width: calc(var(--x) + 3.5rem); border-radius: 99rem; background: var(--rec); opacity: calc(var(--p) * .85); }
+      .discard-label { position: absolute; inset: 0; display: grid; place-items: center; padding-left: 2.75rem; color: transparent; background: linear-gradient(90deg, var(--muted) 0 38%, var(--ink) 50%, var(--muted) 62% 100%) 0 0 / 250% 100%; -webkit-background-clip: text; background-clip: text; font-size: .95rem; font-weight: 550; opacity: calc(1 - var(--p) * 1.8); animation: shimmer 2.6s linear infinite; pointer-events: none; }
+      .discard-thumb { position: absolute; top: .25rem; left: .25rem; width: 3rem; height: 3rem; display: grid; place-items: center; border-radius: 50%; color: var(--rec); background: #fff; box-shadow: 0 .15rem .5rem rgba(0,0,0,.16); cursor: grab; transform: translateX(var(--x)); transition: transform .5s var(--spring), background-color .2s ease, color .2s ease; }
+      .discard-slider.is-sliding .discard-thumb { cursor: grabbing; transition: background-color .2s ease, color .2s ease; }
+      .discard-slider.armed .discard-thumb { color: #fff; background: var(--rec); }
+      @keyframes ring-pulse { from { transform: scale(1); opacity: .5; } to { transform: scale(1.35); opacity: 0; } }
+      @keyframes blink { 50% { opacity: .35; } }
+      @keyframes spin { to { transform: rotate(1turn); } }
+      @keyframes shimmer { from { background-position: 100% 0; } to { background-position: 0 0; } }
+      @media (prefers-reduced-motion: reduce) { .shutter::after, .phase-label::before, .discard-label, .transport[data-phase="paused"] .recording-timer { animation: none !important; } }
 
       .back { padding: 0; color: var(--blue); background: transparent; font-size: .9rem; font-weight: 600; }
       .detail-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin: .7rem 0 1.5rem; }
@@ -129,7 +170,7 @@
       .transcript { min-height: 14rem; padding: 1.15rem; border: 1px solid var(--line); border-radius: .85rem; background: var(--surface); box-shadow: inset 0 1px rgba(255,255,255,.65); color: #303036; line-height: 1.68; white-space: pre-wrap; backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
       .color-picker { display: flex; align-items: center; flex-wrap: wrap; gap: .48rem; margin-top: .65rem; }
       .color-swatch { width: 1.55rem; height: 1.55rem; padding: 0; border: 2px solid rgba(255,255,255,.78); border-radius: 50%; box-shadow: 0 0 0 1px rgba(61,91,132,.18); }
-      .color-swatch[data-color="blue"] { background: #2b86f2; }.color-swatch[data-color="violet"] { background: #7655dd; }.color-swatch[data-color="coral"] { background: #e35d67; }.color-swatch[data-color="amber"] { background: #c58a00; }.color-swatch[data-color="mint"] { background: #159a7c; }.color-swatch[data-color="slate"] { background: #64748b; }
+      .color-swatch[data-color] { background: linear-gradient(155deg, var(--hue-light) 0%, var(--hue-mid) 45%, var(--hue-deep) 100%); }
       .color-swatch.selected { box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--blue); }
       .color-menu { display: flex; align-items: center; gap: .3rem; padding: .35rem .45rem; border: 1px solid rgba(255,255,255,.72); border-radius: .8rem; background: rgba(255,255,255,.6); box-shadow: 0 .65rem 1.5rem rgba(57,85,130,.15); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
       .toast { position: fixed; right: 1.25rem; bottom: 1.25rem; max-width: min(23rem, calc(100vw - 2.5rem)); padding: .72rem .9rem; border-radius: .55rem; color: white; background: #2d2d31; box-shadow: 0 .5rem 1.4rem rgba(0,0,0,.18); font-size: .88rem; transform: translateY(.8rem); opacity: 0; pointer-events: none; transition: opacity .16s ease, transform .16s ease; }
@@ -137,68 +178,455 @@
 
       @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; } }
       @media (max-width: 760px) {
-        .app { width: 100%; min-height: 100vh; margin: 0; border: 0; border-radius: 0; grid-template-columns: 1fr; }
-        .sidebar { position: static; height: auto; max-height: none; border-right: 0; border-bottom: 1px solid var(--line); }
-        .sidebar-note { display: none; }
-        .nav-groups { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
-        .nav-label { margin-top: .6rem; }
+        .app { width: 100%; min-height: 100vh; margin: 0; border: 0; border-radius: 0; }
+        .topbar { min-height: 4.4rem; padding: .75rem 1rem; }
+        .identity p { display: none; }
+        .top-actions .button { padding: .5rem .6rem; }
+        .recent-menu { right: 0; }
         main { padding: 1.25rem 1rem 2rem; }
         .detail-grid { grid-template-columns: 1fr; }
+        .empty { align-items: flex-start; flex-direction: column; }
+        .recording-options { grid-template-columns: 1fr; }
       }
+
+      /*
+       * Editorial card system
+       * The library uses one shared visual grammar: an airy cool-grey stage,
+       * thick ink outlines, oversized rounded corners, and an inset dark
+       * information panel. Folder colors decorate the "cover" portion of a
+       * card; they are never the sole way a destination is identified.
+       */
+      :root {
+        --blue: #1769d2;
+        --blue-pressed: #084ca9;
+        --blue-wash: rgba(23, 105, 210, .12);
+        --ink: #10131f;
+        --muted: #647084;
+        --line: rgba(16, 19, 31, .14);
+        --soft-line: rgba(16, 19, 31, .10);
+        --surface: rgba(247, 249, 252, .78);
+      }
+      body {
+        background:
+          radial-gradient(circle at 8% 4%, rgba(255,255,255,.94), transparent 28rem),
+          radial-gradient(circle at 94% 90%, rgba(196, 209, 238, .75), transparent 30rem),
+          linear-gradient(145deg, #edf1f6 0%, #e5eaf1 52%, #e9ebf5 100%);
+      }
+      .app {
+        width: min(76rem, calc(100% - 3rem));
+        min-height: calc(100vh - 3rem);
+        margin: 1.5rem auto;
+        border: 1px solid rgba(255,255,255,.64);
+        border-radius: 2rem;
+        background: rgba(238, 242, 248, .58);
+        box-shadow: 0 1.5rem 4.5rem rgba(25, 40, 72, .14), inset 0 1px rgba(255,255,255,.88);
+        backdrop-filter: blur(24px) saturate(115%);
+        -webkit-backdrop-filter: blur(24px) saturate(115%);
+      }
+      .topbar {
+        width: min(68rem, 100%);
+        min-height: 5.6rem;
+        padding: 1rem clamp(1.2rem, 4vw, 2.85rem);
+        border-bottom: 1px solid rgba(16,19,31,.12);
+        border-radius: 2rem 2rem 0 0;
+        background: rgba(238, 242, 248, .72);
+        backdrop-filter: blur(22px) saturate(120%);
+        -webkit-backdrop-filter: blur(22px) saturate(120%);
+      }
+      .identity { gap: .8rem; }
+      .identity-mark {
+        width: 2.45rem;
+        height: 2.45rem;
+        border: 2px solid #0d1022;
+        border-radius: .9rem;
+        background: linear-gradient(145deg, #6044ea 0%, #1c2493 65%, #0e1040 100%);
+        box-shadow: .18rem .22rem 0 #0d1022;
+      }
+      .identity h1 { font-size: 1.04rem; font-weight: 760; letter-spacing: -.035em; }
+      .top-actions { gap: .4rem; }
+      .button, .home-button {
+        border: 1.5px solid rgba(16,19,31,.78);
+        border-radius: .72rem;
+        box-shadow: .13rem .16rem 0 rgba(16,19,31,.78);
+        font-weight: 700;
+      }
+      .home-button { padding: .5rem .65rem; background: rgba(249,251,254,.66); }
+      .home-button:hover, .button.secondary:hover { transform: translate(-.04rem, -.04rem); background: #fff; }
+      .button.primary {
+        border-color: #0b1030;
+        background: #163bc8;
+        box-shadow: .14rem .17rem 0 #0b1030;
+      }
+      .button.primary:hover { background: #0f2da8; }
+      .button.secondary { border-color: rgba(16,19,31,.78); background: rgba(249,251,254,.82); }
+      .button.danger { border-color: #821d29; box-shadow: .13rem .16rem 0 #821d29; }
+      .recent-menu {
+        border: 2px solid #10131f;
+        border-radius: 1.15rem;
+        background: rgba(247,249,252,.96);
+        box-shadow: .28rem .35rem 0 #10131f, 0 1.1rem 2.5rem rgba(34,48,76,.18);
+      }
+      main { padding: clamp(1.75rem, 4vw, 3.6rem); background: transparent; }
+      .breadcrumb { color: #59667a; font-weight: 600; }
+      .breadcrumb button { color: #303a4a; }
+      .titlebar { padding: .9rem 0 1.7rem; }
+      .titlebar h2, .detail-header h2 { font-weight: 790; letter-spacing: -.065em; }
+      .section-title { color: #536177; font-weight: 800; letter-spacing: .09em; }
+
+      .capture-launch {
+        position: relative;
+        overflow: hidden;
+        margin-top: 3.25rem;
+        border: 3px solid #080b1a;
+        border-radius: 1.75rem;
+        color: #fff;
+        background:
+          radial-gradient(circle at 78% 12%, rgba(90,84,255,.9), transparent 30%),
+          linear-gradient(135deg, #1c259d, #070936 70%);
+        box-shadow: .35rem .42rem 0 #080b1a, 0 1.3rem 2.7rem rgba(30,34,112,.18);
+      }
+      .capture-launch::before {
+        content: "";
+        position: absolute;
+        width: 15rem;
+        height: 15rem;
+        top: -9rem;
+        right: -3.5rem;
+        border: 1px solid rgba(255,255,255,.16);
+        border-radius: 50%;
+      }
+      .capture-launch h3, .capture-launch p, .capture-launch .record-now { position: relative; }
+      .capture-launch h3 { color: #fff; font-size: 1.42rem; }
+      .capture-launch p { color: rgba(235,239,255,.7); }
+      .record-now {
+        border: 2px solid #fff;
+        background: #2a78e8;
+        box-shadow: .18rem .22rem 0 rgba(0,0,0,.72);
+      }
+      .record-now:hover { background: #4a92f5; }
+
+      .parent-target {
+        border: 2px solid #10131f;
+        border-radius: 1.15rem;
+        background: rgba(248,250,253,.86);
+        box-shadow: .22rem .27rem 0 #10131f;
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+      }
+      .parent-target:hover { background: #fff; }
+      .parent-icon, .parent-icon::before { background: #b8cae3; }
+      .parent-arrow { color: #10131f; }
+      .parent-target.drop-target, .drop-target { border-color: #1769d2; background: #dce9ff; box-shadow: .22rem .27rem 0 #1769d2; }
+
+      .list {
+        border: 2px solid #10131f;
+        border-radius: 1.15rem;
+        background: rgba(249,250,253,.8);
+        box-shadow: .24rem .3rem 0 #10131f, 0 .75rem 1.7rem rgba(60,74,102,.08);
+      }
+      .list-row { min-height: 4.45rem; border-bottom-color: rgba(16,19,31,.13); }
+      .list-row > span:nth-child(2), .row-title, .row-meta { min-width: 0; display: block; }
+      .list-row:hover { background: #fff; }
+      .row-icon { border: 1px solid rgba(16,19,31,.2); background: #e4edf9; color: #18243c; }
+      .row-icon.recording { color: #164fc1; background: #dbe9ff; }
+      .row-chevron { color: #10131f; }
+      .empty { padding: 1.25rem .1rem; }
+
+      .panel, .detail-section, .transcript {
+        border: 2px solid #10131f;
+        border-radius: 1.3rem;
+        background: rgba(249,250,253,.84);
+        box-shadow: .28rem .34rem 0 #10131f, 0 1rem 2.3rem rgba(50,64,93,.12);
+      }
+      .location { border: 1px solid #10131f; border-radius: 99rem; color: #fff; background: #111735; box-shadow: .1rem .12rem 0 #10131f; }
+      input, select {
+        border: 1.5px solid rgba(16,19,31,.7);
+        border-radius: .75rem;
+        background: rgba(255,255,255,.88);
+      }
+      input:focus, select:focus { border-color: #1769d2; box-shadow: 0 0 0 3px rgba(23,105,210,.18); }
+      .transport {
+        border: 3px solid #080b1a;
+        border-radius: 1.6rem;
+        color: #f7f9ff;
+        background: radial-gradient(circle at 70% 0%, rgba(76,86,210,.7), transparent 34%), #0b1030;
+        box-shadow: .34rem .4rem 0 #080b1a, 0 1rem 2.2rem rgba(32,40,100,.22);
+      }
+      .phase-label, .recording-timer, .transport-hint { color: inherit; }
+      .transport[data-phase="recording"] .phase-label { color: #ff8e8a; }
+      .shutter::before { border-color: rgba(255,255,255,.35); }
+      .finish-button { border: 2px solid #fff; color: #0d1d62; background: #e6edff; box-shadow: .15rem .16rem 0 rgba(0,0,0,.65); }
+      .finish-caption { color: rgba(235,239,255,.8); }
+      .discard-slider { background: rgba(255,255,255,.13); }
+      .discard-label { background: linear-gradient(90deg, #aeb8ce 0 38%, #fff 50%, #aeb8ce 62% 100%) 0 0 / 250% 100%; }
+      .discard-thumb { border: 1px solid rgba(16,19,31,.4); }
+      .save-bar { border: 2px solid #10131f; border-radius: 1rem; background: rgba(230,236,247,.8); box-shadow: .22rem .28rem 0 #10131f; }
+      .color-menu { border: 2px solid #10131f; border-radius: 1rem; background: #f8faff; box-shadow: .18rem .22rem 0 #10131f; }
+      .color-swatch { border-color: #10131f; }
+      .color-swatch.selected { box-shadow: 0 0 0 3px #fff, 0 0 0 5px #1769d2; }
+      .toast { border: 2px solid #080b1a; border-radius: .85rem; background: #101735; box-shadow: .22rem .28rem 0 #080b1a; }
+
+      @media (max-width: 760px) {
+        .app { width: 100%; margin: 0; border: 0; border-radius: 0; box-shadow: none; }
+        .topbar { border-radius: 0; }
+      }
+
+      /* Borders are structural, not offset shadows. */
+      .app,
+      .identity-mark,
+      .button,
+      .home-button,
+      .recent-menu,
+      .capture-launch,
+      .record-now,
+      .parent-target,
+      .list,
+      .panel,
+      .detail-section,
+      .transcript,
+      .location,
+      .transport,
+      .finish-button,
+      .save-bar,
+      .color-menu,
+      .toast,
+      .color-swatch,
+      .shutter-glyph,
+      .discard-thumb {
+        box-shadow: none;
+      }
+      .app {
+        border: 3px solid rgba(222, 229, 240, .96);
+        border-radius: 2.25rem;
+        background: rgba(237, 242, 248, .64);
+      }
+      .topbar { border-bottom: 3px solid rgba(208, 218, 232, .9); }
+      .identity-mark { border: 3px solid #0d1037; }
+      .button, .home-button {
+        border: 2px solid #c7d2e2;
+        border-radius: .85rem;
+      }
+      .button.primary { border-color: #163bc8; }
+      .button.danger { border-color: #e3b7bd; }
+      .home-button:hover, .button.secondary:hover { transform: none; }
+      .recent-menu,
+      .panel,
+      .detail-section,
+      .transcript,
+      .color-menu {
+        border: 4px solid #c8d4e5;
+        border-radius: 1.45rem;
+      }
+      .capture-launch, .transport {
+        border: 6px solid #080b2a;
+        border-radius: 1.85rem;
+      }
+      .record-now { border: 3px solid rgba(255,255,255,.82); }
+      .parent-target, .list, .save-bar {
+        border: 4px solid #c8d4e5;
+        border-radius: 1.25rem;
+      }
+      .parent-target.drop-target, .drop-target {
+        border-color: #1769d2;
+        box-shadow: none;
+      }
+      input, select { border: 2px solid #c8d4e5; }
+      input:focus, select:focus { outline: 3px solid #1769d2; outline-offset: 1px; box-shadow: none; }
+      .finish-button { border: 3px solid #dbe5ff; }
+      .location { border: 2px solid #111735; }
+      .save-bar { background: rgba(230,236,247,.8); }
+      .color-swatch { border: 3px solid #c8d4e5; }
+      .color-swatch.selected { outline: 3px solid #1769d2; outline-offset: 2px; box-shadow: none; }
+      .toast { border: 4px solid #0b1030; }
+      @media (max-width: 760px) {
+        .app { border: 0; }
+        .capture-launch, .transport { border-width: 4px; }
+        .recent-menu, .panel, .detail-section, .transcript, .color-menu, .parent-target, .list, .save-bar { border-width: 3px; }
+      }
+
+      /*
+       * Folder cards: a coloured frame around a grainy cover, with a folder-shaped
+       * panel (tab on the left) holding the number, name and note. Hovering,
+       * focusing, or dragging a recording over a card slides the panel down to
+       * reveal more cover, pulling the name up under the number.
+       */
+      .folder-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(11.5rem, 13.5rem)); gap: 1rem; }
+      .folder-card {
+        --frame: var(--hue-frame, #0c0853);
+        --panel: var(--hue-panel, #05024f);
+        --text: #ffffff;
+        --note: var(--hue-note, rgba(203, 206, 255, .62));
+        --cover: linear-gradient(155deg, var(--hue-light, #8d5ff7) 0%, var(--hue-mid, #5536ea) 38%, var(--hue-deep, #2317c6) 100%);
+        --panel-top: 26%;
+        --card-ease: cubic-bezier(.22, .8, .24, 1);
+        position: relative;
+        display: block;
+        width: 100%;
+        aspect-ratio: 3 / 4;
+        padding: 0;
+        overflow: hidden;
+        isolation: isolate;
+        container-type: inline-size;
+        border: .55rem solid var(--frame);
+        border-radius: 1.6rem;
+        color: var(--text);
+        background: var(--panel);
+        text-align: left;
+        transition: border-color .2s ease;
+      }
+      /* Keeps drag events on the card itself, so hovering its children doesn't flicker the drop state. */
+      .folder-card * { pointer-events: none; }
+      .folder-cover {
+        position: absolute;
+        inset: 0;
+        background-image:
+          url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='640' height='640' viewBox='0 0 640 640'%3E%3Cfilter id='n' x='0' y='0'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E"),
+          var(--cover);
+        background-size: 640px 640px, cover;
+        background-blend-mode: overlay, normal;
+        transition: transform .7s var(--card-ease);
+      }
+      .folder-panel {
+        position: absolute;
+        top: var(--panel-top);
+        right: 0;
+        bottom: 0;
+        left: 0;
+        display: flex;
+        flex-direction: column;
+        padding: .35rem 7cqi 7cqi;
+        border-radius: 0 1.05rem 0 0;
+        background: var(--panel);
+        transition: top .6s var(--card-ease);
+      }
+      .folder-tab { position: absolute; bottom: calc(100% - 1px); left: 0; width: 47cqi; height: 10.7cqi; color: var(--panel); }
+      .folder-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+      .folder-index { font-size: clamp(1.8rem, 17cqi, 3.2rem); font-weight: 500; letter-spacing: -.05em; line-height: 1; font-variant-numeric: tabular-nums; }
+      .folder-arrow { flex: none; width: 1.15rem; height: 1.15rem; transition: transform .35s var(--card-ease); }
+      .folder-copy { display: grid; gap: .3rem; margin-top: auto; padding-top: .75rem; }
+      .folder-name, .folder-note { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
+      .folder-name { font-size: clamp(.9rem, 5.4cqi, 1.05rem); font-weight: 550; letter-spacing: -.015em; line-height: 1.25; }
+      .folder-note { color: var(--note); font-size: clamp(.74rem, 4.2cqi, .85rem); line-height: 1.35; }
+      .folder-card:is(:hover, :focus-visible, .drop-target) { --panel-top: 46%; }
+      .folder-card:is(:hover, :focus-visible, .drop-target) .folder-cover { transform: scale(1.06); }
+      .folder-card:is(:hover, :focus-visible, .drop-target) .folder-arrow { transform: translate(.12rem, -.12rem); }
+      .folder-card.drop-target { border-color: var(--blue); background: var(--panel); box-shadow: none; }
+      /* Folder palette: every colour follows the purple card's recipe — a bright
+         light→mid→deep cover over a deep panel and frame of the same hue. */
+      [data-color="blue"]   { --hue-light: #8d5ff7; --hue-mid: #5536ea; --hue-deep: #2317c6; --hue-panel: #05024f; --hue-frame: #0c0853; --hue-note: rgba(203, 206, 255, .62); }
+      [data-color="violet"] { --hue-light: #d08cff; --hue-mid: #9147f0; --hue-deep: #4a13a8; --hue-panel: #16063b; --hue-frame: #1f0b4a; --hue-note: rgba(228, 212, 255, .62); }
+      [data-color="rose"]   { --hue-light: #ff8cc6; --hue-mid: #e8459a; --hue-deep: #9a1a5f; --hue-panel: #2a0619; --hue-frame: #380b23; --hue-note: rgba(255, 212, 234, .62); }
+      [data-color="coral"]  { --hue-light: #ffa27a; --hue-mid: #f25a3f; --hue-deep: #a81d2e; --hue-panel: #2b0810; --hue-frame: #3a0d17; --hue-note: rgba(255, 214, 206, .62); }
+      [data-color="amber"]  { --hue-light: #ffd56b; --hue-mid: #f5a00f; --hue-deep: #b3530b; --hue-panel: #2a1604; --hue-frame: #381d07; --hue-note: rgba(255, 230, 194, .62); }
+      [data-color="lime"]   { --hue-light: #d8f78a; --hue-mid: #86c91c; --hue-deep: #3e7a0e; --hue-panel: #0e1d05; --hue-frame: #172b09; --hue-note: rgba(224, 244, 196, .6); }
+      [data-color="mint"]   { --hue-light: #86f0d4; --hue-mid: #22b89b; --hue-deep: #0b6c69; --hue-panel: #04201f; --hue-frame: #082b29; --hue-note: rgba(200, 240, 230, .6); }
+      [data-color="sky"]    { --hue-light: #93d5ff; --hue-mid: #3d9df5; --hue-deep: #1654c4; --hue-panel: #04163d; --hue-frame: #0a1f4f; --hue-note: rgba(206, 227, 255, .62); }
+      [data-color="slate"]  { --hue-light: #b6c4db; --hue-mid: #6b82aa; --hue-deep: #34476f; --hue-panel: #0e1526; --hue-frame: #172036; --hue-note: rgba(214, 224, 240, .6); }
+      @media (max-width: 760px) {
+        .folder-grid { grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr)); gap: .75rem; }
+        .folder-card { border-width: .45rem; border-radius: 1.3rem; }
+        .folder-panel { border-top-right-radius: .9rem; }
+        .folder-note { -webkit-line-clamp: 1; line-clamp: 1; }
+      }
+
+      /* Note-first lecture workspace. */
+      .workspace-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 1rem; }
+      .workspace-card { min-height: 11rem; display: flex; flex-direction: column; justify-content: space-between; padding: 1.2rem; border: 4px solid #c8d4e5; border-radius: 1.35rem; color: #f8fbff; background: radial-gradient(circle at 84% 0, #6958dc 0, transparent 40%), #10143d; text-align: left; }
+      .workspace-card:hover { border-color: #8fa7cb; background: radial-gradient(circle at 84% 0, #7b67ee 0, transparent 40%), #10143d; }
+      .workspace-kicker { color: #aebce3; font-size: .7rem; font-weight: 800; letter-spacing: .1em; }
+      .workspace-card h4 { margin: .45rem 0 0; overflow: hidden; font-size: 1.08rem; letter-spacing: -.035em; text-overflow: ellipsis; white-space: nowrap; }
+      .workspace-card p { margin: .35rem 0 0; color: #b8c4df; font-size: .8rem; line-height: 1.35; }
+      .workspace-card-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 1.25rem; color: #d9e2f8; font-size: .78rem; font-weight: 650; }
+
+      .workspace-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1.25rem; }
+      .workspace-header h2 { margin: .55rem 0 0; font-size: clamp(1.55rem, 3vw, 2.2rem); letter-spacing: -.055em; }
+      .workspace-header p { margin: .35rem 0 0; color: var(--muted); }
+      .workspace-title-label { display: grid; gap: .32rem; margin-top: 1rem; color: var(--muted); font-size: .75rem; font-weight: 760; letter-spacing: .07em; text-transform: uppercase; }
+      .workspace-title-input { width: min(31rem, 100%); min-height: 3rem; margin: 0; padding: .45rem .65rem; border: 3px solid #c8d4e5; border-radius: .9rem; color: var(--ink); background: rgba(249,251,254,.84); font-size: clamp(1.2rem, 2.6vw, 1.65rem); font-weight: 760; letter-spacing: -.045em; text-transform: none; }
+      .workspace-inspector { padding: 1rem; }
+      .workspace-inspector { border: 4px solid #c8d4e5; border-radius: 1.25rem; background: rgba(249,251,254,.8); }
+      .workspace-inspector h3 { margin: 0; font-size: .9rem; }
+      .workspace-inspector p { margin: .45rem 0 0; color: var(--muted); font-size: .8rem; line-height: 1.45; }
+      .session-list { display: grid; gap: .45rem; margin-top: .75rem; }
+      .session-item { padding: .6rem; border: 2px solid #d9e2ef; border-radius: .75rem; color: #354158; background: #fff; font-size: .78rem; line-height: 1.35; }
+      @media (max-width: 540px) {
+        .workspace-header { align-items: stretch; flex-direction: column; }
+      }
+
+      .note-workspace-layout { display: grid; grid-template-columns: minmax(0, 1fr) 15rem; gap: 1rem; align-items: start; }
+      .note-editor-card { overflow: hidden; border: 4px solid #c8d4e5; border-radius: 1.4rem; background: rgba(252,253,255,.88); }
+      .note-editor-head { display: flex; align-items: center; justify-content: space-between; gap: .75rem; padding: .95rem 1rem; border-bottom: 2px solid #dbe4f0; }
+      .note-editor-head h3 { margin: 0; font-size: .96rem; }
+      .note-editor-head span { color: var(--muted); font-size: .76rem; }
+      .workspace-notes { min-height: 34rem; display: block; width: 100%; padding: 1.2rem; border: 0; border-radius: 0; resize: vertical; color: #202a3c; background: transparent; font-family: inherit; font-size: 1rem; line-height: 1.7; }
+      .workspace-notes:focus { outline: 3px solid rgba(23,105,210,.28); outline-offset: -3px; box-shadow: none; }
+      .note-save-bar { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin-top: 1rem; padding: .8rem 1rem; border: 4px solid #c8d4e5; border-radius: 1.1rem; background: rgba(235,241,250,.8); }
+      .note-save-bar .status { margin: 0; }
+      @media (max-width: 840px) { .note-workspace-layout { grid-template-columns: 1fr; } }
     </style>
   </head>
   <body>
     <div class="app">
-      <aside class="sidebar" aria-label="Library navigation">
+      <header class="topbar">
         <div class="identity">
           <div class="identity-mark" aria-hidden="true">C</div>
           <div><h1>Class Notes</h1><p>Private lecture library</p></div>
         </div>
-        <div class="create">
-          <button id="new-recording" class="button primary"><span class="create-symbol">＋</span>Record</button>
+        <div class="top-actions">
+          <button id="library-home" class="home-button">Library</button>
+          <button id="recent-toggle" class="home-button" aria-expanded="false">Recent</button>
           <button id="new-folder" class="button secondary"><span class="create-symbol">＋</span>Folder</button>
-        </div>
-        <div class="nav-groups">
-          <section>
-            <p class="nav-label">Library</p>
-            <button id="unfiled-link" class="nav-row selected"><span class="nav-icon recording">●</span>Unfiled</button>
-            <p class="nav-label">Folders</p>
-            <div id="folder-tree" class="nav-list"></div>
-            <div id="sidebar-no-folders" class="nav-empty">No folders</div>
-          </section>
-          <section>
-            <p class="nav-label">Recent</p>
-            <div id="recording-nav" class="nav-list"></div>
-            <div id="sidebar-no-recordings" class="nav-empty">No recordings</div>
+          <section id="recent-menu" class="recent-menu" aria-label="Recent recordings" hidden>
+            <h2>Recent recordings</h2>
+            <div id="recent-recording-list" class="list"></div>
+            <p id="recent-empty" class="recent-empty" hidden>No recordings yet.</p>
           </section>
         </div>
-        <p class="sidebar-note">Recordings stay on this computer. New recordings begin unfiled so you can organize them later.</p>
-      </aside>
+      </header>
 
       <main>
         <section id="library-view" class="view">
           <nav id="breadcrumb" class="breadcrumb" aria-label="Folder path"></nav>
           <div class="titlebar">
-            <div><h2 id="library-title">Unfiled</h2><p id="library-subtitle">Record first. Organize later.</p></div>
+            <div><h2 id="library-title">Library</h2><p id="library-subtitle">Everything you need for class, in one place.</p></div>
             <div class="folder-actions">
+              <button id="new-workspace" class="button primary"><span class="create-symbol">＋</span>Note</button>
+              <button id="record-from-library" class="button secondary">●&nbsp; Record</button>
               <div id="folder-color-control" class="color-menu" hidden aria-label="Folder color">
-                <button type="button" class="color-swatch" data-color="blue" aria-label="Blue"></button><button type="button" class="color-swatch" data-color="violet" aria-label="Violet"></button><button type="button" class="color-swatch" data-color="coral" aria-label="Coral"></button><button type="button" class="color-swatch" data-color="amber" aria-label="Amber"></button><button type="button" class="color-swatch" data-color="mint" aria-label="Mint"></button><button type="button" class="color-swatch" data-color="slate" aria-label="Slate"></button>
+                <button type="button" class="color-swatch" data-color="blue" aria-label="Blue"></button><button type="button" class="color-swatch" data-color="violet" aria-label="Violet"></button><button type="button" class="color-swatch" data-color="rose" aria-label="Rose"></button><button type="button" class="color-swatch" data-color="coral" aria-label="Coral"></button><button type="button" class="color-swatch" data-color="amber" aria-label="Amber"></button><button type="button" class="color-swatch" data-color="lime" aria-label="Lime"></button><button type="button" class="color-swatch" data-color="mint" aria-label="Mint"></button><button type="button" class="color-swatch" data-color="sky" aria-label="Sky"></button><button type="button" class="color-swatch" data-color="slate" aria-label="Slate"></button>
               </div>
               <button id="folder-color-toggle" class="button secondary" hidden>Color</button>
               <button id="delete-folder" class="button danger" hidden>Delete folder</button>
             </div>
           </div>
-          <div id="return-target" class="return-target" hidden>
-            <span class="return-icon" aria-hidden="true">↩</span>
-            <div><strong id="return-title">Move to previous folder</strong><span id="return-copy">Drag a recording here to move it up one level.</span></div>
-          </div>
-
+          <button id="parent-target" class="parent-target" hidden>
+            <span class="parent-icon" aria-hidden="true"></span>
+            <span><strong id="parent-title">Library</strong><span id="parent-copy" class="parent-copy">Click to open. Drag a recording here to move it.</span></span>
+            <span class="parent-arrow" aria-hidden="true">›</span>
+          </button>
           <h3 class="section-title">Folders</h3>
           <div id="folder-list" class="folder-grid"></div>
-          <div id="no-folders" class="empty">No folders here yet.</div>
-          <h3 class="section-title">Recordings</h3>
+          <template id="folder-card-template">
+            <button class="folder-card">
+              <span class="folder-cover" aria-hidden="true"></span>
+              <span class="folder-panel">
+                <svg class="folder-tab" viewBox="0 0 184 42" preserveAspectRatio="none" aria-hidden="true"><path fill="currentColor" d="M0 42V22A22 22 0 0 1 22 0H116C128 0 134 4 142 12L160 30C168 38 173 42 184 42Z" /></svg>
+                <span class="folder-head">
+                  <span class="folder-index"></span>
+                  <svg class="folder-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8" /></svg>
+                </span>
+                <span class="folder-copy"><span class="folder-name"></span><span class="folder-note"></span></span>
+              </span>
+            </button>
+          </template>
+          <div id="no-folders" class="empty"><span>No folders here yet.</span><button id="empty-folder-action" class="button secondary">＋ Create folder</button></div>
+          <h3 class="section-title">Lecture notes</h3>
+          <div id="workspace-list" class="workspace-grid"></div>
+          <div id="no-workspaces" class="empty"><span>No lecture notes here yet.</span><button id="empty-workspace-action" class="button secondary">＋ New note</button></div>
+          <h3 class="section-title" hidden>Recordings</h3>
           <div id="recording-list" class="list"></div>
-          <div id="no-recordings" class="empty">No recordings here yet.</div>
+          <div id="no-recordings" class="empty" hidden>No recordings here yet.</div>
+          <section id="capture-launch" class="capture-launch" hidden><p id="capture-copy"></p></section>
         </section>
 
         <section id="folder-view" class="view" hidden>
@@ -209,7 +637,7 @@
               <label>Folder name<input id="folder-name" maxlength="120" placeholder="e.g. Biology 101" required /></label>
               <label>Folder color
                 <span class="color-picker" id="new-folder-colors">
-                  <button type="button" class="color-swatch selected" data-color="blue" aria-label="Blue"></button><button type="button" class="color-swatch" data-color="violet" aria-label="Violet"></button><button type="button" class="color-swatch" data-color="coral" aria-label="Coral"></button><button type="button" class="color-swatch" data-color="amber" aria-label="Amber"></button><button type="button" class="color-swatch" data-color="mint" aria-label="Mint"></button><button type="button" class="color-swatch" data-color="slate" aria-label="Slate"></button>
+                  <button type="button" class="color-swatch selected" data-color="blue" aria-label="Blue"></button><button type="button" class="color-swatch" data-color="violet" aria-label="Violet"></button><button type="button" class="color-swatch" data-color="rose" aria-label="Rose"></button><button type="button" class="color-swatch" data-color="coral" aria-label="Coral"></button><button type="button" class="color-swatch" data-color="amber" aria-label="Amber"></button><button type="button" class="color-swatch" data-color="lime" aria-label="Lime"></button><button type="button" class="color-swatch" data-color="mint" aria-label="Mint"></button><button type="button" class="color-swatch" data-color="sky" aria-label="Sky"></button><button type="button" class="color-swatch" data-color="slate" aria-label="Slate"></button>
                 </span>
               </label>
               <div class="actions"><button type="submit" class="button primary">Create folder</button><button id="cancel-folder" type="button" class="button secondary">Cancel</button></div>
@@ -219,15 +647,66 @@
         </section>
 
         <section id="recording-view" class="view" hidden>
-          <div class="panel">
-            <h2>New recording</h2>
-            <div class="location">●&nbsp; Saving to Unfiled</div>
-            <p>Leave the name blank for a date-and-time title. You can rename and file it after it is saved.</p>
-            <label>Recording name <span>(optional)</span><input id="recording-title" maxlength="180" placeholder="e.g. Cell respiration" /></label>
-            <label>Transcription quality<select id="quality"><option value="tiny.en">Fast — lower accuracy</option><option value="base.en" selected>Balanced — recommended</option><option value="small.en">High accuracy — slower first run</option></select></label>
-            <div class="actions"><button id="record" class="button primary">Start recording</button><button id="pause" class="button secondary" disabled>Pause</button><button id="stop" class="button danger" disabled>Stop &amp; save</button><button id="cancel-recording" class="button secondary">Cancel</button></div>
-            <div id="recording-status" class="status" role="status" aria-live="polite">Ready to record.</div>
+          <div class="panel capture-panel">
+            <h2>Capture a lecture</h2>
+            <div id="recording-location" class="location">●&nbsp; Saving to Unfiled</div>
+            <p id="recording-helper">Tap once to begin. You can rename or move the recording after it is saved.</p>
+            <div class="recording-options">
+              <label>Recording name <span>(optional)</span><input id="recording-title" maxlength="180" placeholder="e.g. Cell respiration" /></label>
+              <label>Transcription quality<select id="quality"><option value="tiny.en">Fast</option><option value="base.en" selected>Balanced</option><option value="small.en">High accuracy</option></select></label>
+            </div>
+            <section id="transport" class="transport" data-phase="idle" aria-label="Recording controls">
+              <div id="phase-label" class="phase-label">Ready</div>
+              <div id="recording-timer" class="recording-timer" aria-live="off">00:00.0</div>
+              <canvas id="waveform" class="waveform" aria-hidden="true"></canvas>
+              <div class="transport-controls">
+                <button id="record" class="shutter" aria-label="Start recording"><span class="shutter-glyph" aria-hidden="true"></span></button>
+                <div id="finish-group" class="finish-group" inert>
+                  <button id="finish-recording" class="finish-button" aria-label="Done — save and transcribe">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+                  </button>
+                  <span class="finish-caption" aria-hidden="true">Done</span>
+                </div>
+              </div>
+              <div id="recording-status" class="status transport-hint" role="status" aria-live="polite">Tap to record</div>
+              <div id="discard-reveal" class="discard-reveal" inert>
+                <div class="discard-inner">
+                  <div id="discard-slider" class="discard-slider">
+                    <span class="discard-fill"></span>
+                    <span class="discard-label" aria-hidden="true">slide to discard</span>
+                    <span id="discard-thumb" class="discard-thumb" role="slider" tabindex="0" aria-label="Slide to discard recording" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3" /></svg>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </section>
+            <div class="capture-cancel"><button id="cancel-recording" class="button secondary">Cancel</button></div>
           </div>
+        </section>
+
+        <section id="workspace-view" class="view" hidden>
+          <div class="workspace-header">
+            <div>
+              <button id="workspace-back" class="back">‹ Back to library</button>
+              <h2 id="workspace-heading">Lecture notes</h2>
+              <p id="workspace-location">Unfiled lecture</p>
+              <label class="workspace-title-label" for="workspace-title">Lecture title<input id="workspace-title" class="workspace-title-input" maxlength="180" aria-label="Lecture workspace title" /></label>
+            </div>
+          </div>
+          <div class="note-workspace-layout">
+            <section class="note-editor-card" aria-label="Lecture notes">
+              <div class="note-editor-head"><h3>Notes</h3><span>Paste or write class notes here</span></div>
+              <textarea id="workspace-notes" class="workspace-notes" maxlength="100000" spellcheck="true" placeholder="Start writing, or paste the notes your professor shared…"></textarea>
+            </section>
+            <aside class="workspace-inspector">
+              <h3>Recording sessions</h3>
+              <p>Every recording for this lecture stays attached to these notes.</p>
+              <button id="record-from-workspace" class="button primary">●&nbsp; Record session</button>
+              <div id="session-list" class="session-list"></div>
+            </aside>
+          </div>
+          <div class="note-save-bar"><span id="workspace-notes-status" class="status" role="status"></span><button id="workspace-notes-save" class="button primary">Save notes</button></div>
         </section>
 
         <section id="detail-view" class="view" hidden>
@@ -247,7 +726,7 @@
               <label>Folder<select id="move-target"></select></label>
             </aside>
           </div>
-          <div class="save-bar"><span id="save-status" class="status" role="status"></span><button id="save-recording" class="button primary">Save changes</button></div>
+          <div class="save-bar"><span id="save-status" class="status" role="status"></span><button id="save-recording" class="button primary">Done</button></div>
           <h3 class="section-title">Transcript</h3>
           <div id="transcript" class="transcript"></div>
         </section>
@@ -257,20 +736,23 @@
 
     <script>
       const elementIds = [
-        'new-recording', 'new-folder', 'unfiled-link', 'folder-tree', 'sidebar-no-folders',
-        'recording-nav', 'sidebar-no-recordings', 'library-view', 'breadcrumb', 'library-title',
-        'library-subtitle', 'delete-folder', 'folder-color-toggle', 'folder-color-control', 'return-target', 'return-title', 'return-copy',
-        'folder-list', 'no-folders', 'recording-list', 'no-recordings', 'folder-view',
+        'library-home', 'new-workspace', 'new-folder', 'record-from-library', 'empty-folder-action', 'empty-workspace-action', 'capture-launch', 'capture-copy',
+        'recent-toggle', 'recent-menu', 'recent-recording-list', 'recent-empty', 'library-view', 'breadcrumb', 'library-title',
+        'library-subtitle', 'delete-folder', 'folder-color-toggle', 'folder-color-control', 'parent-target', 'parent-title', 'parent-copy',
+        'folder-list', 'no-folders', 'workspace-list', 'no-workspaces', 'recording-list', 'no-recordings', 'folder-view',
         'folder-context', 'folder-form', 'folder-name', 'new-folder-colors', 'cancel-folder', 'folder-status',
-        'recording-view', 'recording-title', 'quality', 'record', 'pause', 'stop',
+        'recording-view', 'recording-title', 'quality', 'record', 'recording-location', 'recording-helper', 'recording-timer', 'transport', 'phase-label', 'waveform',
+        'finish-group', 'finish-recording', 'discard-reveal', 'discard-slider', 'discard-thumb',
         'cancel-recording', 'recording-status', 'detail-view', 'back-to-library', 'detail-heading',
         'delete-recording', 'saved-title', 'save-recording', 'save-status', 'saved-date', 'playback',
-        'move-target', 'transcript', 'toast'
+        'move-target', 'transcript', 'workspace-view', 'workspace-back', 'workspace-heading', 'workspace-location',
+        'workspace-title', 'workspace-notes', 'workspace-notes-status', 'workspace-notes-save', 'record-from-workspace', 'session-list', 'toast'
       ];
       const el = Object.fromEntries(elementIds.map(id => [id, document.getElementById(id)]));
       let activeFolder = null;
       let activePath = [];
       let activeRecording = null;
+      let activeWorkspace = null;
       let allFolders = [];
       let allRecordings = [];
       let recorder;
@@ -278,19 +760,61 @@
       let chunks = [];
       let toastTimer;
       let newFolderColor = 'blue';
+      let recordingDestination = null;
+      let recordingWorkspace = null;
+      let discardCapture = false;
+      let capturePhase = 'idle';
+      let audioContext;
+      let analyser;
+      let samples;
+      let elapsedMs = 0;
+      let runningSince = 0;
+      let levels = [];
+      let lastSampleAt = 0;
+      let waveFrame = 0;
+      let slideStartX = 0;
+      let slideProgress = 0;
+      let sliding = false;
+      let workspaceNotesSaveTimer = 0;
 
+      const CAPTURE_PHASES = {
+        idle: { label: 'Ready', hint: 'Tap to record', action: 'Start recording' },
+        recording: { label: 'Recording', hint: 'Tap to pause', action: 'Pause recording' },
+        paused: { label: 'Paused', hint: 'Tap to resume, or slide to discard', action: 'Resume recording' },
+        saving: { label: 'Saving', hint: 'Saving and transcribing…', action: 'Saving recording' },
+        discarding: { label: 'Discarding', hint: 'Discarding recording…', action: 'Discarding recording' },
+      };
+      const BAR_WIDTH = 3;
+      const BAR_GAP = 2;
+      const SAMPLE_EVERY_MS = 70;
+      const SLIDE_CONFIRM = 0.9;
+
+      function closeRecentMenu() {
+        el['recent-menu'].hidden = true;
+        el['recent-toggle'].setAttribute('aria-expanded', 'false');
+      }
       function show(view) {
-        ['library', 'folder', 'recording', 'detail'].forEach(name => {
+        closeRecentMenu();
+        if (view !== 'recording' && (capturePhase === 'recording' || capturePhase === 'paused')) {
+          showToast('Finish or discard the recording first.');
+          return;
+        }
+        ['library', 'folder', 'recording', 'workspace', 'detail'].forEach(name => {
           el[`${name}-view`].hidden = name !== view;
         });
+        window.scrollTo(0, 0);
       }
       function formatDate(date) {
         return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(date));
       }
-      function locationName() { return activeFolder ? activeFolder.name : 'Unfiled'; }
-      function returnDestination() {
+      function locationName() { return activeFolder ? activeFolder.name : 'Library'; }
+      function parentDestination() {
         const parent = activePath.length > 1 ? activePath[activePath.length - 2] : null;
-        return { id: parent ? parent.id : null, name: parent ? parent.name : 'Unfiled' };
+        return {
+          id: parent ? parent.id : null,
+          locationName: parent ? parent.name : 'Library',
+          recordingName: parent ? parent.name : 'Unfiled',
+        };
       }
       function showToast(message) {
         el.toast.textContent = message;
@@ -328,19 +852,6 @@
         });
         node.addEventListener('dragend', () => node.classList.remove('dragging'));
       }
-      function navRow(kind, title, detail, onClick, selected = false, depth = 0, folderId = null) {
-        const node = document.createElement('button');
-        node.className = `nav-row${selected ? ' selected' : ''}`;
-        node.style.paddingLeft = `${.6 + depth * .9}rem`;
-        const icon = document.createElement('span');
-        icon.className = `nav-icon ${kind}`;
-        icon.textContent = kind === 'folder' ? '●' : '●';
-        node.append(icon, document.createTextNode(title));
-        if (detail) { const meta = document.createElement('small'); meta.textContent = detail; node.append(meta); }
-        node.addEventListener('click', onClick);
-        if (kind === 'folder') addDropTarget(node, folderId);
-        return node;
-      }
       function listRow(kind, title, meta, onClick, item) {
         const node = document.createElement('button');
         node.className = 'list-row';
@@ -364,27 +875,112 @@
         if (kind === 'recording') addRecordingDrag(node, item);
         return node;
       }
-      function folderTile(folder) {
-        const node = document.createElement('button');
-        node.className = 'folder-tile';
+      function folderTile(folder, index) {
+        const node = document.getElementById('folder-card-template').content.firstElementChild.cloneNode(true);
         node.dataset.color = folder.color || 'blue';
-        const icon = document.createElement('span');
-        icon.className = 'tile-icon';
-        const name = document.createElement('span');
-        name.className = 'tile-name';
-        name.textContent = folder.name;
-        const meta = document.createElement('span');
-        meta.className = 'tile-meta';
-        const note = document.createElement('span');
-        note.textContent = 'Open folder';
-        const color = document.createElement('span');
-        color.className = 'tile-color';
-        color.setAttribute('aria-hidden', 'true');
-        meta.append(note, color);
-        node.append(icon, name, meta);
+        node.setAttribute('aria-label', `Open folder ${folder.name}`);
+        const subfolders = allFolders.filter(child => child.parent_id === folder.id).length;
+        node.querySelector('.folder-index').textContent = String(index + 1).padStart(2, '0');
+        node.querySelector('.folder-name').textContent = folder.name;
+        node.querySelector('.folder-note').textContent = subfolders
+          ? `${subfolders} ${subfolders === 1 ? 'folder' : 'folders'} inside`
+          : 'Drop recordings here';
         node.addEventListener('click', () => loadLibrary(folder.id));
         addDropTarget(node, folder.id);
         return node;
+      }
+      function workspaceCard(workspace) {
+        const node = document.createElement('button');
+        node.className = 'workspace-card';
+        node.setAttribute('aria-label', `Open lecture workspace ${workspace.title}`);
+        const kicker = document.createElement('span');
+        kicker.className = 'workspace-kicker';
+        kicker.textContent = 'LECTURE NOTES';
+        const title = document.createElement('h4');
+        title.textContent = workspace.title;
+        const copy = document.createElement('p');
+        copy.textContent = workspace.session_count
+          ? `${workspace.session_count} ${workspace.session_count === 1 ? 'recording attached' : 'recordings attached'}`
+          : 'Start or paste your notes';
+        const footer = document.createElement('span');
+        footer.className = 'workspace-card-footer';
+        footer.innerHTML = '<span>Open notes</span><span aria-hidden="true">↗</span>';
+        node.append(kicker, title, copy, footer);
+        node.addEventListener('click', () => loadWorkspace(workspace.id));
+        return node;
+      }
+      function renderWorkspaceSessions(sessions) {
+        el['session-list'].replaceChildren(...sessions.map(session => {
+          const item = document.createElement('div');
+          item.className = 'session-item';
+          item.textContent = `${formatDate(session.created_at)} — ${session.title}`;
+          return item;
+        }));
+      }
+      async function loadWorkspace(id) {
+        try {
+          const workspace = await api(`/api/workspaces/${id}`);
+          activeWorkspace = workspace;
+          activeRecording = null;
+          const folder = workspace.folder_id ? allFolders.find(item => item.id === workspace.folder_id) : null;
+          el['workspace-heading'].textContent = workspace.title;
+          el['workspace-title'].value = workspace.title;
+          el['workspace-location'].textContent = folder ? `Inside ${folder.name}` : 'Unfiled lecture';
+          el['workspace-notes'].value = workspace.note_body || '';
+          el['workspace-notes-status'].textContent = workspace.notes_updated_at
+            ? `Saved ${formatDate(workspace.notes_updated_at)}`
+            : 'Add your notes for this lecture.';
+          renderWorkspaceSessions(workspace.sessions || []);
+          show('workspace');
+        } catch (error) {
+          showToast(error.message);
+          await loadLibrary(activeFolder?.id);
+        }
+      }
+      async function createWorkspace() {
+        try {
+          const workspace = await api('/api/workspaces', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ folder_id: activeFolder?.id || null })
+          });
+          await loadWorkspace(workspace.id);
+        } catch (error) { showToast(error.message); }
+      }
+      async function saveWorkspaceTitle() {
+        if (!activeWorkspace) return;
+        const title = el['workspace-title'].value;
+        try {
+          const updated = await api(`/api/workspaces/${activeWorkspace.id}`, {
+            method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title })
+          });
+          activeWorkspace = { ...activeWorkspace, ...updated };
+          el['workspace-heading'].textContent = updated.title;
+          el['workspace-title'].value = updated.title;
+          showToast('Lecture title saved');
+        } catch (error) { showToast(error.message); }
+      }
+      async function saveWorkspaceNotes() {
+        if (!activeWorkspace) return;
+        clearTimeout(workspaceNotesSaveTimer);
+        el['workspace-notes-save'].disabled = true;
+        el['workspace-notes-status'].textContent = 'Saving notes…';
+        try {
+          const result = await api(`/api/workspaces/${activeWorkspace.id}/notes`, {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ note_body: el['workspace-notes'].value })
+          });
+          el['workspace-notes-status'].textContent = `Saved ${formatDate(result.updated_at)}`;
+        } catch (error) {
+          el['workspace-notes-status'].textContent = error.message;
+        } finally {
+          el['workspace-notes-save'].disabled = false;
+        }
+      }
+      function scheduleWorkspaceNotesSave() {
+        if (!activeWorkspace) return;
+        clearTimeout(workspaceNotesSaveTimer);
+        el['workspace-notes-status'].textContent = 'Unsaved changes';
+        workspaceNotesSaveTimer = setTimeout(saveWorkspaceNotes, 900);
       }
       function setSelectedSwatch(container, color) {
         container.querySelectorAll('.color-swatch').forEach(swatch => {
@@ -401,34 +997,32 @@
         appendOptions(null, 0);
         if (activeRecording) el['move-target'].value = activeRecording.folder_id || '';
       }
-      function renderSidebar() {
-        el['unfiled-link'].classList.toggle('selected', !activeFolder);
-        el['folder-tree'].replaceChildren();
-        const childrenOf = parentId => allFolders.filter(folder => (folder.parent_id || null) === parentId);
-        const addBranch = (parentId, depth) => childrenOf(parentId).forEach(folder => {
-          el['folder-tree'].append(navRow('folder', folder.name, '', () => loadLibrary(folder.id), activeFolder?.id === folder.id, depth, folder.id));
-          addBranch(folder.id, depth + 1);
-        });
-        addBranch(null, 0);
-        el['sidebar-no-folders'].hidden = allFolders.length > 0;
-        el['recording-nav'].replaceChildren(...allRecordings.map(recording => {
-          const node = navRow('recording', recording.title, formatDate(recording.created_at), () => loadRecording(recording.id), activeRecording?.id === recording.id);
-          addRecordingDrag(node, recording);
-          return node;
-        }));
-        el['sidebar-no-recordings'].hidden = allRecordings.length > 0;
+      function renderMainNavigation() {
         renderMoveTargets();
+        const hasRecent = allRecordings.length > 0;
+        el['recent-toggle'].hidden = !hasRecent;
+        if (hasRecent) {
+          el['recent-recording-list'].replaceChildren(...allRecordings.map(recording => {
+            const place = recording.folder_id ? recording.course : 'Unfiled';
+            return listRow('recording', recording.title, `${formatDate(recording.created_at)} · ${place}`, () => { closeRecentMenu(); loadRecording(recording.id); }, recording);
+          }));
+          el['recent-empty'].hidden = true;
+        } else {
+          el['recent-recording-list'].replaceChildren();
+          el['recent-empty'].hidden = false;
+          closeRecentMenu();
+        }
       }
       async function refreshNavigation() {
         const [folders, recordings] = await Promise.all([api('/api/folders'), api('/api/recordings')]);
         allFolders = folders.folders;
         allRecordings = recordings.recordings;
-        renderSidebar();
+        renderMainNavigation();
       }
       function renderBreadcrumb() {
         el.breadcrumb.replaceChildren();
         const root = document.createElement('button');
-        root.textContent = 'Unfiled';
+        root.textContent = 'Library';
         root.addEventListener('click', () => loadLibrary());
         el.breadcrumb.append(root);
         activePath.forEach((folder, index) => {
@@ -448,34 +1042,39 @@
           activeFolder = library.current_folder;
           activePath = library.breadcrumbs;
           activeRecording = null;
+          activeWorkspace = null;
           el['library-title'].textContent = locationName();
-          el['library-subtitle'].textContent = activeFolder ? 'Drag a recording here to add it to this folder.' : 'Record first. Organize later.';
+          el['library-subtitle'].textContent = activeFolder ? 'Drag a recording here to add it to this folder.' : 'Everything you need for class, in one place.';
+          el['capture-copy'].textContent = activeFolder
+            ? `Record now and we’ll save it to ${activeFolder.name}. You can move it later if you need to.`
+            : 'Record first. We’ll save it safely to Unfiled, ready for you to organize after class.';
           el['delete-folder'].hidden = !activeFolder;
           el['folder-color-toggle'].hidden = !activeFolder;
           if (!activeFolder) el['folder-color-control'].hidden = true;
           if (activeFolder) setSelectedSwatch(el['folder-color-control'], activeFolder.color || 'blue');
-          el['return-target'].hidden = !activeFolder;
+          el['parent-target'].hidden = !activeFolder;
           if (activeFolder) {
-            const destination = returnDestination();
-            el['return-title'].textContent = `Move to ${destination.name}`;
-            el['return-copy'].textContent = destination.id ? 'Drag a recording here to move it up one folder level.' : 'Drag a recording here to remove it from this folder.';
-          }
-          renderBreadcrumb();
-          el['folder-list'].replaceChildren(...library.folders.map(folder => folderTile(folder)));
-          el['recording-list'].replaceChildren(...library.lectures.map(recording => listRow('recording', recording.title, formatDate(recording.created_at), () => loadRecording(recording.id), recording)));
-          el['folder-list'].hidden = library.folders.length === 0;
-          el['recording-list'].hidden = library.lectures.length === 0;
-          el['no-folders'].hidden = library.folders.length > 0;
-          el['no-recordings'].hidden = library.lectures.length > 0;
-          if (!el['unfiled-link'].dataset.dropReady) {
-            addDropTarget(el['unfiled-link'], null);
-            el['unfiled-link'].dataset.dropReady = 'true';
-          }
-          if (!el['return-target'].dataset.dropReady) {
-            addDropTarget(el['return-target'], () => returnDestination().id);
-            el['return-target'].dataset.dropReady = 'true';
+            const destination = parentDestination();
+            el['parent-title'].textContent = destination.locationName;
+            el['parent-copy'].textContent = destination.id
+              ? `Click to open ${destination.locationName}. Drag a recording here to move it there.`
+              : 'Click to open your library. Drag a recording here to unfile it.';
           }
           await refreshNavigation();
+          renderBreadcrumb();
+          el['folder-list'].replaceChildren(...library.folders.map((folder, index) => folderTile(folder, index)));
+          el['workspace-list'].replaceChildren(...(library.workspaces || []).map(workspaceCard));
+          el['recording-list'].replaceChildren(...library.lectures.map(recording => listRow('recording', recording.title, formatDate(recording.created_at), () => loadRecording(recording.id), recording)));
+          el['folder-list'].hidden = library.folders.length === 0;
+          el['workspace-list'].hidden = !(library.workspaces || []).length;
+          el['recording-list'].hidden = library.lectures.length === 0;
+          el['no-folders'].hidden = library.folders.length > 0;
+          el['no-workspaces'].hidden = (library.workspaces || []).length > 0;
+          el['no-recordings'].hidden = library.lectures.length > 0;
+          if (!el['parent-target'].dataset.dropReady) {
+            addDropTarget(el['parent-target'], () => parentDestination().id);
+            el['parent-target'].dataset.dropReady = 'true';
+          }
           show('library');
         } catch (error) {
           el['library-title'].textContent = error.message;
@@ -510,8 +1109,7 @@
         } catch (error) { showToast(error.message); }
       }
 
-      el['unfiled-link'].addEventListener('click', () => loadLibrary());
-      el['new-folder'].addEventListener('click', () => {
+      function openFolderForm() {
         el['folder-context'].textContent = `Creating inside ${locationName()}.`;
         el['folder-name'].value = '';
         el['folder-status'].textContent = '';
@@ -519,7 +1117,125 @@
         setSelectedSwatch(el['new-folder-colors'], newFolderColor);
         show('folder');
         el['folder-name'].focus();
+      }
+      function haptic(pattern = 10) {
+        try { navigator.vibrate?.(pattern); } catch { /* not supported */ }
+      }
+      function setCapturePhase(phase, hint) {
+        capturePhase = phase;
+        const copy = CAPTURE_PHASES[phase];
+        el.transport.dataset.phase = phase;
+        el['phase-label'].textContent = copy.label;
+        el['recording-status'].textContent = hint ?? copy.hint;
+        el.record.setAttribute('aria-label', copy.action);
+        el.record.disabled = phase === 'saving' || phase === 'discarding';
+        el['finish-group'].inert = phase !== 'recording' && phase !== 'paused';
+        el['discard-reveal'].inert = phase !== 'paused';
+        const locked = phase !== 'idle';
+        el['recording-title'].disabled = locked;
+        el.quality.disabled = locked;
+        el['cancel-recording'].hidden = locked;
+        if (phase !== 'paused') resetSlider();
+      }
+      function captureMs() { return elapsedMs + (runningSince ? performance.now() - runningSince : 0); }
+      function formatClock(ms) {
+        const tenths = Math.floor(ms / 100);
+        const seconds = Math.floor(tenths / 10);
+        const pad = value => String(value).padStart(2, '0');
+        return `${pad(Math.floor(seconds / 60))}:${pad(seconds % 60)}.${tenths % 10}`;
+      }
+      function updateTimer() { el['recording-timer'].textContent = formatClock(captureMs()); }
+
+      function sizeWaveform() {
+        const ratio = window.devicePixelRatio || 1;
+        el.waveform.width = Math.round(el.waveform.clientWidth * ratio);
+        el.waveform.height = Math.round(el.waveform.clientHeight * ratio);
+        drawWaveform();
+      }
+      function sampleLevel() {
+        analyser.getFloatTimeDomainData(samples);
+        let sum = 0;
+        for (const value of samples) sum += value * value;
+        return Math.min(1, Math.sqrt(Math.sqrt(sum / samples.length)) * 1.8);
+      }
+      function drawWaveform() {
+        const canvas = el.waveform;
+        const context = canvas.getContext('2d');
+        const ratio = window.devicePixelRatio || 1;
+        const barWidth = BAR_WIDTH * ratio;
+        const step = (BAR_WIDTH + BAR_GAP) * ratio;
+        const capacity = Math.ceil(canvas.width / step);
+        const visible = levels.slice(-capacity);
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        context.fillStyle = getComputedStyle(el.transport)
+          .getPropertyValue(capturePhase === 'recording' ? '--rec' : '--wave-idle').trim();
+        for (let index = 0; index < capacity; index += 1) {
+          const level = visible[visible.length - capacity + index] ?? 0;
+          const barHeight = Math.max(barWidth, level * canvas.height);
+          const x = index * step;
+          const y = (canvas.height - barHeight) / 2;
+          context.beginPath();
+          if (context.roundRect) context.roundRect(x, y, barWidth, barHeight, barWidth / 2);
+          else context.rect(x, y, barWidth, barHeight);
+          context.fill();
+        }
+      }
+      function waveTick(now) {
+        if (now - lastSampleAt >= SAMPLE_EVERY_MS) {
+          levels.push(sampleLevel());
+          if (levels.length > 600) levels.splice(0, levels.length - 600);
+          lastSampleAt = now;
+        }
+        updateTimer();
+        drawWaveform();
+        waveFrame = requestAnimationFrame(waveTick);
+      }
+      function startWaveLoop() { cancelAnimationFrame(waveFrame); waveFrame = requestAnimationFrame(waveTick); }
+      function stopWaveLoop() { cancelAnimationFrame(waveFrame); waveFrame = 0; }
+
+      function resetCaptureControls(hint) {
+        stopWaveLoop();
+        elapsedMs = 0;
+        runningSince = 0;
+        levels = [];
+        updateTimer();
+        setCapturePhase('idle', hint);
+        drawWaveform();
+      }
+      function returnFromCapture() {
+        if (recordingWorkspace) return loadWorkspace(recordingWorkspace.id);
+        return loadLibrary(recordingDestination?.id);
+      }
+      function openRecording(workspace = null) {
+        recordingWorkspace = workspace;
+        const folder = workspace?.folder_id ? allFolders.find(item => item.id === workspace.folder_id) : activeFolder;
+        recordingDestination = folder ? { id: folder.id, name: folder.name } : null;
+        discardCapture = false;
+        el['recording-title'].value = '';
+        el['recording-location'].textContent = workspace
+          ? `●  Adding a session to ${workspace.title}`
+          : `●  Saving to ${recordingDestination?.name || 'Unfiled'}`;
+        el['recording-helper'].textContent = workspace
+          ? 'This recording will stay attached to these lecture notes.'
+          : 'Tap once to begin. A new lecture note will be created when you save.';
+        resetCaptureControls();
+        show('recording');
+      }
+      el['library-home'].addEventListener('click', () => loadLibrary());
+      el['recent-toggle'].addEventListener('click', event => {
+        event.stopPropagation();
+        const opening = el['recent-menu'].hidden;
+        el['recent-menu'].hidden = !opening;
+        el['recent-toggle'].setAttribute('aria-expanded', String(opening));
       });
+      el['recent-menu'].addEventListener('click', event => event.stopPropagation());
+      document.addEventListener('click', closeRecentMenu);
+      el['parent-target'].addEventListener('click', () => loadLibrary(parentDestination().id));
+      el['new-workspace'].addEventListener('click', createWorkspace);
+      el['new-folder'].addEventListener('click', openFolderForm);
+      el['empty-folder-action'].addEventListener('click', openFolderForm);
+      el['empty-workspace-action'].addEventListener('click', createWorkspace);
+      el['record-from-library'].addEventListener('click', () => openRecording());
       el['cancel-folder'].addEventListener('click', () => loadLibrary(activeFolder?.id));
       el['folder-form'].addEventListener('submit', async event => {
         event.preventDefault();
@@ -555,36 +1271,151 @@
           el['folder-color-control'].hidden = false;
         } catch (error) { showToast(error.message); }
       }));
-      el['new-recording'].addEventListener('click', () => {
-        el['recording-title'].value = '';
-        el['recording-status'].textContent = 'Ready to record.';
-        show('recording');
-      });
-      el['cancel-recording'].addEventListener('click', () => loadLibrary(activeFolder?.id));
-      el.record.addEventListener('click', async () => {
+      el['workspace-back'].addEventListener('click', () => loadLibrary(activeWorkspace?.folder_id));
+      el['record-from-workspace'].addEventListener('click', () => openRecording(activeWorkspace));
+      el['workspace-title'].addEventListener('change', saveWorkspaceTitle);
+      el['workspace-notes-save'].addEventListener('click', saveWorkspaceNotes);
+      el['workspace-notes'].addEventListener('input', scheduleWorkspaceNotesSave);
+      function releaseMicrophone() {
+        stream?.getTracks().forEach(track => track.stop());
+        stream = null;
+        audioContext?.close();
+        audioContext = null;
+      }
+      async function startRecording() {
+        el.record.disabled = true;
+        // Created inside the tap so the browser lets it run; the mic prompt below can outlast that window.
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
         try {
           stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          recorder = new MediaRecorder(stream);
-          chunks = [];
-          recorder.addEventListener('dataavailable', event => chunks.push(event.data));
-          recorder.addEventListener('stop', uploadRecording, { once: true });
-          recorder.start();
-          el.record.disabled = true; el.pause.disabled = false; el.stop.disabled = false;
-          el['recording-title'].disabled = true; el.quality.disabled = true;
-          el['recording-status'].textContent = 'Recording…';
-        } catch { el['recording-status'].textContent = 'Microphone access was not granted. Please allow it and try again.'; }
+        } catch {
+          releaseMicrophone();
+          el.record.disabled = false;
+          el['recording-status'].textContent = 'Microphone access was not granted. Please allow it and try again.';
+          return;
+        }
+        audioContext.resume();
+        analyser = audioContext.createAnalyser();
+        analyser.fftSize = 1024;
+        samples = new Float32Array(analyser.fftSize);
+        audioContext.createMediaStreamSource(stream).connect(analyser);
+        recorder = new MediaRecorder(stream);
+        chunks = [];
+        discardCapture = false;
+        recorder.addEventListener('dataavailable', event => chunks.push(event.data));
+        recorder.addEventListener('stop', () => {
+          if (discardCapture) {
+            resetCaptureControls();
+            showToast('Recording discarded');
+            returnFromCapture();
+            return;
+          }
+          uploadRecording();
+        }, { once: true });
+        recorder.start();
+        elapsedMs = 0;
+        levels = [];
+        runningSince = performance.now();
+        setCapturePhase('recording');
+        startWaveLoop();
+        haptic();
+      }
+      function pauseRecording() {
+        recorder.pause();
+        elapsedMs = captureMs();
+        runningSince = 0;
+        stopWaveLoop();
+        setCapturePhase('paused');
+        updateTimer();
+        drawWaveform();
+        haptic();
+      }
+      function resumeRecording() {
+        recorder.resume();
+        runningSince = performance.now();
+        setCapturePhase('recording');
+        startWaveLoop();
+        haptic();
+      }
+      function finishRecording() {
+        if (!recorder || recorder.state === 'inactive') return;
+        elapsedMs = captureMs();
+        runningSince = 0;
+        stopWaveLoop();
+        setCapturePhase('saving');
+        updateTimer();
+        drawWaveform();
+        recorder.stop();
+        releaseMicrophone();
+        haptic();
+      }
+      function discardActiveRecording() {
+        if (!recorder || recorder.state === 'inactive') return;
+        discardCapture = true;
+        stopWaveLoop();
+        setCapturePhase('discarding');
+        drawWaveform();
+        recorder.stop();
+        releaseMicrophone();
+        haptic([12, 60, 12]);
+      }
+      el['cancel-recording'].addEventListener('click', returnFromCapture);
+      el.record.addEventListener('click', () => {
+        if (capturePhase === 'idle') startRecording();
+        else if (capturePhase === 'recording') pauseRecording();
+        else if (capturePhase === 'paused') resumeRecording();
       });
-      el.pause.addEventListener('click', () => {
-        if (!recorder) return;
-        if (recorder.state === 'recording') { recorder.pause(); el.pause.textContent = 'Resume'; el['recording-status'].textContent = 'Paused.'; }
-        else { recorder.resume(); el.pause.textContent = 'Pause'; el['recording-status'].textContent = 'Recording…'; }
+      el['finish-recording'].addEventListener('click', finishRecording);
+
+      // Slide to discard: only reachable while paused, and only fires when released near the end.
+      function slideTravel() { return el['discard-slider'].clientWidth - el['discard-thumb'].offsetWidth - 8; }
+      function renderSlide(progress) {
+        slideProgress = progress;
+        el['discard-slider'].style.setProperty('--x', `${progress * slideTravel()}px`);
+        el['discard-slider'].style.setProperty('--p', progress);
+        el['discard-slider'].classList.toggle('armed', progress >= SLIDE_CONFIRM);
+        el['discard-thumb'].setAttribute('aria-valuenow', Math.round(progress * 100));
+      }
+      function resetSlider() {
+        sliding = false;
+        el['discard-slider'].classList.remove('is-sliding');
+        renderSlide(0);
+      }
+      el['discard-thumb'].addEventListener('pointerdown', event => {
+        if (capturePhase !== 'paused') return;
+        sliding = true;
+        slideStartX = event.clientX - slideProgress * slideTravel();
+        el['discard-thumb'].setPointerCapture(event.pointerId);
+        el['discard-slider'].classList.add('is-sliding');
       });
-      el.stop.addEventListener('click', () => {
-        if (!recorder) return;
-        el.stop.disabled = true; el.pause.disabled = true;
-        el['recording-status'].textContent = 'Saving and transcribing…';
-        recorder.stop(); stream.getTracks().forEach(track => track.stop());
+      el['discard-thumb'].addEventListener('pointermove', event => {
+        if (!sliding) return;
+        const progress = Math.min(1, Math.max(0, (event.clientX - slideStartX) / slideTravel()));
+        if (slideProgress < SLIDE_CONFIRM && progress >= SLIDE_CONFIRM) haptic(8);
+        renderSlide(progress);
       });
+      el['discard-thumb'].addEventListener('pointerup', () => {
+        if (!sliding) return;
+        if (slideProgress >= SLIDE_CONFIRM) discardActiveRecording();
+        else resetSlider();
+      });
+      el['discard-thumb'].addEventListener('pointercancel', resetSlider);
+      el['discard-thumb'].addEventListener('keydown', event => {
+        if (capturePhase !== 'paused') return;
+        const steps = { ArrowRight: 0.25, ArrowUp: 0.25, ArrowLeft: -0.25, ArrowDown: -0.25 };
+        if (event.key === 'Home' || event.key === 'Escape') { event.preventDefault(); renderSlide(0); return; }
+        if (!(event.key in steps)) return;
+        event.preventDefault();
+        const progress = Math.min(1, Math.max(0, slideProgress + steps[event.key]));
+        renderSlide(progress);
+        if (progress >= 1) discardActiveRecording();
+      });
+      el['discard-thumb'].addEventListener('blur', () => { if (!sliding) renderSlide(0); });
+      window.addEventListener('beforeunload', event => {
+        if (capturePhase === 'recording' || capturePhase === 'paused') { event.preventDefault(); event.returnValue = ''; }
+      });
+      new ResizeObserver(sizeWaveform).observe(el.waveform);
+
       async function uploadRecording() {
         const extension = recorder.mimeType.includes('mp4') ? 'mp4' : 'webm';
         const blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
@@ -592,13 +1423,15 @@
         form.append('audio', blob, `lecture.${extension}`);
         form.append('title', el['recording-title'].value);
         form.append('model', el.quality.value);
+        if (recordingWorkspace?.id) form.append('workspace_id', recordingWorkspace.id);
+        if (recordingDestination?.id) form.append('folder_id', recordingDestination.id);
         try {
           const recording = await api('/api/lectures', { method: 'POST', body: form });
-          showToast('Recording saved to Unfiled');
-          await loadRecording(recording.id);
+          showToast(`Recording saved to ${recordingDestination?.name || 'Unfiled'}`);
+          if (recording.workspace_id) await loadWorkspace(recording.workspace_id);
+          else await loadRecording(recording.id);
         } catch (error) {
-          el['recording-status'].textContent = error.message;
-          el.record.disabled = false; el['recording-title'].disabled = false; el.quality.disabled = false;
+          resetCaptureControls(error.message);
         }
       }
       el['back-to-library'].addEventListener('click', () => loadLibrary(activeRecording?.folder_id));
@@ -614,8 +1447,8 @@
           activeRecording = recording;
           el['detail-heading'].textContent = recording.title;
           el['save-status'].textContent = 'Saved.';
-          showToast('Changes saved');
-          await loadRecording(recording.id);
+          showToast('Recording ready');
+          await loadLibrary(recording.folder_id);
         } catch (error) { el['save-status'].textContent = error.message; }
         finally { el['save-recording'].disabled = false; }
       });

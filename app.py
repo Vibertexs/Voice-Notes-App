@@ -22,7 +22,7 @@ DATABASE_PATH = DATA_DIR / "voice_notes.db"
 MAX_UPLOAD_BYTES = 25 * 1024 * 1024
 ALLOWED_SUFFIXES = {".wav", ".mp3", ".m4a", ".ogg", ".webm", ".mp4"}
 TRANSCRIPTION_MODELS = {"tiny.en", "base.en", "small.en"}
-FOLDER_COLORS = {"blue", "violet", "coral", "amber", "mint", "slate"}
+FOLDER_COLORS = {"blue", "violet", "rose", "coral", "amber", "lime", "mint", "sky", "slate"}
 
 
 class FolderCreate(BaseModel):
@@ -43,6 +43,20 @@ class LectureUpdate(BaseModel):
 
 class RecordingMove(BaseModel):
     folder_id: str | None = None
+
+
+class WorkspaceCreate(BaseModel):
+    title: str | None = Field(default=None, max_length=180)
+    folder_id: str | None = None
+
+
+class WorkspaceUpdate(BaseModel):
+    title: str | None = Field(default=None, max_length=180)
+    folder_id: str | None = None
+
+
+class WorkspaceNotesUpdate(BaseModel):
+    note_body: str = Field(max_length=100_000)
 
 
 def connect_database() -> sqlite3.Connection:
@@ -80,12 +94,90 @@ def initialize_database() -> None:
             )
             """
         )
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS workspaces (
+                id TEXT PRIMARY KEY,
+                folder_id TEXT,
+                title TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )
+            """
+        )
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS workspace_notes (
+                workspace_id TEXT PRIMARY KEY,
+                note_body TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )
+            """
+        )
         columns = {row["name"] for row in connection.execute("PRAGMA table_info(lectures)")}
         if "folder_id" not in columns:
             connection.execute("ALTER TABLE lectures ADD COLUMN folder_id TEXT")
+        if "workspace_id" not in columns:
+            connection.execute("ALTER TABLE lectures ADD COLUMN workspace_id TEXT")
         folder_columns = {row["name"] for row in connection.execute("PRAGMA table_info(folders)")}
         if "color" not in folder_columns:
             connection.execute("ALTER TABLE folders ADD COLUMN color TEXT NOT NULL DEFAULT 'blue'")
+        legacy_rows = connection.execute(
+            """
+            SELECT id, folder_id, title, created_at, note_body
+            FROM lectures
+            WHERE workspace_id IS NULL
+            """
+        ).fetchall()
+        for lecture in legacy_rows:
+            workspace_id = str(uuid4())
+            connection.execute(
+                """
+                INSERT INTO workspaces (id, folder_id, title, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (
+                    workspace_id,
+                    lecture["folder_id"],
+                    lecture["title"],
+                    lecture["created_at"],
+                    lecture["created_at"],
+                ),
+            )
+            connection.execute(
+                "UPDATE lectures SET workspace_id = ? WHERE id = ?",
+                (workspace_id, lecture["id"]),
+            )
+            connection.execute(
+                """
+                INSERT INTO workspace_notes (workspace_id, note_body, updated_at)
+                VALUES (?, ?, ?)
+                """,
+                (workspace_id, lecture["note_body"], lecture["created_at"]),
+            )
+        missing_notes = connection.execute(
+            """
+            SELECT workspaces.id, workspaces.updated_at,
+                   COALESCE((
+                       SELECT lectures.note_body
+                       FROM lectures
+                       WHERE lectures.workspace_id = workspaces.id
+                       ORDER BY lectures.created_at ASC
+                       LIMIT 1
+                   ), '') AS note_body
+            FROM workspaces
+            LEFT JOIN workspace_notes ON workspace_notes.workspace_id = workspaces.id
+            WHERE workspace_notes.workspace_id IS NULL
+            """
+        ).fetchall()
+        for workspace in missing_notes:
+            connection.execute(
+                """
+                INSERT INTO workspace_notes (workspace_id, note_body, updated_at)
+                VALUES (?, ?, ?)
+                """,
+                (workspace["id"], workspace["note_body"], workspace["updated_at"]),
+            )
 
 
 @asynccontextmanager
@@ -135,6 +227,7 @@ def serialize_folder(row: sqlite3.Row) -> dict[str, object]:
 def serialize_lecture(row: sqlite3.Row, *, include_content: bool) -> dict[str, object]:
     result: dict[str, object] = {
         "id": row["id"],
+        "workspace_id": row["workspace_id"],
         "folder_id": row["folder_id"],
         "course": row["course"],
         "title": row["title"],
@@ -145,6 +238,30 @@ def serialize_lecture(row: sqlite3.Row, *, include_content: bool) -> dict[str, o
     if include_content:
         result["transcript"] = row["transcript"]
         result["note_body"] = row["note_body"]
+    return result
+
+
+def serialize_workspace(row: sqlite3.Row, *, include_sessions: bool = False) -> dict[str, object]:
+    result: dict[str, object] = {
+        "id": row["id"],
+        "folder_id": row["folder_id"],
+        "title": row["title"],
+        "created_at": row["created_at"],
+        "updated_at": row["updated_at"],
+        "session_count": row["session_count"] if "session_count" in row.keys() else 0,
+    }
+    if include_sessions:
+        with connect_database() as connection:
+            sessions = connection.execute(
+                "SELECT * FROM lectures WHERE workspace_id = ? ORDER BY created_at ASC", (row["id"],)
+            ).fetchall()
+            notes = connection.execute(
+                "SELECT note_body, updated_at FROM workspace_notes WHERE workspace_id = ?",
+                (row["id"],),
+            ).fetchone()
+        result["sessions"] = [serialize_lecture(session, include_content=True) for session in sessions]
+        result["note_body"] = notes["note_body"] if notes else ""
+        result["notes_updated_at"] = notes["updated_at"] if notes else None
     return result
 
 
@@ -181,6 +298,23 @@ def get_lecture(lecture_id: str) -> sqlite3.Row:
     return row
 
 
+def get_workspace(workspace_id: str) -> sqlite3.Row:
+    with connect_database() as connection:
+        row = connection.execute(
+            """
+            SELECT workspaces.*, COUNT(lectures.id) AS session_count
+            FROM workspaces
+            LEFT JOIN lectures ON lectures.workspace_id = workspaces.id
+            WHERE workspaces.id = ?
+            GROUP BY workspaces.id
+            """,
+            (workspace_id,),
+        ).fetchone()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Lecture workspace not found.")
+    return row
+
+
 @app.get("/", include_in_schema=False)
 def index() -> FileResponse:
     return FileResponse(PROJECT_ROOT / "static" / "index.html")
@@ -200,19 +334,41 @@ def list_library(folder_id: str | None = Query(default=None)) -> dict[str, objec
                 "SELECT * FROM folders WHERE parent_id = ? ORDER BY name COLLATE NOCASE", (folder_id,)
             ).fetchall()
             lectures = connection.execute(
-                "SELECT * FROM lectures WHERE folder_id = ? ORDER BY created_at DESC", (folder_id,)
+                "SELECT * FROM lectures WHERE folder_id = ? AND workspace_id IS NULL ORDER BY created_at DESC", (folder_id,)
+            ).fetchall()
+            workspaces = connection.execute(
+                """
+                SELECT workspaces.*, COUNT(lectures.id) AS session_count
+                FROM workspaces
+                LEFT JOIN lectures ON lectures.workspace_id = workspaces.id
+                WHERE workspaces.folder_id = ?
+                GROUP BY workspaces.id
+                ORDER BY workspaces.updated_at DESC
+                """,
+                (folder_id,),
             ).fetchall()
         else:
             folders = connection.execute(
                 "SELECT * FROM folders WHERE parent_id IS NULL ORDER BY name COLLATE NOCASE"
             ).fetchall()
             lectures = connection.execute(
-                "SELECT * FROM lectures WHERE folder_id IS NULL ORDER BY created_at DESC"
+                "SELECT * FROM lectures WHERE folder_id IS NULL AND workspace_id IS NULL ORDER BY created_at DESC"
+            ).fetchall()
+            workspaces = connection.execute(
+                """
+                SELECT workspaces.*, COUNT(lectures.id) AS session_count
+                FROM workspaces
+                LEFT JOIN lectures ON lectures.workspace_id = workspaces.id
+                WHERE workspaces.folder_id IS NULL
+                GROUP BY workspaces.id
+                ORDER BY workspaces.updated_at DESC
+                """
             ).fetchall()
     return {
         "current_folder": serialize_folder(current_folder) if current_folder else None,
         "breadcrumbs": get_folder_path(current_folder),
         "folders": [serialize_folder(folder) for folder in folders],
+        "workspaces": [serialize_workspace(workspace) for workspace in workspaces],
         "lectures": [serialize_lecture(lecture, include_content=False) for lecture in lectures],
     }
 
@@ -282,13 +438,86 @@ def delete_folder(folder_id: str) -> dict[str, str]:
         has_lectures = connection.execute(
             "SELECT 1 FROM lectures WHERE folder_id = ? LIMIT 1", (folder_id,)
         ).fetchone()
-        if has_children or has_lectures:
+        has_workspaces = connection.execute(
+            "SELECT 1 FROM workspaces WHERE folder_id = ? LIMIT 1", (folder_id,)
+        ).fetchone()
+        if has_children or has_lectures or has_workspaces:
             raise HTTPException(
                 status_code=409,
                 detail="Move or delete the folder's contents before deleting the folder.",
             )
         connection.execute("DELETE FROM folders WHERE id = ?", (folder_id,))
     return {"status": "deleted"}
+
+
+@app.post("/api/workspaces", status_code=201)
+def create_workspace(workspace: WorkspaceCreate) -> dict[str, object]:
+    folder_id = workspace.folder_id or None
+    if folder_id:
+        get_folder(folder_id)
+    created_at = datetime.now(timezone.utc)
+    title = clean_label(workspace.title or "", default_lecture_title(created_at), 180)
+    workspace_id = str(uuid4())
+    with connect_database() as connection:
+        connection.execute(
+            """
+            INSERT INTO workspaces (id, folder_id, title, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (workspace_id, folder_id, title, created_at.isoformat(), created_at.isoformat()),
+        )
+    return serialize_workspace(get_workspace(workspace_id))
+
+
+@app.get("/api/workspaces/{workspace_id}")
+def read_workspace(workspace_id: str) -> dict[str, object]:
+    return serialize_workspace(get_workspace(workspace_id), include_sessions=True)
+
+
+@app.patch("/api/workspaces/{workspace_id}")
+def update_workspace(workspace_id: str, update: WorkspaceUpdate) -> dict[str, object]:
+    current = get_workspace(workspace_id)
+    values = update.model_dump(exclude_unset=True)
+    title = clean_label(values.get("title", current["title"]), "Untitled lecture", 180)
+    folder_id = current["folder_id"]
+    if "folder_id" in values:
+        folder_id = values["folder_id"] or None
+        if folder_id:
+            get_folder(folder_id)
+    updated_at = datetime.now(timezone.utc).isoformat()
+    with connect_database() as connection:
+        connection.execute(
+            "UPDATE workspaces SET title = ?, folder_id = ?, updated_at = ? WHERE id = ?",
+            (title, folder_id, updated_at, workspace_id),
+        )
+        destination = get_folder(folder_id) if folder_id else None
+        course = destination["name"] if destination else "Unfiled recordings"
+        connection.execute(
+            "UPDATE lectures SET folder_id = ?, course = ? WHERE workspace_id = ?",
+            (folder_id, course, workspace_id),
+        )
+    return serialize_workspace(get_workspace(workspace_id))
+
+
+@app.put("/api/workspaces/{workspace_id}/notes")
+def save_workspace_notes(workspace_id: str, update: WorkspaceNotesUpdate) -> dict[str, object]:
+    get_workspace(workspace_id)
+    saved_at = datetime.now(timezone.utc).isoformat()
+    with connect_database() as connection:
+        connection.execute(
+            """
+            INSERT INTO workspace_notes (workspace_id, note_body, updated_at)
+            VALUES (?, ?, ?)
+            ON CONFLICT(workspace_id) DO UPDATE SET
+                note_body = excluded.note_body,
+                updated_at = excluded.updated_at
+            """,
+            (workspace_id, update.note_body, saved_at),
+        )
+        connection.execute(
+            "UPDATE workspaces SET updated_at = ? WHERE id = ?", (saved_at, workspace_id)
+        )
+    return {"status": "saved", "updated_at": saved_at}
 
 
 @app.get("/api/lectures/{lecture_id}")
@@ -310,12 +539,15 @@ def read_lecture_audio(lecture_id: str) -> FileResponse:
 def create_lecture(
     audio: UploadFile = File(...),
     folder_id: str = Form(default=""),
+    workspace_id: str = Form(default=""),
     title: str = Form(default=""),
     model: str = Form(default="base.en"),
 ) -> dict[str, object]:
     if model not in TRANSCRIPTION_MODELS:
         raise HTTPException(status_code=400, detail="Choose a supported transcription quality.")
-    selected_folder_id = folder_id or None
+    selected_workspace_id = workspace_id or None
+    selected_workspace = get_workspace(selected_workspace_id) if selected_workspace_id else None
+    selected_folder_id = selected_workspace["folder_id"] if selected_workspace else folder_id or None
     selected_folder = get_folder(selected_folder_id) if selected_folder_id else None
     suffix = Path(audio.filename or "recording.webm").suffix.lower()
     if suffix not in ALLOWED_SUFFIXES:
@@ -351,14 +583,37 @@ def create_lecture(
     course = selected_folder["name"] if selected_folder else "Unfiled recordings"
     try:
         with connect_database() as connection:
+            if selected_workspace is None:
+                selected_workspace_id = str(uuid4())
+                connection.execute(
+                    """
+                    INSERT INTO workspaces (id, folder_id, title, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?)
+                    """,
+                    (
+                        selected_workspace_id,
+                        selected_folder_id,
+                        clean_title,
+                        created_at_datetime.isoformat(),
+                        created_at_datetime.isoformat(),
+                    ),
+                )
+                connection.execute(
+                    """
+                    INSERT INTO workspace_notes (workspace_id, note_body, updated_at)
+                    VALUES (?, ?, ?)
+                    """,
+                    (selected_workspace_id, note_body, created_at_datetime.isoformat()),
+                )
             connection.execute(
                 """
                 INSERT INTO lectures (
-                    id, folder_id, course, title, created_at, audio_filename, model, transcript, note_body
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    id, workspace_id, folder_id, course, title, created_at, audio_filename, model, transcript, note_body
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     lecture_id,
+                    selected_workspace_id,
                     selected_folder_id,
                     course,
                     clean_title,
@@ -394,20 +649,39 @@ def update_lecture(lecture_id: str, update: LectureUpdate) -> dict[str, object]:
             "UPDATE lectures SET title = ?, note_body = ?, folder_id = ?, course = ? WHERE id = ?",
             (title, note_body, folder_id, course, lecture_id),
         )
+        if current["workspace_id"] and "folder_id" in values:
+            connection.execute(
+                "UPDATE workspaces SET folder_id = ?, updated_at = ? WHERE id = ?",
+                (folder_id, datetime.now(timezone.utc).isoformat(), current["workspace_id"]),
+            )
+            connection.execute(
+                "UPDATE lectures SET folder_id = ?, course = ? WHERE workspace_id = ?",
+                (folder_id, course, current["workspace_id"]),
+            )
     return serialize_lecture(get_lecture(lecture_id), include_content=True)
 
 
 @app.patch("/api/lectures/{lecture_id}/move")
 def move_lecture(lecture_id: str, move: RecordingMove) -> dict[str, object]:
-    get_lecture(lecture_id)
+    current = get_lecture(lecture_id)
     folder_id = move.folder_id or None
     destination = get_folder(folder_id) if folder_id else None
     course = destination["name"] if destination else "Unfiled recordings"
     with connect_database() as connection:
-        connection.execute(
-            "UPDATE lectures SET folder_id = ?, course = ? WHERE id = ?",
-            (folder_id, course, lecture_id),
-        )
+        if current["workspace_id"]:
+            connection.execute(
+                "UPDATE workspaces SET folder_id = ?, updated_at = ? WHERE id = ?",
+                (folder_id, datetime.now(timezone.utc).isoformat(), current["workspace_id"]),
+            )
+            connection.execute(
+                "UPDATE lectures SET folder_id = ?, course = ? WHERE workspace_id = ?",
+                (folder_id, course, current["workspace_id"]),
+            )
+        else:
+            connection.execute(
+                "UPDATE lectures SET folder_id = ?, course = ? WHERE id = ?",
+                (folder_id, course, lecture_id),
+            )
     return serialize_lecture(get_lecture(lecture_id), include_content=True)
 
 
@@ -416,5 +690,14 @@ def delete_lecture(lecture_id: str) -> dict[str, str]:
     row = get_lecture(lecture_id)
     with connect_database() as connection:
         connection.execute("DELETE FROM lectures WHERE id = ?", (lecture_id,))
+        if row["workspace_id"]:
+            remaining = connection.execute(
+                "SELECT 1 FROM lectures WHERE workspace_id = ? LIMIT 1", (row["workspace_id"],)
+            ).fetchone()
+            if remaining is None:
+                connection.execute(
+                    "DELETE FROM workspace_notes WHERE workspace_id = ?", (row["workspace_id"],)
+                )
+                connection.execute("DELETE FROM workspaces WHERE id = ?", (row["workspace_id"],))
     (AUDIO_DIR / row["audio_filename"]).unlink(missing_ok=True)
     return {"status": "deleted"}

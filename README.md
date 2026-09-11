@@ -40,12 +40,12 @@ Once this works, the next step is wrapping this script in a tiny API that the Ex
 
 ## Try the Browser UI
 
-The local browser UI is a student lecture library. Its persistent sidebar has
-two primary actions: **New recording** and **New folder**. New recordings are
-saved as unfiled items with a timestamped default name; drag them into a course
-folder later, or move them back to Unfiled. Each recording saves its audio and
-raw transcript on this computer. The saved data is stored under `data/`, which
-is intentionally excluded from Git.
+The local browser UI is a student lecture library. Create a **Note** for a
+blank, persistent lecture note or record immediately from the Library or a
+folder. A successful first recording creates its own note workspace; later work
+will add more recording sessions and PDF materials to that same workspace. Each
+recording saves its audio and raw transcript on this computer. The saved data
+is stored under `data/`, which is intentionally excluded from Git.
 
 ```powershell
 .\.venv\Scripts\python -m uvicorn app:app --reload

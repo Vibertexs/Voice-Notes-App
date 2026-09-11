@@ -6,6 +6,9 @@ models/
 *.ogg
 *.webm
 *.json
+!package.json
+!package-lock.json
+node_modules/
 __pycache__/
 pip-install*.log
 server*.log

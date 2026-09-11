@@ -9,66 +9,95 @@ delete it.
 
 ## Information architecture
 
-The app has one durable sidebar and one changing content area.
+The app has one centered workspace. A compact top bar holds the Library and
+New folder actions; breadcrumbs in the main area handle movement between the
+root and nested folders.
 
 ```
-Sidebar                         Main area
+Top bar                         Main area
 ────────────────────────────   ─────────────────────────────
-New recording                   Unfiled recordings or folder contents
-New folder                      Recording detail and transcript
-Unfiled recordings              Folder creation or recording capture
-Folders
-Recent recordings
+Library · Recent · New folder   Folder tiles and recording lists
+                                Recent-recordings dropdown
+                                Recording detail and transcript
+                                Folder creation or recording capture
 ```
 
-The sidebar remains visible while recording, viewing a transcript, or managing
-folders. A student never has to navigate away to create the next item.
+The centered workspace keeps the current class context visible without a
+permanent navigation rail. The Library button and breadcrumbs provide a direct
+route home, while the record action remains at the bottom of every folder view.
 
 ## Capture before organization
 
-Every new recording is saved to **Unfiled recordings**, even when the student
-was browsing a folder. Naming a lecture or choosing a course before class adds
-friction at exactly the wrong moment. The server assigns a readable,
-date-and-time default name when the title is blank. The name can be changed
-afterward.
+Every new recording inherits the folder from which the student starts capture.
+Starting from the Library root saves to **Unfiled**. This gives an in-context
+lecture a sensible home without adding an extra decision before class. The
+server assigns a readable date-and-time default name when the title is blank;
+the name and destination can both be changed afterward.
 
 Folders are an organizational layer, not a prerequisite for capture. They can
 represent a course, a semester, or a topic and may be nested.
 
 ## Moving recordings
 
-Drag a recording row or sidebar item onto a folder to file it. Drag it onto
-**Unfiled** to remove it from a folder. Drop targets use a distinct but subtle
-blue outline and surface change so it is clear where the recording will go.
+Drag a recording row onto a folder to file it. Drop targets use a distinct but
+subtle blue outline and surface change so it is clear where the recording will
+go.
 
-When a student is viewing a folder, a full-width return zone appears directly
-above its contents. In a nested folder it moves a recording to the immediate
-parent folder—not all the way back to Unfiled. At the top folder level, that
-same target moves it to Unfiled. This follows the user's mental model of
-"going back one level" while retaining the sidebar's explicit root destination.
+When a student is viewing a folder, one full-width **parent location** target
+appears above its contents. Clicking it opens the immediate parent (or the
+Library at the top level). Dragging a recording onto the same target moves it
+there—one folder level at a time; at the top level, that means Unfiled. The
+copy always names the dual behavior directly: "Click to open" and "Drag a
+recording here to move it." Breadcrumbs remain available for direct jumps to
+any ancestor.
 
 Drag-and-drop is not reliable on every touch or keyboard environment, so the
 recording detail view also includes a destination selector. It is a draft:
-selecting a folder does not move the recording. The bottom **Save changes**
-button saves the title and chosen destination together in one request. This
+selecting a folder does not move the recording. The bottom **Done** button
+saves the title and chosen destination together in one request, then returns
+the student to that folder. This
 prevents an accidental move while the student is still reviewing a new
 recording, while drag-and-drop remains an intentional immediate action.
 
 ## Visual language
 
-The interface uses a frosted-glass workspace over a soft blue background so the
-library feels like one focused surface rather than several boxed-in pages.
-System type, simple recording rows, restrained motion, and blue primary actions
-keep that effect legible rather than decorative. The two creation actions stay
-together in the sidebar, while the main area stays focused on the current
-location. Motion is disabled for users who request reduced motion.
+The interface uses an editorial card system over an airy cool-grey, lightly
+glassed workspace. Cards have a clear, substantial outline and generous rounded
+corners rather than offset shadows. The border belongs to the surface it frames:
+dark inlaid covers use a dark border and pale surfaces use the surrounding
+blue-grey. The dark inlaid lower portion of a folder tile consistently holds
+its name and action; its colored upper "cover" gives the library personality
+without becoming a second navigation language. Folder colors remain decorative
+landmarks, not the only way a destination is identified.
 
-Folders are square tiles: their consistent footprint makes a course library
-easy to scan without turning recordings into another card grid. Students choose
-one of six folder colors while creating a folder and can change it later from
-the folder's **Color** control. Color is stored in the local database, is used
-as a quick visual landmark rather than the only identifier, and never changes
-the folder's organization or sharing state.
+The same grammar carries into the rest of the product: top-bar actions are
+outlined controls, recording rows are wide bordered surfaces with a small
+colored icon, forms and transcript areas are calm light cards, and capture is a
+single dark-blue feature card. Blue stays reserved for primary actions and
+active/drop states. Folder creation is available from the top bar and from an
+empty folder state, while a prominent recording action stays at the bottom of
+the workspace. Motion is disabled for users who request reduced motion.
+
+Capture uses one oversized, tactile record control rather than a crowded row
+of actions. Once recording begins, a compact transport deck appears: elapsed
+time is visible, pause/resume is secondary, **Finish & review** saves the audio
+for transcription, and a native, keyboard-accessible **Slide all the way to
+cancel** control discards the active capture. This gives the flow a confident
+audio-station feel while keeping the destructive action intentional.
+
+Folders are portrait covers, deliberately unlike the wide recording rows. A
+textured color field sits above a large dark inlay, with a local sequence number,
+the folder name, and a plain-language action. Students choose one of six colors
+while creating a folder and can change it later from the folder's **Color**
+control; this changes the cover field only, leaving the readable information
+panel consistent. Color is stored in the local database, is used as a quick
+visual landmark rather than the only identifier, and never changes the folder's
+organization or sharing state.
+
+Recordings use horizontal rows rather than square tiles because their title,
+date, and destination are the information students scan first. The Recent menu
+uses the same compact row shape and is placed in the top bar, preventing a
+second recording list from repeating the current page's content.
 
 ## Privacy and data
 
@@ -89,3 +118,11 @@ These features should follow real student testing of the capture and
 organization workflow. The next decision point is whether repeated real
 lectures prove the need for a mobile client; the current API and SQLite model
 are kept deliberately simple so a mobile app can replace the browser UI later.
+
+## Next product phase
+
+The planned next object is a **lecture workspace**: a persistent home for
+student-authored notes or PDF material, several dated recording sessions, and
+later study material. The architecture and entry-point contract are
+documented in [Lecture Workspace: Phase 1 Architecture](LECTURE_WORKSPACE.md).
+No database or capture migration should happen until that contract is approved.
