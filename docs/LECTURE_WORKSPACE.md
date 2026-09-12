@@ -12,6 +12,7 @@ Library
 └── Course folder (optional)
     └── Lecture workspace
         ├── Notes           — student-authored or pasted
+        ├── Materials       — private original files (slides, handouts, readings)
         ├── Recording sessions
         │   ├── audio
         │   └── transcript
@@ -88,6 +89,9 @@ audio or transcript data:
 - `workspace_study_notes`: editable study-guide draft separate from student
   notes. Keeping it separate prevents generated text from silently overwriting
   what a student wrote.
+- `materials`: original filename, generated local filename, type, size,
+  workspace, and upload time. The original stays available for download; the
+  database never trusts a browser-provided path.
 - `session_markers`: a user label and an audio time on a recording session.
   This is the lightweight bridge when content changes mid-lecture.
 
@@ -105,6 +109,9 @@ note with automatic saving and a manual Save notes action. A workspace now has
 three deliberate review spaces:
 
 1. **Notes** for writing or pasting source material.
+   The adjacent **Class materials** panel accepts private PDF, Word,
+   PowerPoint, text, and Markdown files. A file belongs to the class note, not
+   to an individual recording.
 2. **Recordings & transcript** for listening to one dated session, reading its
    transcript, and placing/removing topic markers at the current audio time.
 3. **Study guide** for an editable local review draft made from the student's
@@ -114,7 +121,8 @@ The current study-draft generator is deliberately local and extractive. It is
 not represented as an AI model: it never sends student notes, audio, or
 transcripts to a cloud provider, and it is intended to validate the review
 workflow before selecting an AI provider or asking a student to provide an API
-key.
+key. Attached files are safely stored and downloadable in this phase; file
+content is not silently parsed into the study draft yet.
 
 On first launch after this change, each existing recording is safely attached to
 a new one-session workspace using the recording's current title, folder, and
@@ -123,10 +131,11 @@ creation time. Audio and transcript files are not rewritten.
 ## Next implementation check-in
 
 Test whether a student can find their notes, one session's transcript, and the
-study guide without explanation. If that model holds, the next decision is the
-AI boundary: choose an opt-in provider and consent/cost experience, or keep the
-private local draft as the default. Flashcards should come after the study guide
-has a trustworthy source and a student-visible edit/review step.
+study guide without explanation. The next material slice is source extraction:
+start with text/Markdown and then PDF/Office parsing so an opted-in study guide
+can cite attached class materials. AI provider, consent, and cost choices come
+after that. Flashcards should come only after the study guide has a trustworthy
+source and a student-visible edit/review step.
 
 ## Check-in required before implementation
 

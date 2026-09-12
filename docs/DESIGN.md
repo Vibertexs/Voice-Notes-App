@@ -101,11 +101,14 @@ second recording list from repeating the current page's content.
 
 ## Privacy and data
 
-Audio, the SQLite database, transcripts, topic markers, and study-guide drafts
-live in the local `data/` folder, which is ignored by Git. Nothing is uploaded
-by this prototype. Deleting a recording removes its database entry and saved
-audio, but keeps the surrounding class note and its student-authored notes.
-An occupied folder cannot be deleted until its contents are moved or deleted.
+Audio, class materials, the SQLite database, transcripts, topic markers, and
+study-guide drafts live in the local `data/` folder, which is ignored by Git.
+Nothing is uploaded by this prototype. Attached materials use generated local
+filenames rather than browser paths, are limited to supported study formats and
+25 MB each, and can be removed one at a time. Deleting a recording removes its
+database entry and saved audio, but keeps the surrounding class note and its
+student-authored notes. An occupied folder cannot be deleted until its contents
+are moved or deleted.
 
 ## Scope intentionally deferred
 

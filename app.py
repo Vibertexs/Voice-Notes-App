@@ -20,9 +20,13 @@ from transcription import transcribe_audio
 PROJECT_ROOT = Path(__file__).resolve().parent
 DATA_DIR = PROJECT_ROOT / "data"
 AUDIO_DIR = DATA_DIR / "audio"
+MATERIALS_DIR = DATA_DIR / "materials"
 DATABASE_PATH = DATA_DIR / "voice_notes.db"
 MAX_UPLOAD_BYTES = 25 * 1024 * 1024
+MAX_MATERIAL_BYTES = 25 * 1024 * 1024
+MAX_MATERIALS_PER_WORKSPACE = 30
 ALLOWED_SUFFIXES = {".wav", ".mp3", ".m4a", ".ogg", ".webm", ".mp4"}
+ALLOWED_MATERIAL_SUFFIXES = {".pdf", ".txt", ".md", ".doc", ".docx", ".ppt", ".pptx"}
 TRANSCRIPTION_MODELS = {"tiny.en", "base.en", "small.en"}
 FOLDER_COLORS = {"blue", "violet", "rose", "coral", "amber", "lime", "mint", "sky", "slate"}
 
@@ -79,6 +83,7 @@ def connect_database() -> sqlite3.Connection:
 def initialize_database() -> None:
     DATA_DIR.mkdir(exist_ok=True)
     AUDIO_DIR.mkdir(exist_ok=True)
+    MATERIALS_DIR.mkdir(exist_ok=True)
     with connect_database() as connection:
         connection.execute(
             """
@@ -146,8 +151,25 @@ def initialize_database() -> None:
             """
         )
         connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS materials (
+                id TEXT PRIMARY KEY,
+                workspace_id TEXT NOT NULL,
+                original_filename TEXT NOT NULL,
+                stored_filename TEXT NOT NULL,
+                mime_type TEXT NOT NULL,
+                size_bytes INTEGER NOT NULL,
+                created_at TEXT NOT NULL
+            )
+            """
+        )
+        connection.execute(
             "CREATE INDEX IF NOT EXISTS idx_session_markers_lecture_time "
             "ON session_markers (lecture_id, time_seconds)"
+        )
+        connection.execute(
+            "CREATE INDEX IF NOT EXISTS idx_materials_workspace_created "
+            "ON materials (workspace_id, created_at)"
         )
         columns = {row["name"] for row in connection.execute("PRAGMA table_info(lectures)")}
         if "folder_id" not in columns:
@@ -330,6 +352,18 @@ def serialize_folder(row: sqlite3.Row) -> dict[str, object]:
     }
 
 
+def serialize_material(row: sqlite3.Row) -> dict[str, object]:
+    return {
+        "id": row["id"],
+        "workspace_id": row["workspace_id"],
+        "original_filename": row["original_filename"],
+        "mime_type": row["mime_type"],
+        "size_bytes": row["size_bytes"],
+        "created_at": row["created_at"],
+        "download_url": f"/api/workspaces/{row['workspace_id']}/materials/{row['id']}/file",
+    }
+
+
 def serialize_lecture(row: sqlite3.Row, *, include_content: bool) -> dict[str, object]:
     result: dict[str, object] = {
         "id": row["id"],
@@ -380,11 +414,16 @@ def serialize_workspace(row: sqlite3.Row, *, include_sessions: bool = False) -> 
                 "SELECT note_body, updated_at FROM workspace_study_notes WHERE workspace_id = ?",
                 (row["id"],),
             ).fetchone()
+            materials = connection.execute(
+                "SELECT * FROM materials WHERE workspace_id = ? ORDER BY created_at DESC",
+                (row["id"],),
+            ).fetchall()
         result["sessions"] = [serialize_lecture(session, include_content=True) for session in sessions]
         result["note_body"] = notes["note_body"] if notes else ""
         result["notes_updated_at"] = notes["updated_at"] if notes else None
         result["study_notes"] = study_notes["note_body"] if study_notes else ""
         result["study_notes_updated_at"] = study_notes["updated_at"] if study_notes else None
+        result["materials"] = [serialize_material(material) for material in materials]
     return result
 
 
@@ -435,6 +474,17 @@ def get_workspace(workspace_id: str) -> sqlite3.Row:
         ).fetchone()
     if row is None:
         raise HTTPException(status_code=404, detail="Lecture workspace not found.")
+    return row
+
+
+def get_material(workspace_id: str, material_id: str) -> sqlite3.Row:
+    with connect_database() as connection:
+        row = connection.execute(
+            "SELECT * FROM materials WHERE id = ? AND workspace_id = ?",
+            (material_id, workspace_id),
+        ).fetchone()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Attached file not found.")
     return row
 
 
@@ -641,6 +691,106 @@ def save_workspace_notes(workspace_id: str, update: WorkspaceNotesUpdate) -> dic
             "UPDATE workspaces SET updated_at = ? WHERE id = ?", (saved_at, workspace_id)
         )
     return {"status": "saved", "updated_at": saved_at}
+
+
+@app.post("/api/workspaces/{workspace_id}/materials", status_code=201)
+def upload_workspace_material(
+    workspace_id: str, material: UploadFile = File(...)
+) -> dict[str, object]:
+    get_workspace(workspace_id)
+    original_filename = Path((material.filename or "").replace("\\", "/")).name.strip()
+    suffix = Path(original_filename).suffix.lower()
+    if not original_filename or suffix not in ALLOWED_MATERIAL_SUFFIXES:
+        raise HTTPException(
+            status_code=415,
+            detail="Upload a PDF, Word file, PowerPoint, text file, or Markdown file.",
+        )
+
+    with connect_database() as connection:
+        material_count = connection.execute(
+            "SELECT COUNT(*) AS count FROM materials WHERE workspace_id = ?", (workspace_id,)
+        ).fetchone()["count"]
+    if material_count >= MAX_MATERIALS_PER_WORKSPACE:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Keep up to {MAX_MATERIALS_PER_WORKSPACE} files in one class note.",
+        )
+
+    material_id = str(uuid4())
+    stored_filename = f"{material_id}{suffix}"
+    saved_path = MATERIALS_DIR / stored_filename
+    total_bytes = 0
+    try:
+        with tempfile.TemporaryDirectory(prefix="class-notes-material-") as temp_dir:
+            temporary_path = Path(temp_dir) / f"material{suffix}"
+            with temporary_path.open("wb") as destination:
+                while chunk := material.file.read(1024 * 1024):
+                    total_bytes += len(chunk)
+                    if total_bytes > MAX_MATERIAL_BYTES:
+                        raise HTTPException(status_code=413, detail="Each file must be 25 MB or smaller.")
+                    destination.write(chunk)
+            if total_bytes == 0:
+                raise HTTPException(status_code=400, detail="The uploaded file was empty.")
+            shutil.copyfile(temporary_path, saved_path)
+    except Exception:
+        saved_path.unlink(missing_ok=True)
+        raise
+    finally:
+        material.file.close()
+
+    created_at = datetime.now(timezone.utc).isoformat()
+    mime_type, _ = mimetypes.guess_type(original_filename)
+    try:
+        with connect_database() as connection:
+            connection.execute(
+                """
+                INSERT INTO materials (
+                    id, workspace_id, original_filename, stored_filename, mime_type, size_bytes, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    material_id,
+                    workspace_id,
+                    original_filename,
+                    stored_filename,
+                    mime_type or "application/octet-stream",
+                    total_bytes,
+                    created_at,
+                ),
+            )
+            connection.execute(
+                "UPDATE workspaces SET updated_at = ? WHERE id = ?", (created_at, workspace_id)
+            )
+    except Exception:
+        saved_path.unlink(missing_ok=True)
+        raise
+    return serialize_material(get_material(workspace_id, material_id))
+
+
+@app.get("/api/workspaces/{workspace_id}/materials/{material_id}/file")
+def download_workspace_material(workspace_id: str, material_id: str) -> FileResponse:
+    material = get_material(workspace_id, material_id)
+    material_path = MATERIALS_DIR / material["stored_filename"]
+    if not material_path.is_file():
+        raise HTTPException(status_code=404, detail="The saved file is unavailable.")
+    return FileResponse(
+        material_path,
+        media_type=material["mime_type"],
+        filename=material["original_filename"],
+    )
+
+
+@app.delete("/api/workspaces/{workspace_id}/materials/{material_id}")
+def delete_workspace_material(workspace_id: str, material_id: str) -> dict[str, str]:
+    material = get_material(workspace_id, material_id)
+    updated_at = datetime.now(timezone.utc).isoformat()
+    with connect_database() as connection:
+        connection.execute("DELETE FROM materials WHERE id = ?", (material_id,))
+        connection.execute(
+            "UPDATE workspaces SET updated_at = ? WHERE id = ?", (updated_at, workspace_id)
+        )
+    (MATERIALS_DIR / material["stored_filename"]).unlink(missing_ok=True)
+    return {"status": "deleted"}
 
 
 @app.put("/api/workspaces/{workspace_id}/study-notes")

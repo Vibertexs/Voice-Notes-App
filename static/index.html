@@ -551,6 +551,7 @@
       .workspace-pane[hidden] { display: none; }
       .workspace-note-layout, .review-layout { display: grid; grid-template-columns: minmax(0, 1fr) 16rem; gap: 1rem; align-items: start; }
       .workspace-inspector, .sessions-card, .review-card, .study-card { border: 4px solid #c8d4e5; border-radius: 1.25rem; background: rgba(249,251,254,.8); }
+      .workspace-side-stack { display: grid; gap: 1rem; }
       .workspace-inspector, .sessions-card { padding: 1rem; }
       .workspace-inspector h3, .sessions-card h3 { margin: 0; font-size: .9rem; }
       .workspace-inspector p, .sessions-card p { margin: .45rem 0 0; color: var(--muted); font-size: .8rem; line-height: 1.45; }
@@ -560,6 +561,26 @@
       .session-date { display: block; margin-bottom: .18rem; color: #77859b; font-size: .7rem; font-weight: 740; letter-spacing: .03em; text-transform: uppercase; }
       .session-title { display: block; overflow: hidden; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
       .session-count { display: block; margin-top: .3rem; color: #61718a; font-size: .72rem; }
+      .materials-card { padding: 1rem; border: 4px solid #c8d4e5; border-radius: 1.25rem; background: rgba(249,251,254,.8); }
+      .materials-card h3 { margin: 0; font-size: .9rem; }
+      .materials-card > p { margin: .45rem 0 .75rem; color: var(--muted); font-size: .8rem; line-height: 1.45; }
+      .material-dropzone { display: grid; place-items: center; min-height: 7rem; padding: .9rem; border: 2px dashed #9eb3d1; border-radius: .95rem; color: #45618e; background: #f6f9fe; cursor: pointer; text-align: center; transition: border-color .18s ease, background .18s ease; }
+      .material-dropzone:hover, .material-dropzone:focus-visible, .material-dropzone:focus-within, .material-dropzone.dragging { border-color: #3775d2; background: #eaf3ff; }
+      .material-dropzone strong { color: #24477f; font-size: .8rem; }
+      .material-dropzone span { margin-top: .25rem; font-size: .72rem; line-height: 1.35; }
+      .material-status { min-height: 1.1rem; margin: .55rem 0 0; color: #64728a; font-size: .72rem; line-height: 1.35; }
+      .material-list { display: grid; gap: .45rem; margin-top: .7rem; }
+      .material-empty { margin: 0; color: #6f7d92; font-size: .75rem; line-height: 1.45; }
+      .material-item { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: .55rem; padding: .62rem; border: 2px solid #d9e2ef; border-radius: .8rem; background: #fff; }
+      .material-type { display: grid; place-items: center; width: 2.2rem; height: 2.2rem; border-radius: .6rem; color: #fff; background: #2859a8; font-size: .61rem; font-weight: 800; letter-spacing: .04em; }
+      .material-info { min-width: 0; }
+      .material-name { display: block; overflow: hidden; color: #2d3a50; font-size: .78rem; font-weight: 720; text-overflow: ellipsis; white-space: nowrap; }
+      .material-meta { display: block; margin-top: .16rem; color: #718097; font-size: .69rem; }
+      .material-actions { display: flex; align-items: center; gap: .2rem; }
+      .material-download, .material-remove { display: inline-grid; place-items: center; min-width: 2rem; min-height: 2rem; padding: .3rem; border: 0; border-radius: .55rem; color: #355b96; background: transparent; font: inherit; font-size: .72rem; text-decoration: none; }
+      .material-download:hover, .material-download:focus-visible { color: #1f4f9b; background: #ebf3ff; }
+      .material-remove { color: #9a4b51; font-size: 1.12rem; line-height: 1; }
+      .material-remove:hover, .material-remove:focus-visible { background: #fff0f1; }
       @media (max-width: 540px) {
         .workspace-header { align-items: stretch; flex-direction: column; }
         .workspace-actions { justify-content: flex-start; padding-top: 0; }
@@ -730,6 +751,7 @@
               <label class="workspace-title-label" for="workspace-title">Topic or lecture title<input id="workspace-title" class="workspace-title-input" maxlength="180" aria-label="Topic or lecture title" /></label>
             </div>
             <div class="workspace-actions">
+              <button id="add-material" class="button secondary"><span class="create-symbol">＋</span>File</button>
               <button id="new-topic" class="button secondary"><span class="create-symbol">＋</span>New topic</button>
               <button id="record-from-workspace" class="button primary">●&nbsp; Record session</button>
             </div>
@@ -746,10 +768,22 @@
                 <div class="note-editor-head"><h3>Your notes</h3><span>Paste or write what matters from class</span></div>
                 <textarea id="workspace-notes" class="workspace-notes" maxlength="100000" spellcheck="true" placeholder="Start writing, or paste the notes your teacher shared…"></textarea>
               </section>
-              <aside class="workspace-inspector">
-                <h3>Keep this together</h3>
-                <p>Use one class note for a lecture or a topic that returns on another day. Add another session whenever the material continues.</p>
-                <div id="session-list" class="session-list"></div>
+              <aside class="workspace-side-stack">
+                <section class="materials-card" aria-label="Class materials">
+                  <h3>Class materials</h3>
+                  <p>Attach the handout, slides, or reading for this class note.</p>
+                  <label id="material-dropzone" class="material-dropzone" for="material-upload" role="button" tabindex="0">
+                    <strong>Drop files here or browse</strong><span>PDF, Word, PowerPoint, text, or Markdown · up to 25 MB each</span>
+                  </label>
+                  <input id="material-upload" type="file" accept=".pdf,.txt,.md,.doc,.docx,.ppt,.pptx" multiple hidden />
+                  <p id="material-status" class="material-status" role="status"></p>
+                  <div id="material-list" class="material-list"></div>
+                </section>
+                <section class="workspace-inspector">
+                  <h3>Keep this together</h3>
+                  <p>Use one class note for a lecture or a topic that returns on another day. Add another session whenever the material continues.</p>
+                  <div id="session-list" class="session-list"></div>
+                </section>
               </aside>
             </div>
             <div class="note-save-bar"><span id="workspace-notes-status" class="status" role="status"></span><button id="workspace-notes-save" class="button primary">Save notes</button></div>
@@ -827,11 +861,12 @@
         'cancel-recording', 'recording-status', 'detail-view', 'back-to-library', 'detail-heading',
         'delete-recording', 'saved-title', 'save-recording', 'save-status', 'saved-date', 'playback',
         'move-target', 'transcript', 'workspace-view', 'workspace-back', 'workspace-heading', 'workspace-location',
-        'workspace-title', 'workspace-notes', 'workspace-notes-status', 'workspace-notes-save', 'record-from-workspace', 'new-topic',
+        'workspace-title', 'workspace-notes', 'workspace-notes-status', 'workspace-notes-save', 'record-from-workspace', 'new-topic', 'add-material',
         'workspace-tab-notes', 'workspace-tab-review', 'workspace-tab-study', 'notes-pane', 'review-pane', 'study-pane',
         'session-list', 'review-session-list', 'review-empty', 'review-content', 'review-session-title', 'review-session-meta',
         'session-playback', 'marker-label', 'add-marker', 'marker-list', 'session-transcript',
-        'study-notes', 'study-notes-status', 'study-notes-save', 'generate-study-notes', 'toast'
+        'study-notes', 'study-notes-status', 'study-notes-save', 'generate-study-notes',
+        'material-upload', 'material-dropzone', 'material-status', 'material-list', 'toast'
       ];
       const el = Object.fromEntries(elementIds.map(id => [id, document.getElementById(id)]));
       let activeFolder = null;
@@ -996,6 +1031,90 @@
         node.addEventListener('click', () => loadWorkspace(workspace.id));
         return node;
       }
+      function formatFileSize(bytes) {
+        if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+        return `${(bytes / (1024 * 1024)).toFixed(bytes >= 10 * 1024 * 1024 ? 0 : 1)} MB`;
+      }
+      function materialKind(filename) {
+        const suffix = filename.split('.').pop()?.toUpperCase();
+        return ({ MARKDOWN: 'MD', DOCX: 'DOC', PPTX: 'PPT' })[suffix] || suffix || 'FILE';
+      }
+      function renderWorkspaceMaterials(materials) {
+        if (!materials?.length) {
+          const empty = document.createElement('p');
+          empty.className = 'material-empty';
+          empty.textContent = 'No files attached yet.';
+          el['material-list'].replaceChildren(empty);
+          return;
+        }
+        el['material-list'].replaceChildren(...materials.map(material => {
+          const item = document.createElement('div');
+          item.className = 'material-item';
+          const type = document.createElement('span');
+          type.className = 'material-type';
+          type.textContent = materialKind(material.original_filename);
+          const info = document.createElement('span');
+          info.className = 'material-info';
+          const name = document.createElement('span');
+          name.className = 'material-name';
+          name.textContent = material.original_filename;
+          const meta = document.createElement('span');
+          meta.className = 'material-meta';
+          meta.textContent = `${formatFileSize(material.size_bytes)} · ${formatDate(material.created_at)}`;
+          info.append(name, meta);
+          const actions = document.createElement('span');
+          actions.className = 'material-actions';
+          const download = document.createElement('a');
+          download.className = 'material-download';
+          download.href = material.download_url;
+          download.target = '_blank';
+          download.rel = 'noopener';
+          download.textContent = '↓';
+          download.setAttribute('aria-label', `Download ${material.original_filename}`);
+          const remove = document.createElement('button');
+          remove.className = 'material-remove';
+          remove.type = 'button';
+          remove.textContent = '×';
+          remove.setAttribute('aria-label', `Remove ${material.original_filename}`);
+          remove.addEventListener('click', () => removeWorkspaceMaterial(material));
+          actions.append(download, remove);
+          item.append(type, info, actions);
+          return item;
+        }));
+      }
+      async function uploadWorkspaceMaterials(files) {
+        if (!activeWorkspace || !files?.length) return;
+        const selected = [...files];
+        el['material-status'].textContent = selected.length === 1 ? 'Uploading file…' : `Uploading ${selected.length} files…`;
+        el['add-material'].disabled = true;
+        let uploaded = 0;
+        try {
+          for (const file of selected) {
+            const form = new FormData();
+            form.append('material', file, file.name);
+            const material = await api(`/api/workspaces/${activeWorkspace.id}/materials`, { method: 'POST', body: form });
+            activeWorkspace.materials = [material, ...(activeWorkspace.materials || [])];
+            uploaded += 1;
+          }
+          renderWorkspaceMaterials(activeWorkspace.materials);
+          el['material-status'].textContent = uploaded === 1 ? 'File attached privately.' : `${uploaded} files attached privately.`;
+        } catch (error) {
+          renderWorkspaceMaterials(activeWorkspace.materials || []);
+          el['material-status'].textContent = uploaded ? `${uploaded} file${uploaded === 1 ? '' : 's'} attached. ${error.message}` : error.message;
+        } finally {
+          el['add-material'].disabled = false;
+          el['material-upload'].value = '';
+        }
+      }
+      async function removeWorkspaceMaterial(material) {
+        if (!activeWorkspace || !confirm(`Remove ${material.original_filename} from this class note?`)) return;
+        try {
+          await api(`/api/workspaces/${activeWorkspace.id}/materials/${material.id}`, { method: 'DELETE' });
+          activeWorkspace.materials = (activeWorkspace.materials || []).filter(item => item.id !== material.id);
+          renderWorkspaceMaterials(activeWorkspace.materials);
+          el['material-status'].textContent = 'File removed.';
+        } catch (error) { el['material-status'].textContent = error.message; }
+      }
       function formatPlaybackTime(seconds) {
         const safeSeconds = Math.max(0, Math.floor(Number(seconds) || 0));
         return `${Math.floor(safeSeconds / 60)}:${String(safeSeconds % 60).padStart(2, '0')}`;
@@ -1101,6 +1220,8 @@
           el['study-notes-status'].textContent = workspace.study_notes_updated_at
             ? `Saved ${formatDate(workspace.study_notes_updated_at)}`
             : 'No study draft yet.';
+          el['material-status'].textContent = '';
+          renderWorkspaceMaterials(workspace.materials || []);
           renderWorkspaceSessions(workspace.sessions || []);
           renderActiveSession();
           setWorkspaceTab('notes');
@@ -1523,6 +1644,23 @@
       el['workspace-back'].addEventListener('click', () => loadLibrary(activeWorkspace?.folder_id));
       el['record-from-workspace'].addEventListener('click', () => openRecording(activeWorkspace));
       el['new-topic'].addEventListener('click', createTopic);
+      el['add-material'].addEventListener('click', () => el['material-upload'].click());
+      el['material-upload'].addEventListener('change', event => uploadWorkspaceMaterials(event.target.files));
+      el['material-dropzone'].addEventListener('keydown', event => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        el['material-upload'].click();
+      });
+      el['material-dropzone'].addEventListener('dragover', event => {
+        event.preventDefault();
+        el['material-dropzone'].classList.add('dragging');
+      });
+      el['material-dropzone'].addEventListener('dragleave', () => el['material-dropzone'].classList.remove('dragging'));
+      el['material-dropzone'].addEventListener('drop', event => {
+        event.preventDefault();
+        el['material-dropzone'].classList.remove('dragging');
+        uploadWorkspaceMaterials(event.dataTransfer.files);
+      });
       el['workspace-title'].addEventListener('change', saveWorkspaceTitle);
       el['workspace-notes-save'].addEventListener('click', saveWorkspaceNotes);
       el['workspace-notes'].addEventListener('input', scheduleWorkspaceNotesSave);
