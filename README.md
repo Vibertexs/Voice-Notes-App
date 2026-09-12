@@ -67,3 +67,19 @@ Recordings receive a timestamped default title when no name is entered, and can
 be renamed later. Use **Delete recording** in the app to remove its transcript
 and saved audio from this computer. See [the prototype design notes](docs/DESIGN.md)
 for the product and interaction decisions behind this version.
+
+## Optional local AI
+
+The **AI study** tab is designed to use [Ollama](https://ollama.com/download/windows)
+on this laptop. It sends requests only to `http://127.0.0.1:11434`, never to a
+hosted AI provider. After installing Ollama, download the prototype's default
+Apache-2.0 model once:
+
+```powershell
+ollama pull qwen3:1.7b
+```
+
+Then refresh the browser app. The tab will offer locally generated notes and
+questions over the current class note and its recording transcripts. The model
+download is roughly 1.4 GB; it has no per-request cost, but does use this
+laptop's RAM and processor while responding.
