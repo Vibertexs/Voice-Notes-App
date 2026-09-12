@@ -101,14 +101,15 @@ second recording list from repeating the current page's content.
 
 ## Privacy and data
 
-Audio, the SQLite database, and transcripts live in the local `data/` folder,
-which is ignored by Git. Nothing is uploaded by this prototype. Deleting a
-recording removes its database entry and saved audio. An occupied folder cannot
-be deleted until its contents are moved or deleted.
+Audio, the SQLite database, transcripts, topic markers, and study-guide drafts
+live in the local `data/` folder, which is ignored by Git. Nothing is uploaded
+by this prototype. Deleting a recording removes its database entry and saved
+audio, but keeps the surrounding class note and its student-authored notes.
+An occupied folder cannot be deleted until its contents are moved or deleted.
 
 ## Scope intentionally deferred
 
-- Automatic study-note summaries, diagrams, and flashcards
+- Cloud/LLM-backed study-note summaries and flashcards
 - Cloud synchronization, sign-in, and sharing
 - Native mobile recording and background capture
 - Uploading an existing audio file
@@ -119,10 +120,11 @@ organization workflow. The next decision point is whether repeated real
 lectures prove the need for a mobile client; the current API and SQLite model
 are kept deliberately simple so a mobile app can replace the browser UI later.
 
-## Next product phase
+## Current product phase
 
-The planned next object is a **lecture workspace**: a persistent home for
-student-authored notes or PDF material, several dated recording sessions, and
-later study material. The architecture and entry-point contract are
-documented in [Lecture Workspace: Phase 1 Architecture](LECTURE_WORKSPACE.md).
-No database or capture migration should happen until that contract is approved.
+A **class note** is now the persistent home for student-authored notes, several
+dated recording sessions, transcripts, topic markers, and an editable local
+study draft. The design deliberately separates a student's notes from generated
+study material and treats a class note as either one lecture or a continuing
+topic. The architecture and interaction contract are documented in
+[Lecture Workspace](LECTURE_WORKSPACE.md).

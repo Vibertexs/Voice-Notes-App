@@ -2,26 +2,36 @@
 
 ## Decision
 
-The primary object is a **lecture workspace**, not a single audio recording.
-A workspace is the durable home for one class meeting or study topic. It can be
-opened with nothing in it, then gradually collect student notes, materials, and
-multiple recording sessions.
+The primary object is a **class note**, not a single audio recording. A class
+note is the durable home for either one lecture or a study topic that returns
+over several class days. It can be opened with nothing in it, then gradually
+collect student notes and multiple dated recording sessions.
 
 ```
 Library
 └── Course folder (optional)
     └── Lecture workspace
-        ├── Notes           — student-authored, pasted, and AI-assisted later
-        ├── Materials       — PDF first; preserved source file
+        ├── Notes           — student-authored or pasted
         ├── Recording sessions
         │   ├── audio
         │   └── transcript
-        └── Study           — approved flashcards, later
+        │   └── topic markers
+        └── Study guide     — editable, private local draft for now
 ```
 
-A folder remains an organizational container: normally a course, semester, or
-topic. It is optional so a student can capture an unfiled lecture when class is
-starting. A lecture workspace can live in a folder, or in the Library root.
+A folder remains an organizational container: normally a course or semester.
+Inside it, a class note holds the actual subject matter—such as **Cell
+Respiration**—rather than forcing students to create a new folder every day.
+Folders are optional so a student can capture an unfiled class note when class
+is starting.
+
+This yields one simple rule for students:
+
+- Start a **new topic** when class shifts to a distinct subject.
+- Add a **recording session** when the current lecture or topic continues,
+  including on another day.
+- Add a **topic marker** during review when one recording moves to a new idea.
+  It points to the exact audio time, so the original session stays intact.
 
 ## Entry points
 
@@ -46,21 +56,24 @@ workspace; starting in a course folder assigns that folder by default.
 
 ## Screen contract
 
-The future workspace screen has one purpose: keep lecture notes and their
-recordings together in one place.
+The workspace screen has one purpose: keep class notes and their recordings
+together, without showing the same recording twice in separate areas.
 
 ```
 Breadcrumb + lecture title
 ────────────────────────────────────────────────
-                  Notes editor                    |  Recording sessions
-──────────────────────────────────────────────────────────────────────────
-                   Persistent recording dock
+  Notes  |  Recordings & transcript  |  Study guide
+────────────────────────────────────────────────
+  Notes:      student-owned notes + session list
+  Review:     one selected session, audio, transcript, topic markers
+  Study:      editable draft based on notes + all session transcripts
 ```
 
-The notes editor is the default focus. The session inspector can collapse on
-smaller screens. The recording dock stays available without covering the note.
-Mobile is not part of this desktop proof of concept; it
-will use a single-pane, tabbed adaptation rather than compressing this layout.
+The notes editor is the default focus. The recording action is visible in the
+header on every tab. The review tab isolates replay and transcript reading from
+writing, and the study tab keeps generated material visibly separate from the
+student's own notes. Mobile is not part of this desktop proof of concept; it
+will use this same single-pane tab order rather than compressing columns.
 
 ## Data contract for the implementation phase
 
@@ -71,12 +84,12 @@ audio or transcript data:
 - `lectures` becomes the recording-session store by adding nullable
   `workspace_id`. Its existing audio, transcription model, and transcript
   fields remain intact.
-- `materials`: source filename, MIME type, workspace, and upload metadata.
 - `workspace_notes`: editable, local text notes linked directly to a workspace.
-  This is the source the future AI note workflow will receive alongside the
-  transcript and PDF material.
-- `workspace_notes`: editable notes, provenance (`student` or `ai`), and
-  optional links to pages or recording timestamps.
+- `workspace_study_notes`: editable study-guide draft separate from student
+  notes. Keeping it separate prevents generated text from silently overwriting
+  what a student wrote.
+- `session_markers`: a user label and an audio time on a recording session.
+  This is the lightweight bridge when content changes mid-lecture.
 
 The migration must be transactional. Each existing recording receives one new
 workspace using its current title, folder, and creation time, then gets attached
@@ -88,9 +101,20 @@ consistent destination before the UI changes.
 
 The note-first slice is implemented. A **Note** action creates a persistent
 workspace in the active folder (or the Library root) and opens an editable local
-note with automatic saving and a manual Save notes action. Every recording
-session is displayed beside the notes it belongs to, rather than as a competing
-top-level library object.
+note with automatic saving and a manual Save notes action. A workspace now has
+three deliberate review spaces:
+
+1. **Notes** for writing or pasting source material.
+2. **Recordings & transcript** for listening to one dated session, reading its
+   transcript, and placing/removing topic markers at the current audio time.
+3. **Study guide** for an editable local review draft made from the student's
+   notes and all saved transcripts in that workspace.
+
+The current study-draft generator is deliberately local and extractive. It is
+not represented as an AI model: it never sends student notes, audio, or
+transcripts to a cloud provider, and it is intended to validate the review
+workflow before selecting an AI provider or asking a student to provide an API
+key.
 
 On first launch after this change, each existing recording is safely attached to
 a new one-session workspace using the recording's current title, folder, and
@@ -98,11 +122,11 @@ creation time. Audio and transcript files are not rewritten.
 
 ## Next implementation check-in
 
-The next slice is PDF material import: accept a single PDF, retain the original
-file, render its pages with PDF.js, and connect that material to the same note
-and recording sessions. Recording a second session from inside a workspace
-follows after that. AI notes, flashcards, non-PDF imports, and mobile remain
-later phases.
+Test whether a student can find their notes, one session's transcript, and the
+study guide without explanation. If that model holds, the next decision is the
+AI boundary: choose an opt-in provider and consent/cost experience, or keep the
+private local draft as the default. Flashcards should come after the study guide
+has a trustworthy source and a student-visible edit/review step.
 
 ## Check-in required before implementation
 

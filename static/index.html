@@ -538,22 +538,33 @@
       .workspace-card p { margin: .35rem 0 0; color: #b8c4df; font-size: .8rem; line-height: 1.35; }
       .workspace-card-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 1.25rem; color: #d9e2f8; font-size: .78rem; font-weight: 650; }
 
-      .workspace-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1.25rem; }
+      .workspace-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
       .workspace-header h2 { margin: .55rem 0 0; font-size: clamp(1.55rem, 3vw, 2.2rem); letter-spacing: -.055em; }
-      .workspace-header p { margin: .35rem 0 0; color: var(--muted); }
+      .workspace-header p { max-width: 45rem; margin: .35rem 0 0; color: var(--muted); line-height: 1.5; }
       .workspace-title-label { display: grid; gap: .32rem; margin-top: 1rem; color: var(--muted); font-size: .75rem; font-weight: 760; letter-spacing: .07em; text-transform: uppercase; }
       .workspace-title-input { width: min(31rem, 100%); min-height: 3rem; margin: 0; padding: .45rem .65rem; border: 3px solid #c8d4e5; border-radius: .9rem; color: var(--ink); background: rgba(249,251,254,.84); font-size: clamp(1.2rem, 2.6vw, 1.65rem); font-weight: 760; letter-spacing: -.045em; text-transform: none; }
-      .workspace-inspector { padding: 1rem; }
-      .workspace-inspector { border: 4px solid #c8d4e5; border-radius: 1.25rem; background: rgba(249,251,254,.8); }
-      .workspace-inspector h3 { margin: 0; font-size: .9rem; }
-      .workspace-inspector p { margin: .45rem 0 0; color: var(--muted); font-size: .8rem; line-height: 1.45; }
+      .workspace-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .55rem; padding-top: 1.7rem; }
+      .workspace-tabs { display: flex; gap: .25rem; width: fit-content; max-width: 100%; margin: 1.25rem 0; padding: .3rem; overflow-x: auto; border: 4px solid #c8d4e5; border-radius: 1.1rem; background: rgba(235,241,250,.8); }
+      .workspace-tab { flex: none; min-height: 2.5rem; padding: .45rem .85rem; border: 0; border-radius: .72rem; color: #58657b; background: transparent; font: inherit; font-size: .83rem; font-weight: 760; }
+      .workspace-tab:hover, .workspace-tab:focus-visible { color: #1e2c45; background: rgba(255,255,255,.62); }
+      .workspace-tab[aria-selected="true"] { color: #fff; background: #1a56bd; }
+      .workspace-pane[hidden] { display: none; }
+      .workspace-note-layout, .review-layout { display: grid; grid-template-columns: minmax(0, 1fr) 16rem; gap: 1rem; align-items: start; }
+      .workspace-inspector, .sessions-card, .review-card, .study-card { border: 4px solid #c8d4e5; border-radius: 1.25rem; background: rgba(249,251,254,.8); }
+      .workspace-inspector, .sessions-card { padding: 1rem; }
+      .workspace-inspector h3, .sessions-card h3 { margin: 0; font-size: .9rem; }
+      .workspace-inspector p, .sessions-card p { margin: .45rem 0 0; color: var(--muted); font-size: .8rem; line-height: 1.45; }
       .session-list { display: grid; gap: .45rem; margin-top: .75rem; }
-      .session-item { padding: .6rem; border: 2px solid #d9e2ef; border-radius: .75rem; color: #354158; background: #fff; font-size: .78rem; line-height: 1.35; }
+      .session-item { width: 100%; padding: .72rem; border: 2px solid #d9e2ef; border-radius: .8rem; color: #354158; background: #fff; text-align: left; font: inherit; font-size: .78rem; line-height: 1.35; }
+      .session-item:hover, .session-item:focus-visible, .session-item.selected { border-color: #5d8bd8; color: #173b79; background: #eef5ff; }
+      .session-date { display: block; margin-bottom: .18rem; color: #77859b; font-size: .7rem; font-weight: 740; letter-spacing: .03em; text-transform: uppercase; }
+      .session-title { display: block; overflow: hidden; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+      .session-count { display: block; margin-top: .3rem; color: #61718a; font-size: .72rem; }
       @media (max-width: 540px) {
         .workspace-header { align-items: stretch; flex-direction: column; }
+        .workspace-actions { justify-content: flex-start; padding-top: 0; }
       }
 
-      .note-workspace-layout { display: grid; grid-template-columns: minmax(0, 1fr) 15rem; gap: 1rem; align-items: start; }
       .note-editor-card { overflow: hidden; border: 4px solid #c8d4e5; border-radius: 1.4rem; background: rgba(252,253,255,.88); }
       .note-editor-head { display: flex; align-items: center; justify-content: space-between; gap: .75rem; padding: .95rem 1rem; border-bottom: 2px solid #dbe4f0; }
       .note-editor-head h3 { margin: 0; font-size: .96rem; }
@@ -562,7 +573,32 @@
       .workspace-notes:focus { outline: 3px solid rgba(23,105,210,.28); outline-offset: -3px; box-shadow: none; }
       .note-save-bar { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin-top: 1rem; padding: .8rem 1rem; border: 4px solid #c8d4e5; border-radius: 1.1rem; background: rgba(235,241,250,.8); }
       .note-save-bar .status { margin: 0; }
-      @media (max-width: 840px) { .note-workspace-layout { grid-template-columns: 1fr; } }
+      .review-card, .study-card { overflow: hidden; }
+      .review-card-head, .study-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding: 1rem 1rem .8rem; border-bottom: 2px solid #dbe4f0; }
+      .review-card h3, .study-card h3 { margin: 0; font-size: 1rem; }
+      .review-card-head p, .study-card-head p { margin: .3rem 0 0; color: var(--muted); font-size: .78rem; line-height: 1.45; }
+      .review-empty { padding: 2rem 1rem; color: var(--muted); text-align: center; }
+      .session-player { display: block; width: calc(100% - 2rem); margin: 1rem; }
+      .topic-marker { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .6rem; margin: 1rem; padding: .9rem; border: 2px solid #d9e2ef; border-radius: 1rem; background: #f7faff; }
+      .topic-marker label { display: grid; gap: .25rem; color: #64728a; font-size: .72rem; font-weight: 760; letter-spacing: .05em; text-transform: uppercase; }
+      .topic-marker input { min-height: 2.45rem; margin: 0; padding: .35rem .55rem; border: 2px solid #c8d4e5; border-radius: .7rem; background: #fff; font: inherit; text-transform: none; }
+      .topic-marker .button { align-self: end; }
+      .marker-list { display: flex; flex-wrap: wrap; gap: .45rem; margin: 0 1rem 1rem; }
+      .marker-chip { display: inline-flex; align-items: center; gap: .35rem; max-width: 100%; padding: .42rem .55rem; border: 2px solid #cbd8eb; border-radius: .7rem; color: #23457e; background: #edf4ff; font: inherit; font-size: .73rem; }
+      .marker-jump, .marker-delete { border: 0; color: inherit; background: transparent; font: inherit; font-size: inherit; }
+      .marker-jump { padding: 0; text-align: left; }
+      .marker-delete { padding: 0 .1rem; color: #637797; font-size: 1rem; line-height: 1; }
+      .marker-chip:has(.marker-jump:hover), .marker-chip:focus-within { border-color: #6b97dc; background: #e3efff; }
+      .marker-chip-time { font-variant-numeric: tabular-nums; font-weight: 790; }
+      .transcript-panel { min-height: 20rem; margin: 0 1rem 1rem; padding: 1rem; overflow: auto; border: 2px solid #d9e2ef; border-radius: 1rem; color: #303a4d; background: rgba(255,255,255,.75); line-height: 1.7; white-space: pre-wrap; }
+      .study-card-head { align-items: center; }
+      .study-label { display: inline-flex; padding: .25rem .48rem; border: 2px solid #cbd8eb; border-radius: .55rem; color: #45618e; background: #edf4ff; font-size: .68rem; font-weight: 780; letter-spacing: .04em; text-transform: uppercase; }
+      .study-notes { min-height: 28rem; display: block; width: 100%; padding: 1.2rem; border: 0; border-radius: 0; resize: vertical; color: #202a3c; background: transparent; font-family: inherit; font-size: .98rem; line-height: 1.7; }
+      .study-notes:focus { outline: 3px solid rgba(23,105,210,.28); outline-offset: -3px; }
+      .study-save-bar { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin: 1rem; padding: .75rem .85rem; border: 2px solid #d9e2ef; border-radius: .95rem; background: #f7faff; }
+      .study-save-bar .status { margin: 0; }
+      @media (max-width: 840px) { .workspace-note-layout, .review-layout { grid-template-columns: 1fr; } }
+      @media (max-width: 540px) { .topic-marker { grid-template-columns: 1fr; } .topic-marker .button { justify-self: stretch; } }
     </style>
   </head>
   <body>
@@ -691,22 +727,67 @@
               <button id="workspace-back" class="back">‹ Back to library</button>
               <h2 id="workspace-heading">Lecture notes</h2>
               <p id="workspace-location">Unfiled lecture</p>
-              <label class="workspace-title-label" for="workspace-title">Lecture title<input id="workspace-title" class="workspace-title-input" maxlength="180" aria-label="Lecture workspace title" /></label>
+              <label class="workspace-title-label" for="workspace-title">Topic or lecture title<input id="workspace-title" class="workspace-title-input" maxlength="180" aria-label="Topic or lecture title" /></label>
+            </div>
+            <div class="workspace-actions">
+              <button id="new-topic" class="button secondary"><span class="create-symbol">＋</span>New topic</button>
+              <button id="record-from-workspace" class="button primary">●&nbsp; Record session</button>
             </div>
           </div>
-          <div class="note-workspace-layout">
-            <section class="note-editor-card" aria-label="Lecture notes">
-              <div class="note-editor-head"><h3>Notes</h3><span>Paste or write class notes here</span></div>
-              <textarea id="workspace-notes" class="workspace-notes" maxlength="100000" spellcheck="true" placeholder="Start writing, or paste the notes your professor shared…"></textarea>
+          <nav class="workspace-tabs" role="tablist" aria-label="Class note sections">
+            <button id="workspace-tab-notes" class="workspace-tab" role="tab" aria-selected="true" aria-controls="notes-pane">Notes</button>
+            <button id="workspace-tab-review" class="workspace-tab" role="tab" aria-selected="false" aria-controls="review-pane">Recordings &amp; transcript</button>
+            <button id="workspace-tab-study" class="workspace-tab" role="tab" aria-selected="false" aria-controls="study-pane">Study guide</button>
+          </nav>
+
+          <section id="notes-pane" class="workspace-pane" role="tabpanel" aria-labelledby="workspace-tab-notes">
+            <div class="workspace-note-layout">
+              <section class="note-editor-card" aria-label="Class notes">
+                <div class="note-editor-head"><h3>Your notes</h3><span>Paste or write what matters from class</span></div>
+                <textarea id="workspace-notes" class="workspace-notes" maxlength="100000" spellcheck="true" placeholder="Start writing, or paste the notes your teacher shared…"></textarea>
+              </section>
+              <aside class="workspace-inspector">
+                <h3>Keep this together</h3>
+                <p>Use one class note for a lecture or a topic that returns on another day. Add another session whenever the material continues.</p>
+                <div id="session-list" class="session-list"></div>
+              </aside>
+            </div>
+            <div class="note-save-bar"><span id="workspace-notes-status" class="status" role="status"></span><button id="workspace-notes-save" class="button primary">Save notes</button></div>
+          </section>
+
+          <section id="review-pane" class="workspace-pane" role="tabpanel" aria-labelledby="workspace-tab-review" hidden>
+            <div class="review-layout">
+              <aside class="sessions-card">
+                <h3>Recording sessions</h3>
+                <p>Each date is one saved recording. Select one to replay and read its transcript.</p>
+                <div id="review-session-list" class="session-list"></div>
+              </aside>
+              <section class="review-card" aria-label="Recording review">
+                <div id="review-empty" class="review-empty">Record a session to see its audio and transcript here.</div>
+                <div id="review-content" hidden>
+                  <div class="review-card-head"><div><h3 id="review-session-title">Recording</h3><p id="review-session-meta"></p></div></div>
+                  <audio id="session-playback" class="session-player" controls></audio>
+                  <div class="topic-marker">
+                    <label for="marker-label">Mark a topic change at the current audio time<input id="marker-label" maxlength="120" placeholder="e.g. Moved to cellular respiration" /></label>
+                    <button id="add-marker" class="button secondary">Add marker</button>
+                  </div>
+                  <div id="marker-list" class="marker-list" aria-label="Topic markers"></div>
+                  <div id="session-transcript" class="transcript-panel"></div>
+                </div>
+              </section>
+            </div>
+          </section>
+
+          <section id="study-pane" class="workspace-pane" role="tabpanel" aria-labelledby="workspace-tab-study" hidden>
+            <section class="study-card" aria-label="Study guide">
+              <div class="study-card-head">
+                <div><h3>Study guide</h3><p>Make a private review draft from this note and all its saved transcripts. You can edit every word.</p></div>
+                <span class="study-label">Local draft</span>
+              </div>
+              <textarea id="study-notes" class="study-notes" maxlength="100000" spellcheck="true" placeholder="Generate a study draft once you have notes or a recording…"></textarea>
+              <div class="study-save-bar"><span id="study-notes-status" class="status" role="status"></span><span><button id="generate-study-notes" class="button secondary">Generate draft</button> <button id="study-notes-save" class="button primary">Save study guide</button></span></div>
             </section>
-            <aside class="workspace-inspector">
-              <h3>Recording sessions</h3>
-              <p>Every recording for this lecture stays attached to these notes.</p>
-              <button id="record-from-workspace" class="button primary">●&nbsp; Record session</button>
-              <div id="session-list" class="session-list"></div>
-            </aside>
-          </div>
-          <div class="note-save-bar"><span id="workspace-notes-status" class="status" role="status"></span><button id="workspace-notes-save" class="button primary">Save notes</button></div>
+          </section>
         </section>
 
         <section id="detail-view" class="view" hidden>
@@ -746,13 +827,19 @@
         'cancel-recording', 'recording-status', 'detail-view', 'back-to-library', 'detail-heading',
         'delete-recording', 'saved-title', 'save-recording', 'save-status', 'saved-date', 'playback',
         'move-target', 'transcript', 'workspace-view', 'workspace-back', 'workspace-heading', 'workspace-location',
-        'workspace-title', 'workspace-notes', 'workspace-notes-status', 'workspace-notes-save', 'record-from-workspace', 'session-list', 'toast'
+        'workspace-title', 'workspace-notes', 'workspace-notes-status', 'workspace-notes-save', 'record-from-workspace', 'new-topic',
+        'workspace-tab-notes', 'workspace-tab-review', 'workspace-tab-study', 'notes-pane', 'review-pane', 'study-pane',
+        'session-list', 'review-session-list', 'review-empty', 'review-content', 'review-session-title', 'review-session-meta',
+        'session-playback', 'marker-label', 'add-marker', 'marker-list', 'session-transcript',
+        'study-notes', 'study-notes-status', 'study-notes-save', 'generate-study-notes', 'toast'
       ];
       const el = Object.fromEntries(elementIds.map(id => [id, document.getElementById(id)]));
       let activeFolder = null;
       let activePath = [];
       let activeRecording = null;
       let activeWorkspace = null;
+      let activeSession = null;
+      let activeWorkspaceTab = 'notes';
       let allFolders = [];
       let allRecordings = [];
       let recorder;
@@ -909,19 +996,99 @@
         node.addEventListener('click', () => loadWorkspace(workspace.id));
         return node;
       }
+      function formatPlaybackTime(seconds) {
+        const safeSeconds = Math.max(0, Math.floor(Number(seconds) || 0));
+        return `${Math.floor(safeSeconds / 60)}:${String(safeSeconds % 60).padStart(2, '0')}`;
+      }
+      function makeSessionItem(session) {
+        const item = document.createElement('button');
+        item.className = `session-item${activeSession?.id === session.id ? ' selected' : ''}`;
+        item.setAttribute('aria-label', `Review ${session.title}`);
+        const date = document.createElement('span');
+        date.className = 'session-date';
+        date.textContent = formatDate(session.created_at);
+        const title = document.createElement('span');
+        title.className = 'session-title';
+        title.textContent = session.title;
+        const markers = document.createElement('span');
+        markers.className = 'session-count';
+        const markerCount = session.markers?.length || 0;
+        markers.textContent = markerCount ? `${markerCount} topic ${markerCount === 1 ? 'marker' : 'markers'}` : 'Open transcript';
+        item.append(date, title, markers);
+        item.addEventListener('click', () => selectWorkspaceSession(session.id, true));
+        return item;
+      }
       function renderWorkspaceSessions(sessions) {
-        el['session-list'].replaceChildren(...sessions.map(session => {
-          const item = document.createElement('div');
-          item.className = 'session-item';
-          item.textContent = `${formatDate(session.created_at)} — ${session.title}`;
+        const noteSessions = sessions.map(makeSessionItem);
+        const reviewSessions = sessions.map(makeSessionItem);
+        el['session-list'].replaceChildren(...noteSessions);
+        el['review-session-list'].replaceChildren(...reviewSessions);
+        if (!sessions.length) {
+          el['session-list'].textContent = 'No recordings yet. Start one when class begins.';
+          el['review-session-list'].textContent = 'No recordings yet.';
+        }
+      }
+      function renderSessionMarkers(markers) {
+        el['marker-list'].replaceChildren(...(markers || []).map(marker => {
+          const item = document.createElement('span');
+          item.className = 'marker-chip';
+          const jump = document.createElement('button');
+          jump.className = 'marker-jump';
+          jump.type = 'button';
+          const time = document.createElement('span');
+          time.className = 'marker-chip-time';
+          time.textContent = formatPlaybackTime(marker.time_seconds);
+          jump.append(time, ` ${marker.label}`);
+          jump.addEventListener('click', () => {
+            el['session-playback'].currentTime = marker.time_seconds;
+            el['session-playback'].play().catch(() => {});
+          });
+          const remove = document.createElement('button');
+          remove.className = 'marker-delete';
+          remove.type = 'button';
+          remove.textContent = '×';
+          remove.setAttribute('aria-label', `Remove topic marker ${marker.label}`);
+          remove.addEventListener('click', () => deleteSessionMarker(marker.id));
+          item.append(jump, remove);
           return item;
         }));
+      }
+      function renderActiveSession() {
+        if (!activeSession) {
+          el['review-empty'].hidden = false;
+          el['review-content'].hidden = true;
+          el['session-playback'].removeAttribute('src');
+          return;
+        }
+        el['review-empty'].hidden = true;
+        el['review-content'].hidden = false;
+        el['review-session-title'].textContent = activeSession.title;
+        el['review-session-meta'].textContent = `${formatDate(activeSession.created_at)} · ${activeSession.model}`;
+        el['session-playback'].src = activeSession.audio_url;
+        el['session-transcript'].textContent = activeSession.transcript || 'No speech was detected.';
+        renderSessionMarkers(activeSession.markers);
+      }
+      function setWorkspaceTab(tab) {
+        activeWorkspaceTab = tab;
+        const tabs = ['notes', 'review', 'study'];
+        tabs.forEach(name => {
+          el[`workspace-tab-${name}`].setAttribute('aria-selected', String(name === tab));
+          el[`${name}-pane`].hidden = name !== tab;
+        });
+        if (tab === 'review') renderActiveSession();
+      }
+      function selectWorkspaceSession(sessionId, openReview = false) {
+        activeSession = activeWorkspace?.sessions?.find(session => session.id === sessionId) || null;
+        renderWorkspaceSessions(activeWorkspace?.sessions || []);
+        renderActiveSession();
+        if (openReview) setWorkspaceTab('review');
       }
       async function loadWorkspace(id) {
         try {
           const workspace = await api(`/api/workspaces/${id}`);
           activeWorkspace = workspace;
           activeRecording = null;
+          activeSession = workspace.sessions?.at(-1) || null;
           const folder = workspace.folder_id ? allFolders.find(item => item.id === workspace.folder_id) : null;
           el['workspace-heading'].textContent = workspace.title;
           el['workspace-title'].value = workspace.title;
@@ -930,21 +1097,32 @@
           el['workspace-notes-status'].textContent = workspace.notes_updated_at
             ? `Saved ${formatDate(workspace.notes_updated_at)}`
             : 'Add your notes for this lecture.';
+          el['study-notes'].value = workspace.study_notes || '';
+          el['study-notes-status'].textContent = workspace.study_notes_updated_at
+            ? `Saved ${formatDate(workspace.study_notes_updated_at)}`
+            : 'No study draft yet.';
           renderWorkspaceSessions(workspace.sessions || []);
+          renderActiveSession();
+          setWorkspaceTab('notes');
           show('workspace');
         } catch (error) {
           showToast(error.message);
           await loadLibrary(activeFolder?.id);
         }
       }
-      async function createWorkspace() {
+      async function createWorkspace(folderId = activeFolder?.id || null) {
         try {
           const workspace = await api('/api/workspaces', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ folder_id: activeFolder?.id || null })
+            body: JSON.stringify({ folder_id: folderId })
           });
           await loadWorkspace(workspace.id);
-        } catch (error) { showToast(error.message); }
+          return workspace;
+        } catch (error) { showToast(error.message); return null; }
+      }
+      async function createTopic() {
+        const workspace = await createWorkspace(activeWorkspace?.folder_id || null);
+        if (workspace) showToast('New topic ready. Use it when class changes to a new idea.');
       }
       async function saveWorkspaceTitle() {
         if (!activeWorkspace) return;
@@ -956,7 +1134,7 @@
           activeWorkspace = { ...activeWorkspace, ...updated };
           el['workspace-heading'].textContent = updated.title;
           el['workspace-title'].value = updated.title;
-          showToast('Lecture title saved');
+          showToast('Title saved');
         } catch (error) { showToast(error.message); }
       }
       async function saveWorkspaceNotes() {
@@ -981,6 +1159,71 @@
         clearTimeout(workspaceNotesSaveTimer);
         el['workspace-notes-status'].textContent = 'Unsaved changes';
         workspaceNotesSaveTimer = setTimeout(saveWorkspaceNotes, 900);
+      }
+      async function saveStudyNotes() {
+        if (!activeWorkspace) return;
+        el['study-notes-save'].disabled = true;
+        el['study-notes-status'].textContent = 'Saving study guide…';
+        try {
+          const result = await api(`/api/workspaces/${activeWorkspace.id}/study-notes`, {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ note_body: el['study-notes'].value })
+          });
+          activeWorkspace.study_notes = el['study-notes'].value;
+          activeWorkspace.study_notes_updated_at = result.updated_at;
+          el['study-notes-status'].textContent = `Saved ${formatDate(result.updated_at)}`;
+        } catch (error) {
+          el['study-notes-status'].textContent = error.message;
+        } finally {
+          el['study-notes-save'].disabled = false;
+        }
+      }
+      async function generateStudyNotes() {
+        if (!activeWorkspace) return;
+        el['generate-study-notes'].disabled = true;
+        el['study-notes-status'].textContent = 'Making a private study draft…';
+        try {
+          const result = await api(`/api/workspaces/${activeWorkspace.id}/study-notes/generate`, { method: 'POST' });
+          el['study-notes'].value = result.note_body;
+          activeWorkspace.study_notes = result.note_body;
+          activeWorkspace.study_notes_updated_at = result.updated_at;
+          el['study-notes-status'].textContent = `Draft ready · ${formatDate(result.updated_at)}`;
+        } catch (error) {
+          el['study-notes-status'].textContent = error.message;
+        } finally {
+          el['generate-study-notes'].disabled = false;
+        }
+      }
+      async function addSessionMarker() {
+        if (!activeSession) return;
+        const label = el['marker-label'].value.trim();
+        if (!label) {
+          el['marker-label'].focus();
+          showToast('Name the new topic first.');
+          return;
+        }
+        el['add-marker'].disabled = true;
+        try {
+          const marker = await api(`/api/lectures/${activeSession.id}/markers`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ label, time_seconds: el['session-playback'].currentTime || 0 })
+          });
+          activeSession.markers = [...(activeSession.markers || []), marker];
+          el['marker-label'].value = '';
+          renderWorkspaceSessions(activeWorkspace?.sessions || []);
+          renderActiveSession();
+          showToast(`Marked ${formatPlaybackTime(marker.time_seconds)}`);
+        } catch (error) { showToast(error.message); }
+        finally { el['add-marker'].disabled = false; }
+      }
+      async function deleteSessionMarker(markerId) {
+        if (!activeSession) return;
+        try {
+          await api(`/api/lectures/${activeSession.id}/markers/${markerId}`, { method: 'DELETE' });
+          activeSession.markers = (activeSession.markers || []).filter(marker => marker.id !== markerId);
+          renderWorkspaceSessions(activeWorkspace?.sessions || []);
+          renderActiveSession();
+        } catch (error) { showToast(error.message); }
       }
       function setSelectedSwatch(container, color) {
         container.querySelectorAll('.color-swatch').forEach(swatch => {
@@ -1043,6 +1286,7 @@
           activePath = library.breadcrumbs;
           activeRecording = null;
           activeWorkspace = null;
+          activeSession = null;
           el['library-title'].textContent = locationName();
           el['library-subtitle'].textContent = activeFolder ? 'Drag a recording here to add it to this folder.' : 'Everything you need for class, in one place.';
           el['capture-copy'].textContent = activeFolder
@@ -1084,6 +1328,11 @@
       async function loadRecording(id) {
         try {
           const recording = await api(`/api/lectures/${id}`);
+          if (recording.workspace_id) {
+            await loadWorkspace(recording.workspace_id);
+            selectWorkspaceSession(recording.id, true);
+            return;
+          }
           activeRecording = recording;
           el['detail-heading'].textContent = recording.title;
           el['saved-title'].value = recording.title;
@@ -1231,10 +1480,10 @@
       el['recent-menu'].addEventListener('click', event => event.stopPropagation());
       document.addEventListener('click', closeRecentMenu);
       el['parent-target'].addEventListener('click', () => loadLibrary(parentDestination().id));
-      el['new-workspace'].addEventListener('click', createWorkspace);
+      el['new-workspace'].addEventListener('click', () => createWorkspace());
       el['new-folder'].addEventListener('click', openFolderForm);
       el['empty-folder-action'].addEventListener('click', openFolderForm);
-      el['empty-workspace-action'].addEventListener('click', createWorkspace);
+      el['empty-workspace-action'].addEventListener('click', () => createWorkspace());
       el['record-from-library'].addEventListener('click', () => openRecording());
       el['cancel-folder'].addEventListener('click', () => loadLibrary(activeFolder?.id));
       el['folder-form'].addEventListener('submit', async event => {
@@ -1273,9 +1522,16 @@
       }));
       el['workspace-back'].addEventListener('click', () => loadLibrary(activeWorkspace?.folder_id));
       el['record-from-workspace'].addEventListener('click', () => openRecording(activeWorkspace));
+      el['new-topic'].addEventListener('click', createTopic);
       el['workspace-title'].addEventListener('change', saveWorkspaceTitle);
       el['workspace-notes-save'].addEventListener('click', saveWorkspaceNotes);
       el['workspace-notes'].addEventListener('input', scheduleWorkspaceNotesSave);
+      el['workspace-tab-notes'].addEventListener('click', () => setWorkspaceTab('notes'));
+      el['workspace-tab-review'].addEventListener('click', () => setWorkspaceTab('review'));
+      el['workspace-tab-study'].addEventListener('click', () => setWorkspaceTab('study'));
+      el['study-notes-save'].addEventListener('click', saveStudyNotes);
+      el['generate-study-notes'].addEventListener('click', generateStudyNotes);
+      el['add-marker'].addEventListener('click', addSessionMarker);
       function releaseMicrophone() {
         stream?.getTracks().forEach(track => track.stop());
         stream = null;
