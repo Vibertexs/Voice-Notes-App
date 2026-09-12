@@ -121,9 +121,13 @@ are moved or deleted.
 
 The optional AI integration is also local: the server communicates only with an
 Ollama process on `127.0.0.1`. It never sends class notes, transcripts, or
-question history to a hosted provider. An installed model does consume local
-disk, memory, and processing power, so the interface does not silently download
-one; it shows the required one-time setup and stays usable without it.
+question history to a hosted provider. AI belongs to a **class folder**, not a
+single lecture note: the student chooses up to five recent lecture notes for a
+request (the three most recent are selected initially). This preserves useful
+continuity across days without repeating every lecture or silently filling the
+model context with an entire course. An installed model does consume local disk,
+memory, and processing power, so the interface does not silently download one;
+it shows the required one-time setup and stays usable without it.
 
 ## Scope intentionally deferred
 
@@ -140,9 +144,10 @@ are kept deliberately simple so a mobile app can replace the browser UI later.
 
 ## Current product phase
 
-A **class note** is now the persistent home for student-authored notes, several
-dated recording sessions, transcripts, topic markers, and an editable local
-study draft. The design deliberately separates a student's notes from generated
-study material and treats a class note as either one lecture or a continuing
-topic. The architecture and interaction contract are documented in
+A **class note** is the persistent home for student-authored notes, several
+dated recording sessions, transcripts, and topic markers. A **class folder** is
+the home for its one optional AI study guide and question history. The design
+deliberately separates individual lecture review from cross-lecture study
+material and treats a class note as either one lecture or a continuing topic.
+The architecture and interaction contract are documented in
 [Lecture Workspace](LECTURE_WORKSPACE.md).

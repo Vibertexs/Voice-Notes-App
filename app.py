@@ -30,6 +30,7 @@ LOCAL_AI_URL = "http://127.0.0.1:11434"
 LOCAL_AI_DEFAULT_MODEL = "qwen3:1.7b"
 LOCAL_AI_CONTEXT_LIMIT = 50_000
 LOCAL_AI_HISTORY_LIMIT = 8
+MAX_CLASS_AI_SOURCES = 5
 ALLOWED_SUFFIXES = {".wav", ".mp3", ".m4a", ".ogg", ".webm", ".mp4"}
 ALLOWED_MATERIAL_SUFFIXES = {".pdf", ".txt", ".md", ".doc", ".docx", ".ppt", ".pptx"}
 TRANSCRIPTION_MODELS = {"tiny.en", "base.en", "small.en"}
@@ -89,6 +90,14 @@ class LocalAIQuestion(LocalAIRequest):
 
 class LocalAINotesUpdate(LocalAIRequest):
     note_body: str = Field(max_length=100_000)
+
+
+class ClassAIRequest(LocalAIRequest):
+    workspace_ids: list[str] = Field(min_length=1, max_length=MAX_CLASS_AI_SOURCES)
+
+
+class ClassAIQuestion(ClassAIRequest):
+    question: str = Field(min_length=1, max_length=4_000)
 
 
 def connect_database() -> sqlite3.Connection:
@@ -203,6 +212,28 @@ def initialize_database() -> None:
             """
         )
         connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS folder_ai_notes (
+                folder_id TEXT PRIMARY KEY,
+                note_body TEXT NOT NULL,
+                model TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )
+            """
+        )
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS folder_ai_messages (
+                id TEXT PRIMARY KEY,
+                folder_id TEXT NOT NULL,
+                role TEXT NOT NULL CHECK(role IN ('user', 'assistant')),
+                content TEXT NOT NULL,
+                model TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            )
+            """
+        )
+        connection.execute(
             "CREATE INDEX IF NOT EXISTS idx_session_markers_lecture_time "
             "ON session_markers (lecture_id, time_seconds)"
         )
@@ -213,6 +244,10 @@ def initialize_database() -> None:
         connection.execute(
             "CREATE INDEX IF NOT EXISTS idx_workspace_ai_messages_created "
             "ON workspace_ai_messages (workspace_id, created_at)"
+        )
+        connection.execute(
+            "CREATE INDEX IF NOT EXISTS idx_folder_ai_messages_created "
+            "ON folder_ai_messages (folder_id, created_at)"
         )
         columns = {row["name"] for row in connection.execute("PRAGMA table_info(lectures)")}
         if "folder_id" not in columns:
@@ -478,6 +513,139 @@ def build_workspace_ai_context(workspace_id: str) -> str:
         filenames = ", ".join(material["original_filename"] for material in materials)
         context.append(
             f"## Attached files (stored locally, not yet parsed)\n{filenames}"
+        )
+    return "\n\n".join(context)
+
+
+def descendant_folder_ids(folder_id: str) -> list[str]:
+    """Return a folder and all of its nested folders without trusting client input."""
+    with connect_database() as connection:
+        rows = connection.execute("SELECT id, parent_id FROM folders").fetchall()
+    children: dict[str | None, list[str]] = {}
+    for row in rows:
+        children.setdefault(row["parent_id"], []).append(row["id"])
+    result: list[str] = []
+    pending = [folder_id]
+    while pending:
+        current = pending.pop()
+        result.append(current)
+        pending.extend(children.get(current, []))
+    return result
+
+
+def class_ai_sources(folder_id: str) -> list[sqlite3.Row]:
+    folder_ids = descendant_folder_ids(folder_id)
+    placeholders = ", ".join("?" for _ in folder_ids)
+    with connect_database() as connection:
+        return connection.execute(
+            f"""
+            SELECT workspaces.*, folders.name AS folder_name,
+                   COUNT(lectures.id) AS session_count,
+                   CASE WHEN EXISTS(
+                       SELECT 1 FROM workspace_notes
+                       WHERE workspace_notes.workspace_id = workspaces.id
+                         AND trim(workspace_notes.note_body) <> ''
+                   ) OR EXISTS(
+                       SELECT 1 FROM lectures AS source_lectures
+                       WHERE source_lectures.workspace_id = workspaces.id
+                         AND trim(source_lectures.transcript) <> ''
+                   ) THEN 1 ELSE 0 END AS has_content
+            FROM workspaces
+            LEFT JOIN folders ON folders.id = workspaces.folder_id
+            LEFT JOIN lectures ON lectures.workspace_id = workspaces.id
+            WHERE workspaces.folder_id IN ({placeholders})
+            GROUP BY workspaces.id
+            ORDER BY workspaces.updated_at DESC
+            LIMIT 12
+            """,
+            folder_ids,
+        ).fetchall()
+
+
+def serialize_class_ai_source(row: sqlite3.Row) -> dict[str, object]:
+    return {
+        "id": row["id"],
+        "title": row["title"],
+        "folder_id": row["folder_id"],
+        "folder_name": row["folder_name"],
+        "updated_at": row["updated_at"],
+        "session_count": row["session_count"],
+        "has_content": bool(row["has_content"]),
+    }
+
+
+def selected_class_ai_sources(folder_id: str, workspace_ids: list[str]) -> list[sqlite3.Row]:
+    sources = class_ai_sources(folder_id)
+    requested = list(dict.fromkeys(workspace_ids))
+    if not requested:
+        raise HTTPException(status_code=422, detail="Choose at least one lecture for Class AI.")
+    if len(requested) > MAX_CLASS_AI_SOURCES:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Choose at most {MAX_CLASS_AI_SOURCES} lectures for one Class AI request.",
+        )
+    available_ids = {source["id"] for source in sources}
+    if any(workspace_id not in available_ids for workspace_id in requested):
+        raise HTTPException(status_code=422, detail="Choose lectures that belong to this class.")
+    requested_ids = set(requested)
+    return [source for source in sources if source["id"] in requested_ids]
+
+
+def build_class_ai_context(folder_id: str, workspace_ids: list[str]) -> str:
+    """Build a bounded context from a student's selected recent class notes."""
+    sources = selected_class_ai_sources(folder_id, workspace_ids)
+    source_parts: list[tuple[str, str]] = []
+    material_labels: list[str] = []
+    with connect_database() as connection:
+        for workspace in sources:
+            notes = connection.execute(
+                "SELECT note_body FROM workspace_notes WHERE workspace_id = ?", (workspace["id"],)
+            ).fetchone()
+            if notes and notes["note_body"].strip():
+                source_parts.append((f"{workspace['title']} — student notes", notes["note_body"].strip()))
+            sessions = connection.execute(
+                """
+                SELECT title, created_at, transcript FROM lectures
+                WHERE workspace_id = ?
+                ORDER BY created_at ASC
+                """,
+                (workspace["id"],),
+            ).fetchall()
+            for session in sessions:
+                if session["transcript"].strip():
+                    source_parts.append(
+                        (
+                            f"{workspace['title']} — recording {session['title']} ({session['created_at']})",
+                            session["transcript"].strip(),
+                        )
+                    )
+            materials = connection.execute(
+                "SELECT original_filename FROM materials WHERE workspace_id = ? ORDER BY created_at ASC",
+                (workspace["id"],),
+            ).fetchall()
+            material_labels.extend(
+                f"{workspace['title']}: {material['original_filename']}" for material in materials
+            )
+
+    if not source_parts:
+        raise HTTPException(
+            status_code=422,
+            detail="The selected lectures need notes or saved transcripts before Class AI can help.",
+        )
+
+    remaining = LOCAL_AI_CONTEXT_LIMIT
+    context: list[str] = []
+    for label, source in source_parts:
+        if remaining <= 0:
+            break
+        excerpt = source[:remaining]
+        if len(source) > len(excerpt):
+            excerpt += "\n[Source truncated for this response.]"
+        context.append(f"## {label}\n{excerpt}")
+        remaining -= len(excerpt)
+    if material_labels:
+        context.append(
+            "## Attached files (stored locally, not yet parsed)\n" + "\n".join(material_labels)
         )
     return "\n\n".join(context)
 
@@ -993,6 +1161,148 @@ def delete_workspace_material(workspace_id: str, material_id: str) -> dict[str, 
 @app.get("/api/ai/status")
 def read_local_ai_status() -> dict[str, object]:
     return local_ai_status()
+
+
+@app.get("/api/folders/{folder_id}/class-ai")
+def read_class_ai(folder_id: str) -> dict[str, object]:
+    folder = get_folder(folder_id)
+    with connect_database() as connection:
+        ai_notes = connection.execute(
+            "SELECT note_body, model, updated_at FROM folder_ai_notes WHERE folder_id = ?",
+            (folder_id,),
+        ).fetchone()
+        messages = connection.execute(
+            "SELECT * FROM folder_ai_messages WHERE folder_id = ? ORDER BY created_at ASC",
+            (folder_id,),
+        ).fetchall()
+    return {
+        "folder": serialize_folder(folder),
+        "sources": [serialize_class_ai_source(source) for source in class_ai_sources(folder_id)],
+        "ai_notes": ai_notes["note_body"] if ai_notes else "",
+        "ai_notes_model": ai_notes["model"] if ai_notes else None,
+        "ai_notes_updated_at": ai_notes["updated_at"] if ai_notes else None,
+        "messages": [serialize_ai_message(message) for message in messages],
+    }
+
+
+@app.put("/api/folders/{folder_id}/class-ai/notes")
+def save_class_ai_notes(folder_id: str, update: LocalAINotesUpdate) -> dict[str, object]:
+    get_folder(folder_id)
+    saved_at = datetime.now(timezone.utc).isoformat()
+    with connect_database() as connection:
+        connection.execute(
+            """
+            INSERT INTO folder_ai_notes (folder_id, note_body, model, updated_at)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(folder_id) DO UPDATE SET
+                note_body = excluded.note_body,
+                model = excluded.model,
+                updated_at = excluded.updated_at
+            """,
+            (folder_id, update.note_body, update.model, saved_at),
+        )
+    return {"status": "saved", "model": update.model, "updated_at": saved_at}
+
+
+@app.post("/api/folders/{folder_id}/class-ai/notes")
+def generate_class_ai_notes(folder_id: str, request: ClassAIRequest) -> dict[str, object]:
+    get_folder(folder_id)
+    context = build_class_ai_context(folder_id, request.workspace_ids)
+    prompt = (
+        "Write a focused class study guide from the selected lecture notes and recordings for a high "
+        "school or college student. Use the headings Overview, Connections across lectures, Key ideas, "
+        "Terms to know, and Questions to review when the source supports them. Keep it accurate and "
+        "easy to scan. Do not claim that attached files were read unless their text appears in the source."
+    )
+    note_body = ask_local_model(
+        request.model,
+        [
+            {"role": "system", "content": local_ai_system_prompt(context)},
+            {"role": "user", "content": prompt},
+        ],
+    )
+    saved_at = datetime.now(timezone.utc).isoformat()
+    with connect_database() as connection:
+        connection.execute(
+            """
+            INSERT INTO folder_ai_notes (folder_id, note_body, model, updated_at)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(folder_id) DO UPDATE SET
+                note_body = excluded.note_body,
+                model = excluded.model,
+                updated_at = excluded.updated_at
+            """,
+            (folder_id, note_body, request.model, saved_at),
+        )
+    return {"note_body": note_body, "model": request.model, "updated_at": saved_at}
+
+
+@app.post("/api/folders/{folder_id}/class-ai/questions")
+def ask_class_ai_question(folder_id: str, request: ClassAIQuestion) -> dict[str, object]:
+    get_folder(folder_id)
+    question = " ".join(request.question.split())
+    if not question:
+        raise HTTPException(status_code=422, detail="Ask a question before sending it.")
+    context = build_class_ai_context(folder_id, request.workspace_ids)
+    with connect_database() as connection:
+        history = connection.execute(
+            """
+            SELECT role, content FROM (
+                SELECT role, content, created_at
+                FROM folder_ai_messages
+                WHERE folder_id = ?
+                ORDER BY created_at DESC
+                LIMIT ?
+            ) ORDER BY created_at ASC
+            """,
+            (folder_id, LOCAL_AI_HISTORY_LIMIT),
+        ).fetchall()
+    messages = [{"role": "system", "content": local_ai_system_prompt(context)}]
+    messages.extend({"role": row["role"], "content": row["content"]} for row in history)
+    messages.append({"role": "user", "content": question})
+    answer = ask_local_model(request.model, messages)
+    created_at = datetime.now(timezone.utc).isoformat()
+    question_id = str(uuid4())
+    answer_id = str(uuid4())
+    with connect_database() as connection:
+        connection.execute(
+            """
+            INSERT INTO folder_ai_messages (id, folder_id, role, content, model, created_at)
+            VALUES (?, ?, 'user', ?, ?, ?)
+            """,
+            (question_id, folder_id, question, request.model, created_at),
+        )
+        connection.execute(
+            """
+            INSERT INTO folder_ai_messages (id, folder_id, role, content, model, created_at)
+            VALUES (?, ?, 'assistant', ?, ?, ?)
+            """,
+            (answer_id, folder_id, answer, request.model, created_at),
+        )
+    return {
+        "question": {
+            "id": question_id,
+            "role": "user",
+            "content": question,
+            "model": request.model,
+            "created_at": created_at,
+        },
+        "answer": {
+            "id": answer_id,
+            "role": "assistant",
+            "content": answer,
+            "model": request.model,
+            "created_at": created_at,
+        },
+    }
+
+
+@app.delete("/api/folders/{folder_id}/class-ai/messages")
+def clear_class_ai_messages(folder_id: str) -> dict[str, str]:
+    get_folder(folder_id)
+    with connect_database() as connection:
+        connection.execute("DELETE FROM folder_ai_messages WHERE folder_id = ?", (folder_id,))
+    return {"status": "deleted"}
 
 
 @app.get("/api/workspaces/{workspace_id}/ai/messages")

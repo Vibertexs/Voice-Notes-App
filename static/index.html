@@ -651,9 +651,24 @@
       .capture-notes:focus { outline: 3px solid rgba(23,105,210,.28); outline-offset: -3px; }
       .capture-notes-footer { margin: 0; padding: .8rem 1rem 1rem; border-top: 2px solid #dbe4f0; color: #68778d; font-size: .75rem; line-height: 1.4; }
       .capture-notes-footer strong { color: #254b8d; }
+      .class-ai-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1.25rem; }
+      .class-ai-header h2 { margin: .55rem 0 0; font-size: clamp(1.55rem, 3vw, 2.2rem); letter-spacing: -.055em; }
+      .class-ai-header p { max-width: 42rem; margin: .35rem 0 0; color: var(--muted); line-height: 1.5; }
+      .class-ai-source-card { margin-bottom: 1rem; padding: 1rem; border: 4px solid #c8d4e5; border-radius: 1.25rem; background: rgba(249,251,254,.8); }
+      .class-ai-source-card h3 { margin: 0; font-size: 1rem; }
+      .class-ai-source-card p { margin: .35rem 0 0; color: var(--muted); font-size: .8rem; line-height: 1.45; }
+      .class-ai-source-summary { margin-top: .8rem !important; color: #244b88 !important; font-weight: 720; }
+      .class-ai-source-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(13.5rem, 1fr)); gap: .6rem; margin-top: .8rem; }
+      .class-ai-source { min-height: 5rem; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: .55rem; margin: 0; padding: .7rem; border: 2px solid #d9e2ef; border-radius: .9rem; color: #354158; background: #fff; cursor: pointer; text-transform: none; letter-spacing: normal; }
+      .class-ai-source:has(input:checked) { border-color: #5d8bd8; color: #173b79; background: #eef5ff; }
+      .class-ai-source input { width: 1.15rem; min-height: 1.15rem; margin: .1rem 0 0; accent-color: #1a56bd; }
+      .class-ai-source strong, .class-ai-source span { display: block; }
+      .class-ai-source strong { overflow: hidden; font-size: .82rem; text-overflow: ellipsis; white-space: nowrap; }
+      .class-ai-source span { margin-top: .24rem; color: #6b7990; font-size: .7rem; font-weight: 500; line-height: 1.35; }
+      .class-ai-source-empty { margin: .8rem 0 0; color: var(--muted); font-size: .82rem; }
       @media (max-width: 840px) { .workspace-note-layout, .review-layout { grid-template-columns: 1fr; } }
       @media (max-width: 840px) { .capture-layout.notes-open { grid-template-columns: minmax(0, 1fr); } .capture-notes-card { position: static; } .capture-notes { min-height: 15rem; } }
-      @media (max-width: 540px) { .topic-marker, .ai-question-form { grid-template-columns: 1fr; } .topic-marker .button, .ai-question-form .button { justify-self: stretch; } }
+      @media (max-width: 540px) { .topic-marker, .ai-question-form { grid-template-columns: 1fr; } .topic-marker .button, .ai-question-form .button { justify-self: stretch; } .class-ai-header { align-items: stretch; flex-direction: column; } }
     </style>
   </head>
   <body>
@@ -683,6 +698,7 @@
             <div class="folder-actions">
               <button id="new-workspace" class="button primary"><span class="create-symbol">＋</span>Note</button>
               <button id="record-from-library" class="button secondary">●&nbsp; Record</button>
+              <button id="open-class-ai" class="button secondary" hidden>✦&nbsp; Class AI</button>
               <div id="folder-color-control" class="color-menu" hidden aria-label="Folder color">
                 <button type="button" class="color-swatch" data-color="blue" aria-label="Blue"></button><button type="button" class="color-swatch" data-color="violet" aria-label="Violet"></button><button type="button" class="color-swatch" data-color="rose" aria-label="Rose"></button><button type="button" class="color-swatch" data-color="coral" aria-label="Coral"></button><button type="button" class="color-swatch" data-color="amber" aria-label="Amber"></button><button type="button" class="color-swatch" data-color="lime" aria-label="Lime"></button><button type="button" class="color-swatch" data-color="mint" aria-label="Mint"></button><button type="button" class="color-swatch" data-color="sky" aria-label="Sky"></button><button type="button" class="color-swatch" data-color="slate" aria-label="Slate"></button>
               </div>
@@ -801,13 +817,14 @@
             <div class="workspace-actions">
               <button id="add-material" class="button secondary"><span class="create-symbol">＋</span>File</button>
               <button id="new-topic" class="button secondary"><span class="create-symbol">＋</span>New topic</button>
+              <button id="workspace-class-ai" class="button secondary" hidden>✦&nbsp; Class AI</button>
               <button id="record-from-workspace" class="button primary">●&nbsp; Record session</button>
             </div>
           </div>
           <nav class="workspace-tabs" role="tablist" aria-label="Class note sections">
             <button id="workspace-tab-notes" class="workspace-tab" role="tab" aria-selected="true" aria-controls="notes-pane">Notes</button>
             <button id="workspace-tab-review" class="workspace-tab" role="tab" aria-selected="false" aria-controls="review-pane">Recordings &amp; transcript</button>
-            <button id="workspace-tab-study" class="workspace-tab" role="tab" aria-selected="false" aria-controls="study-pane">AI study</button>
+            <button id="workspace-tab-study" class="workspace-tab" role="tab" aria-selected="false" aria-controls="study-pane" hidden>AI study</button>
           </nav>
 
           <section id="notes-pane" class="workspace-pane" role="tabpanel" aria-labelledby="workspace-tab-notes">
@@ -896,6 +913,46 @@
           </section>
         </section>
 
+        <section id="class-ai-view" class="view" hidden>
+          <div class="class-ai-header">
+            <div>
+              <button id="class-ai-back" class="back">‹ Back to class</button>
+              <h2 id="class-ai-title">Class AI</h2>
+              <p id="class-ai-subtitle">Choose a few recent lectures so the assistant can make connections without repeating your entire class.</p>
+            </div>
+            <span class="study-label">On this laptop</span>
+          </div>
+          <section class="class-ai-source-card" aria-labelledby="class-ai-source-heading">
+            <h3 id="class-ai-source-heading">Choose the lecture context</h3>
+            <p>Class AI defaults to your three most recent lecture notes. Select up to five when you need to reach further back.</p>
+            <p id="class-ai-source-summary" class="class-ai-source-summary" role="status"></p>
+            <div id="class-ai-source-list" class="class-ai-source-list"></div>
+          </section>
+          <div class="study-stack">
+            <section class="ai-notes-card" aria-label="Class AI notes">
+              <div class="ai-card-head"><div><h3>Class study guide</h3><p>Make one editable guide that connects the lectures you selected.</p></div><span class="study-label">Local AI</span></div>
+              <p id="class-ai-setup" class="ai-setup" role="status">Checking local AI…</p>
+              <div class="ai-controls">
+                <label class="ai-model-label" for="class-ai-model">Local model<select id="class-ai-model" disabled></select></label>
+                <button id="class-ai-refresh" class="button secondary">Check local AI</button>
+                <button id="class-generate-ai-notes" class="button primary" disabled>Write class guide</button>
+              </div>
+              <textarea id="class-ai-notes" class="ai-notes" maxlength="100000" spellcheck="true" placeholder="Your class-level local AI guide will appear here. You can edit it before studying."></textarea>
+              <div class="study-save-bar"><span id="class-ai-notes-status" class="status" role="status"></span><button id="class-ai-notes-save" class="button primary">Save class guide</button></div>
+            </section>
+
+            <section class="ai-chat-card" aria-label="Ask your class">
+              <div class="ai-card-head"><div><h3>Ask this class</h3><p>Answers use only the selected lecture notes and recordings.</p></div></div>
+              <div id="class-ai-chat-list" class="ai-chat-list"></div>
+              <form id="class-ai-question-form" class="ai-question-form">
+                <textarea id="class-ai-question" class="ai-question" maxlength="4000" rows="2" placeholder="e.g. How does this connect to last week’s lecture?" disabled></textarea>
+                <button id="class-ai-question-send" type="submit" class="button primary" disabled>Ask</button>
+              </form>
+              <div class="ai-chat-actions"><button id="class-ai-chat-clear" class="button secondary" hidden>Clear questions</button></div>
+            </section>
+          </div>
+        </section>
+
         <section id="detail-view" class="view" hidden>
           <div class="detail-header">
             <div><button id="back-to-library" class="back">‹ Back to library</button><h2 id="detail-heading">Recording</h2></div>
@@ -923,7 +980,7 @@
 
     <script>
       const elementIds = [
-        'library-home', 'new-workspace', 'new-folder', 'record-from-library', 'empty-folder-action', 'empty-workspace-action', 'capture-launch', 'capture-copy',
+        'library-home', 'new-workspace', 'new-folder', 'record-from-library', 'open-class-ai', 'empty-folder-action', 'empty-workspace-action', 'capture-launch', 'capture-copy',
         'recent-toggle', 'recent-menu', 'recent-recording-list', 'recent-empty', 'library-view', 'breadcrumb', 'library-title',
         'library-subtitle', 'delete-folder', 'folder-color-toggle', 'folder-color-control', 'parent-target', 'parent-title', 'parent-copy',
         'folder-list', 'no-folders', 'workspace-list', 'no-workspaces', 'recording-list', 'no-recordings', 'folder-view',
@@ -933,13 +990,16 @@
         'cancel-recording', 'recording-status', 'capture-notes-toggle', 'capture-notes-panel', 'capture-notes-close', 'capture-notes-context', 'capture-notes', 'detail-view', 'back-to-library', 'detail-heading',
         'delete-recording', 'saved-title', 'save-recording', 'save-status', 'saved-date', 'playback',
         'move-target', 'transcript', 'workspace-view', 'workspace-back', 'workspace-heading', 'workspace-location',
-        'workspace-title', 'workspace-notes', 'workspace-notes-status', 'workspace-notes-save', 'record-from-workspace', 'new-topic', 'add-material',
+        'workspace-title', 'workspace-notes', 'workspace-notes-status', 'workspace-notes-save', 'record-from-workspace', 'workspace-class-ai', 'new-topic', 'add-material',
         'workspace-tab-notes', 'workspace-tab-review', 'workspace-tab-study', 'notes-pane', 'review-pane', 'study-pane',
         'session-list', 'review-session-list', 'review-empty', 'review-content', 'review-session-title', 'review-session-meta',
         'session-playback', 'marker-label', 'add-marker', 'marker-list', 'session-transcript',
         'study-notes', 'study-notes-status', 'study-notes-save', 'generate-study-notes',
         'ai-setup', 'ai-model', 'ai-refresh', 'generate-ai-notes', 'ai-notes', 'ai-notes-status', 'ai-notes-save',
         'ai-chat-list', 'ai-question-form', 'ai-question', 'ai-question-send', 'ai-chat-clear',
+        'class-ai-view', 'class-ai-back', 'class-ai-title', 'class-ai-subtitle', 'class-ai-source-summary', 'class-ai-source-list',
+        'class-ai-setup', 'class-ai-model', 'class-ai-refresh', 'class-generate-ai-notes', 'class-ai-notes', 'class-ai-notes-status', 'class-ai-notes-save',
+        'class-ai-chat-list', 'class-ai-question-form', 'class-ai-question', 'class-ai-question-send', 'class-ai-chat-clear',
         'material-upload', 'material-dropzone', 'material-status', 'material-list', 'toast'
       ];
       const el = Object.fromEntries(elementIds.map(id => [id, document.getElementById(id)]));
@@ -951,6 +1011,9 @@
       let activeWorkspaceTab = 'notes';
       let localAIStatus = null;
       let aiMessages = [];
+      let activeClassAI = null;
+      let classAISourceIds = [];
+      let classAIMessages = [];
       let allFolders = [];
       let allRecordings = [];
       let recorder;
@@ -999,7 +1062,7 @@
           showToast('Finish or discard the recording first.');
           return;
         }
-        ['library', 'folder', 'recording', 'workspace', 'detail'].forEach(name => {
+        ['library', 'folder', 'recording', 'workspace', 'class-ai', 'detail'].forEach(name => {
           el[`${name}-view`].hidden = name !== view;
         });
         window.scrollTo(0, 0);
@@ -1294,6 +1357,7 @@
           el['workspace-heading'].textContent = workspace.title;
           el['workspace-title'].value = workspace.title;
           el['workspace-location'].textContent = folder ? `Inside ${folder.name}` : 'Unfiled lecture';
+          el['workspace-class-ai'].hidden = !workspace.folder_id;
           el['workspace-notes'].value = workspace.note_body || '';
           el['workspace-notes-status'].textContent = workspace.notes_updated_at
             ? `Saved ${formatDate(workspace.notes_updated_at)}`
@@ -1539,6 +1603,216 @@
           renderAIMessages([]);
         } catch (error) { showToast(error.message); }
       }
+      function classAIHasSources() { return classAISourceIds.length > 0; }
+      function selectedClassAIModel() {
+        return el['class-ai-model'].value || activeClassAI?.ai_notes_model || localAIStatus?.default_model || 'student edit';
+      }
+      function syncClassAIControls() {
+        const enabled = Boolean(localAIStatus?.ready && classAIHasSources());
+        el['class-generate-ai-notes'].disabled = !enabled;
+        el['class-ai-question'].disabled = !enabled;
+        el['class-ai-question-send'].disabled = !enabled;
+      }
+      function renderClassAIStatus(status) {
+        localAIStatus = status;
+        const selected = el['class-ai-model'].value || activeClassAI?.ai_notes_model || status.default_model;
+        el['class-ai-model'].replaceChildren(...(status.models || []).map(model => new Option(model, model)));
+        if (!status.ready) el['class-ai-model'].append(new Option(status.default_model, status.default_model));
+        el['class-ai-model'].value = (status.models || []).includes(selected) ? selected : (status.models || [status.default_model])[0];
+        el['class-ai-model'].disabled = !status.ready;
+        syncClassAIControls();
+        if (status.ready) {
+          el['class-ai-setup'].textContent = 'Ready on this laptop. Only the lecture notes you select are used.';
+        } else {
+          const link = document.createElement('a');
+          link.href = 'https://ollama.com/download/windows';
+          link.target = '_blank';
+          link.rel = 'noopener';
+          link.textContent = 'Install Ollama';
+          el['class-ai-setup'].replaceChildren(status.message, ' ', link, ', then run ', `ollama pull ${status.default_model}`, ' in a terminal.');
+        }
+      }
+      function renderClassAISources() {
+        const sources = activeClassAI?.sources || [];
+        const validIds = new Set(sources.map(source => source.id));
+        classAISourceIds = classAISourceIds.filter(id => validIds.has(id));
+        const selectedCount = classAISourceIds.length;
+        el['class-ai-source-summary'].textContent = selectedCount
+          ? `Using ${selectedCount} selected ${selectedCount === 1 ? 'lecture note' : 'lecture notes'} for Class AI.`
+          : 'Choose at least one lecture note to use Class AI.';
+        if (!sources.length) {
+          const empty = document.createElement('p');
+          empty.className = 'class-ai-source-empty';
+          empty.textContent = 'No lecture notes have been saved in this class yet. Create a note or record a session first.';
+          el['class-ai-source-list'].replaceChildren(empty);
+          syncClassAIControls();
+          return;
+        }
+        el['class-ai-source-list'].replaceChildren(...sources.map(source => {
+          const choice = document.createElement('label');
+          choice.className = 'class-ai-source';
+          const checkbox = document.createElement('input');
+          checkbox.type = 'checkbox';
+          checkbox.checked = classAISourceIds.includes(source.id);
+          checkbox.setAttribute('aria-label', `Use ${source.title} in Class AI`);
+          const copy = document.createElement('span');
+          const title = document.createElement('strong');
+          title.textContent = source.title;
+          const meta = document.createElement('span');
+          const sessions = source.session_count || 0;
+          meta.textContent = source.has_content
+            ? `${formatDate(source.updated_at)} · ${sessions} ${sessions === 1 ? 'recording' : 'recordings'}`
+            : 'No notes or transcript yet';
+          copy.append(title, meta);
+          checkbox.addEventListener('change', () => {
+            if (checkbox.checked) {
+              if (classAISourceIds.length >= 5) {
+                checkbox.checked = false;
+                showToast('Use up to five lecture notes at once.');
+                return;
+              }
+              classAISourceIds = [...classAISourceIds, source.id];
+            } else {
+              classAISourceIds = classAISourceIds.filter(id => id !== source.id);
+            }
+            renderClassAISources();
+            if (activeClassAI?.ai_notes) {
+              el['class-ai-notes-status'].textContent = 'Lecture selection changed. Regenerate the guide if needed.';
+            }
+          });
+          choice.append(checkbox, copy);
+          return choice;
+        }));
+        syncClassAIControls();
+      }
+      function renderClassAIMessages(messages) {
+        classAIMessages = messages || [];
+        if (!classAIMessages.length) {
+          const empty = document.createElement('p');
+          empty.className = 'ai-chat-empty';
+          empty.textContent = 'Ask a question after local AI is ready. Answers use only the lecture notes you selected above.';
+          el['class-ai-chat-list'].replaceChildren(empty);
+          el['class-ai-chat-clear'].hidden = true;
+          return;
+        }
+        el['class-ai-chat-list'].replaceChildren(...classAIMessages.map(message => {
+          const card = document.createElement('article');
+          card.className = `ai-message ${message.role}`;
+          const meta = document.createElement('span');
+          meta.className = 'ai-message-meta';
+          meta.textContent = message.role === 'assistant' ? `Class AI · ${formatDate(message.created_at)}` : `You · ${formatDate(message.created_at)}`;
+          const content = document.createElement('span');
+          content.textContent = message.content;
+          card.append(meta, content);
+          return card;
+        }));
+        el['class-ai-chat-clear'].hidden = false;
+      }
+      async function refreshClassAIStatus() {
+        try {
+          renderClassAIStatus(await api('/api/ai/status'));
+        } catch (error) {
+          renderClassAIStatus({ ready: false, default_model: 'qwen3:1.7b', models: [], message: error.message });
+        }
+      }
+      async function loadClassAI(folderId = activeFolder?.id || activeWorkspace?.folder_id) {
+        if (!folderId) {
+          showToast('Put this lecture in a class folder before using Class AI.');
+          return;
+        }
+        try {
+          const classAI = await api(`/api/folders/${folderId}/class-ai`);
+          const isSameClass = activeClassAI?.folder?.id === classAI.folder.id;
+          const availableIds = new Set(classAI.sources.map(source => source.id));
+          const retained = isSameClass ? classAISourceIds.filter(id => availableIds.has(id)) : [];
+          activeClassAI = classAI;
+          const readySources = classAI.sources.filter(source => source.has_content);
+          classAISourceIds = retained.length
+            ? retained
+            : (readySources.length ? readySources : classAI.sources).slice(0, 3).map(source => source.id);
+          el['class-ai-title'].textContent = `${classAI.folder.name} class AI`;
+          el['class-ai-subtitle'].textContent = `Use a focused set of recent ${classAI.folder.name} lectures. Your whole class is not automatically sent to the model.`;
+          el['class-ai-notes'].value = classAI.ai_notes || '';
+          el['class-ai-notes-status'].textContent = classAI.ai_notes_updated_at
+            ? `Saved ${formatDate(classAI.ai_notes_updated_at)} · ${classAI.ai_notes_model || 'local AI'}`
+            : 'No class guide yet.';
+          renderClassAISources();
+          renderClassAIMessages(classAI.messages);
+          show('class-ai');
+          await refreshClassAIStatus();
+        } catch (error) {
+          showToast(error.message);
+          await loadLibrary(activeFolder?.id);
+        }
+      }
+      async function saveClassAINotes() {
+        if (!activeClassAI) return;
+        el['class-ai-notes-save'].disabled = true;
+        el['class-ai-notes-status'].textContent = 'Saving class guide…';
+        try {
+          const model = selectedClassAIModel();
+          const result = await api(`/api/folders/${activeClassAI.folder.id}/class-ai/notes`, {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ note_body: el['class-ai-notes'].value, model })
+          });
+          activeClassAI.ai_notes = el['class-ai-notes'].value;
+          activeClassAI.ai_notes_model = result.model;
+          activeClassAI.ai_notes_updated_at = result.updated_at;
+          el['class-ai-notes-status'].textContent = `Saved ${formatDate(result.updated_at)} · ${result.model}`;
+        } catch (error) {
+          el['class-ai-notes-status'].textContent = error.message;
+        } finally {
+          el['class-ai-notes-save'].disabled = false;
+        }
+      }
+      async function generateClassAINotes() {
+        if (!activeClassAI || !classAIHasSources()) return;
+        el['class-generate-ai-notes'].disabled = true;
+        el['class-ai-notes-status'].textContent = 'Writing class guide locally…';
+        try {
+          const result = await api(`/api/folders/${activeClassAI.folder.id}/class-ai/notes`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model: selectedClassAIModel(), workspace_ids: classAISourceIds })
+          });
+          el['class-ai-notes'].value = result.note_body;
+          activeClassAI.ai_notes = result.note_body;
+          activeClassAI.ai_notes_model = result.model;
+          activeClassAI.ai_notes_updated_at = result.updated_at;
+          el['class-ai-notes-status'].textContent = `Class guide ready · ${formatDate(result.updated_at)}`;
+        } catch (error) {
+          el['class-ai-notes-status'].textContent = error.message;
+        } finally {
+          syncClassAIControls();
+        }
+      }
+      async function askClassAI(event) {
+        event.preventDefault();
+        if (!activeClassAI || !classAIHasSources()) return;
+        const question = el['class-ai-question'].value.trim();
+        if (!question) { el['class-ai-question'].focus(); return; }
+        el['class-ai-question-send'].disabled = true;
+        el['class-ai-question'].disabled = true;
+        try {
+          const result = await api(`/api/folders/${activeClassAI.folder.id}/class-ai/questions`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model: selectedClassAIModel(), question, workspace_ids: classAISourceIds })
+          });
+          classAIMessages = [...classAIMessages, result.question, result.answer];
+          renderClassAIMessages(classAIMessages);
+          el['class-ai-question'].value = '';
+        } catch (error) {
+          showToast(error.message);
+        } finally {
+          syncClassAIControls();
+        }
+      }
+      async function clearClassAIChat() {
+        if (!activeClassAI || !confirm('Clear these local Class AI questions?')) return;
+        try {
+          await api(`/api/folders/${activeClassAI.folder.id}/class-ai/messages`, { method: 'DELETE' });
+          renderClassAIMessages([]);
+        } catch (error) { showToast(error.message); }
+      }
       async function addSessionMarker() {
         if (!activeSession) return;
         const label = el['marker-label'].value.trim();
@@ -1639,6 +1913,7 @@
             : 'Record first. We’ll save it safely to Unfiled, ready for you to organize after class.';
           el['delete-folder'].hidden = !activeFolder;
           el['folder-color-toggle'].hidden = !activeFolder;
+          el['open-class-ai'].hidden = !activeFolder;
           if (!activeFolder) el['folder-color-control'].hidden = true;
           if (activeFolder) setSelectedSwatch(el['folder-color-control'], activeFolder.color || 'blue');
           el['parent-target'].hidden = !activeFolder;
@@ -1862,6 +2137,7 @@
       el['empty-folder-action'].addEventListener('click', openFolderForm);
       el['empty-workspace-action'].addEventListener('click', () => createWorkspace());
       el['record-from-library'].addEventListener('click', () => openRecording());
+      el['open-class-ai'].addEventListener('click', () => loadClassAI(activeFolder?.id));
       el['capture-notes-toggle'].addEventListener('click', () => setCaptureNotesOpen(el['capture-notes-panel'].hidden, true));
       el['capture-notes-close'].addEventListener('click', () => setCaptureNotesOpen(false));
       el['cancel-folder'].addEventListener('click', () => loadLibrary(activeFolder?.id));
@@ -1901,6 +2177,7 @@
       }));
       el['workspace-back'].addEventListener('click', () => loadLibrary(activeWorkspace?.folder_id));
       el['record-from-workspace'].addEventListener('click', () => openRecording(activeWorkspace));
+      el['workspace-class-ai'].addEventListener('click', () => loadClassAI(activeWorkspace?.folder_id));
       el['new-topic'].addEventListener('click', createTopic);
       el['add-material'].addEventListener('click', () => el['material-upload'].click());
       el['material-upload'].addEventListener('change', event => uploadWorkspaceMaterials(event.target.files));
@@ -1932,6 +2209,12 @@
       el['ai-notes-save'].addEventListener('click', saveAINotes);
       el['ai-question-form'].addEventListener('submit', askLocalAI);
       el['ai-chat-clear'].addEventListener('click', clearLocalAIChat);
+      el['class-ai-back'].addEventListener('click', () => loadLibrary(activeClassAI?.folder?.id));
+      el['class-ai-refresh'].addEventListener('click', refreshClassAIStatus);
+      el['class-generate-ai-notes'].addEventListener('click', generateClassAINotes);
+      el['class-ai-notes-save'].addEventListener('click', saveClassAINotes);
+      el['class-ai-question-form'].addEventListener('submit', askClassAI);
+      el['class-ai-chat-clear'].addEventListener('click', clearClassAIChat);
       el['add-marker'].addEventListener('click', addSessionMarker);
       function releaseMicrophone() {
         stream?.getTracks().forEach(track => track.stop());
