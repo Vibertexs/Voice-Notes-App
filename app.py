@@ -314,6 +314,13 @@ def new_note_template(title: str) -> str:
 """
 
 
+def append_capture_notes(existing_notes: str, capture_notes: str, created_at: datetime) -> str:
+    """Append an in-recording note in a way that stays readable in the class note."""
+    note_heading = created_at.astimezone().strftime("%b %d, %Y at %I:%M %p")
+    addition = f"## Capture notes — {note_heading}\n\n{capture_notes.strip()}"
+    return f"{existing_notes.rstrip()}\n\n{addition}\n" if existing_notes.strip() else f"{addition}\n"
+
+
 STUDY_STOP_WORDS = frozenset((
     "a about after again all also am an and any are as at be because been before being but by can "
     "could did do does each for from had has have he her here hers herself him himself his how i if in "
@@ -1235,6 +1242,7 @@ def create_lecture(
     folder_id: str = Form(default=""),
     workspace_id: str = Form(default=""),
     title: str = Form(default=""),
+    capture_notes: str = Form(default=""),
     model: str = Form(default="base.en"),
 ) -> dict[str, object]:
     if model not in TRANSCRIPTION_MODELS:
@@ -1246,9 +1254,12 @@ def create_lecture(
     suffix = Path(audio.filename or "recording.webm").suffix.lower()
     if suffix not in ALLOWED_SUFFIXES:
         raise HTTPException(status_code=415, detail="Upload a supported audio file.")
+    if len(capture_notes) > 100_000:
+        raise HTTPException(status_code=422, detail="Capture notes must be 100,000 characters or fewer.")
 
     created_at_datetime = datetime.now(timezone.utc)
     clean_title = clean_label(title, default_lecture_title(created_at_datetime), 180)
+    capture_notes = capture_notes.strip()
     lecture_id = str(uuid4())
     audio_filename = f"{lecture_id}{suffix}"
 
@@ -1273,7 +1284,7 @@ def create_lecture(
         saved_audio_path = AUDIO_DIR / audio_filename
         shutil.copyfile(temporary_audio_path, saved_audio_path)
 
-    note_body = new_note_template(clean_title)
+    note_body = capture_notes or new_note_template(clean_title)
     course = selected_folder["name"] if selected_folder else "Unfiled recordings"
     try:
         with connect_database() as connection:
@@ -1298,6 +1309,30 @@ def create_lecture(
                     VALUES (?, ?, ?)
                     """,
                     (selected_workspace_id, note_body, created_at_datetime.isoformat()),
+                )
+            elif capture_notes:
+                current_notes = connection.execute(
+                    "SELECT note_body FROM workspace_notes WHERE workspace_id = ?",
+                    (selected_workspace_id,),
+                ).fetchone()
+                merged_notes = append_capture_notes(
+                    current_notes["note_body"] if current_notes else "",
+                    capture_notes,
+                    created_at_datetime,
+                )
+                connection.execute(
+                    """
+                    INSERT INTO workspace_notes (workspace_id, note_body, updated_at)
+                    VALUES (?, ?, ?)
+                    ON CONFLICT(workspace_id) DO UPDATE SET
+                        note_body = excluded.note_body,
+                        updated_at = excluded.updated_at
+                    """,
+                    (selected_workspace_id, merged_notes, created_at_datetime.isoformat()),
+                )
+                connection.execute(
+                    "UPDATE workspaces SET updated_at = ? WHERE id = ?",
+                    (created_at_datetime.isoformat(), selected_workspace_id),
                 )
             connection.execute(
                 """

@@ -80,10 +80,19 @@ the workspace. Motion is disabled for users who request reduced motion.
 
 Capture uses one oversized, tactile record control rather than a crowded row
 of actions. Once recording begins, a compact transport deck appears: elapsed
-time is visible, pause/resume is secondary, **Finish & review** saves the audio
+time is visible, pause/resume is secondary, **Done** saves the audio
 for transcription, and a native, keyboard-accessible **Slide all the way to
 cancel** control discards the active capture. This gives the flow a confident
 audio-station feel while keeping the destructive action intentional.
+
+**Add notes** opens an optional companion panel beside capture. It is a
+save-bound draft rather than a competing second editor: when the student saves
+an existing class note's recording, the draft is appended under a timestamped
+"Capture notes" heading; for a first recording, it becomes that new class
+note's initial content. Discarding or cancelling capture therefore creates no
+orphan note. The live waveform uses a small noise gate, eased level changes,
+and neighbouring-bar averaging so it reads as stable audio feedback instead of
+jittering with every microphone sample.
 
 Folders are portrait covers, deliberately unlike the wide recording rows. A
 textured color field sits above a large dark inlay, with a local sequence number,

@@ -636,7 +636,23 @@
       .ai-question { min-height: 2.65rem; margin: 0; padding: .6rem .7rem; border: 2px solid #c8d4e5; border-radius: .8rem; color: #25344c; background: #fff; font: inherit; resize: vertical; }
       .ai-question-form .button { align-self: end; }
       .ai-chat-actions { display: flex; justify-content: flex-end; margin: 0 1rem 1rem; }
+      .capture-layout { display: grid; grid-template-columns: minmax(0, 42rem); justify-content: center; gap: 1rem; }
+      .capture-layout.notes-open { grid-template-columns: minmax(0, 1fr) minmax(16rem, 20rem); justify-content: stretch; }
+      .capture-layout.notes-open .capture-panel { width: 100%; }
+      .capture-note-trigger { display: flex; align-items: center; flex-wrap: wrap; gap: .55rem; margin-top: 1rem; }
+      .capture-note-trigger span { color: var(--muted); font-size: .78rem; line-height: 1.35; }
+      .capture-notes-card { position: sticky; top: 6.25rem; overflow: hidden; border: 4px solid #c8d4e5; border-radius: 1.4rem; background: rgba(252,253,255,.9); }
+      .capture-notes-head { display: flex; align-items: flex-start; justify-content: space-between; gap: .7rem; padding: 1rem; border-bottom: 2px solid #dbe4f0; }
+      .capture-notes-head h3 { margin: 0; font-size: .98rem; }
+      .capture-notes-head p { margin: .28rem 0 0; color: var(--muted); font-size: .76rem; line-height: 1.4; }
+      .capture-notes-close { width: 2rem; height: 2rem; display: grid; flex: 0 0 auto; place-items: center; padding: 0; border: 2px solid #c8d4e5; border-radius: .65rem; color: #526178; background: #fff; font: inherit; font-size: 1.15rem; line-height: 1; }
+      .capture-notes-close:hover, .capture-notes-close:focus-visible { border-color: #7598cc; color: #1e4a91; background: #eef5ff; }
+      .capture-notes { width: 100%; min-height: 22rem; display: block; padding: 1rem; border: 0; border-radius: 0; color: #202a3c; background: transparent; font: inherit; font-size: .93rem; line-height: 1.65; resize: vertical; }
+      .capture-notes:focus { outline: 3px solid rgba(23,105,210,.28); outline-offset: -3px; }
+      .capture-notes-footer { margin: 0; padding: .8rem 1rem 1rem; border-top: 2px solid #dbe4f0; color: #68778d; font-size: .75rem; line-height: 1.4; }
+      .capture-notes-footer strong { color: #254b8d; }
       @media (max-width: 840px) { .workspace-note-layout, .review-layout { grid-template-columns: 1fr; } }
+      @media (max-width: 840px) { .capture-layout.notes-open { grid-template-columns: minmax(0, 1fr); } .capture-notes-card { position: static; } .capture-notes { min-height: 15rem; } }
       @media (max-width: 540px) { .topic-marker, .ai-question-form { grid-template-columns: 1fr; } .topic-marker .button, .ai-question-form .button { justify-self: stretch; } }
     </style>
   </head>
@@ -722,41 +738,55 @@
         </section>
 
         <section id="recording-view" class="view" hidden>
-          <div class="panel capture-panel">
-            <h2>Capture a lecture</h2>
-            <div id="recording-location" class="location">●&nbsp; Saving to Unfiled</div>
-            <p id="recording-helper">Tap once to begin. You can rename or move the recording after it is saved.</p>
-            <div class="recording-options">
-              <label>Recording name <span>(optional)</span><input id="recording-title" maxlength="180" placeholder="e.g. Cell respiration" /></label>
-              <label>Transcription quality<select id="quality"><option value="tiny.en">Fast</option><option value="base.en" selected>Balanced</option><option value="small.en">High accuracy</option></select></label>
-            </div>
-            <section id="transport" class="transport" data-phase="idle" aria-label="Recording controls">
-              <div id="phase-label" class="phase-label">Ready</div>
-              <div id="recording-timer" class="recording-timer" aria-live="off">00:00.0</div>
-              <canvas id="waveform" class="waveform" aria-hidden="true"></canvas>
-              <div class="transport-controls">
-                <button id="record" class="shutter" aria-label="Start recording"><span class="shutter-glyph" aria-hidden="true"></span></button>
-                <div id="finish-group" class="finish-group" inert>
-                  <button id="finish-recording" class="finish-button" aria-label="Done — save and transcribe">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
-                  </button>
-                  <span class="finish-caption" aria-hidden="true">Done</span>
-                </div>
+          <div id="capture-layout" class="capture-layout">
+            <div class="panel capture-panel">
+              <h2>Capture a lecture</h2>
+              <div id="recording-location" class="location">●&nbsp; Saving to Unfiled</div>
+              <p id="recording-helper">Tap once to begin. You can rename or move the recording after it is saved.</p>
+              <div class="capture-note-trigger">
+                <button id="capture-notes-toggle" type="button" class="button secondary" aria-controls="capture-notes-panel" aria-expanded="false"><span class="create-symbol">＋</span>Add notes</button>
+                <span>Keep quick thoughts beside the recording.</span>
               </div>
-              <div id="recording-status" class="status transport-hint" role="status" aria-live="polite">Tap to record</div>
-              <div id="discard-reveal" class="discard-reveal" inert>
-                <div class="discard-inner">
-                  <div id="discard-slider" class="discard-slider">
-                    <span class="discard-fill"></span>
-                    <span class="discard-label" aria-hidden="true">slide to discard</span>
-                    <span id="discard-thumb" class="discard-thumb" role="slider" tabindex="0" aria-label="Slide to discard recording" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3" /></svg>
-                    </span>
+              <div class="recording-options">
+                <label>Recording name <span>(optional)</span><input id="recording-title" maxlength="180" placeholder="e.g. Cell respiration" /></label>
+                <label>Transcription quality<select id="quality"><option value="tiny.en">Fast</option><option value="base.en" selected>Balanced</option><option value="small.en">High accuracy</option></select></label>
+              </div>
+              <section id="transport" class="transport" data-phase="idle" aria-label="Recording controls">
+                <div id="phase-label" class="phase-label">Ready</div>
+                <div id="recording-timer" class="recording-timer" aria-live="off">00:00.0</div>
+                <canvas id="waveform" class="waveform" aria-hidden="true"></canvas>
+                <div class="transport-controls">
+                  <button id="record" class="shutter" aria-label="Start recording"><span class="shutter-glyph" aria-hidden="true"></span></button>
+                  <div id="finish-group" class="finish-group" inert>
+                    <button id="finish-recording" class="finish-button" aria-label="Done — save and transcribe">
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+                    </button>
+                    <span class="finish-caption" aria-hidden="true">Done</span>
                   </div>
                 </div>
+                <div id="recording-status" class="status transport-hint" role="status" aria-live="polite">Tap to record</div>
+                <div id="discard-reveal" class="discard-reveal" inert>
+                  <div class="discard-inner">
+                    <div id="discard-slider" class="discard-slider">
+                      <span class="discard-fill"></span>
+                      <span class="discard-label" aria-hidden="true">slide to discard</span>
+                      <span id="discard-thumb" class="discard-thumb" role="slider" tabindex="0" aria-label="Slide to discard recording" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3" /></svg>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </section>
+              <div class="capture-cancel"><button id="cancel-recording" class="button secondary">Cancel</button></div>
+            </div>
+            <aside id="capture-notes-panel" class="capture-notes-card" aria-labelledby="capture-notes-heading" hidden>
+              <div class="capture-notes-head">
+                <div><h3 id="capture-notes-heading">Capture notes</h3><p id="capture-notes-context">These notes will be saved with this recording.</p></div>
+                <button id="capture-notes-close" class="capture-notes-close" type="button" aria-label="Close capture notes">×</button>
               </div>
-            </section>
-            <div class="capture-cancel"><button id="cancel-recording" class="button secondary">Cancel</button></div>
+              <textarea id="capture-notes" class="capture-notes" maxlength="100000" spellcheck="true" placeholder="Key idea, question, assignment, or something to revisit…"></textarea>
+              <p class="capture-notes-footer"><strong>Saved with this recording.</strong> When you tap Done, these notes are added to the class note.</p>
+            </aside>
           </div>
         </section>
 
@@ -898,9 +928,9 @@
         'library-subtitle', 'delete-folder', 'folder-color-toggle', 'folder-color-control', 'parent-target', 'parent-title', 'parent-copy',
         'folder-list', 'no-folders', 'workspace-list', 'no-workspaces', 'recording-list', 'no-recordings', 'folder-view',
         'folder-context', 'folder-form', 'folder-name', 'new-folder-colors', 'cancel-folder', 'folder-status',
-        'recording-view', 'recording-title', 'quality', 'record', 'recording-location', 'recording-helper', 'recording-timer', 'transport', 'phase-label', 'waveform',
+        'recording-view', 'capture-layout', 'recording-title', 'quality', 'record', 'recording-location', 'recording-helper', 'recording-timer', 'transport', 'phase-label', 'waveform',
         'finish-group', 'finish-recording', 'discard-reveal', 'discard-slider', 'discard-thumb',
-        'cancel-recording', 'recording-status', 'detail-view', 'back-to-library', 'detail-heading',
+        'cancel-recording', 'recording-status', 'capture-notes-toggle', 'capture-notes-panel', 'capture-notes-close', 'capture-notes-context', 'capture-notes', 'detail-view', 'back-to-library', 'detail-heading',
         'delete-recording', 'saved-title', 'save-recording', 'save-status', 'saved-date', 'playback',
         'move-target', 'transcript', 'workspace-view', 'workspace-back', 'workspace-heading', 'workspace-location',
         'workspace-title', 'workspace-notes', 'workspace-notes-status', 'workspace-notes-save', 'record-from-workspace', 'new-topic', 'add-material',
@@ -940,6 +970,8 @@
       let levels = [];
       let lastSampleAt = 0;
       let waveFrame = 0;
+      let waveformTarget = 0;
+      let waveformLevel = 0;
       let slideStartX = 0;
       let slideProgress = 0;
       let sliding = false;
@@ -954,7 +986,7 @@
       };
       const BAR_WIDTH = 3;
       const BAR_GAP = 2;
-      const SAMPLE_EVERY_MS = 70;
+      const SAMPLE_EVERY_MS = 48;
       const SLIDE_CONFIRM = 0.9;
 
       function closeRecentMenu() {
@@ -1697,6 +1729,10 @@
         el['recording-title'].disabled = locked;
         el.quality.disabled = locked;
         el['cancel-recording'].hidden = locked;
+        const captureLocked = phase === 'saving' || phase === 'discarding';
+        el['capture-notes'].disabled = captureLocked;
+        el['capture-notes-toggle'].disabled = captureLocked;
+        el['capture-notes-close'].disabled = captureLocked;
         if (phase !== 'paused') resetSlider();
       }
       function captureMs() { return elapsedMs + (runningSince ? performance.now() - runningSince : 0); }
@@ -1718,7 +1754,9 @@
         analyser.getFloatTimeDomainData(samples);
         let sum = 0;
         for (const value of samples) sum += value * value;
-        return Math.min(1, Math.sqrt(Math.sqrt(sum / samples.length)) * 1.8);
+        const rms = Math.sqrt(sum / samples.length);
+        const noiseGated = Math.max(0, (rms - .006) / .12);
+        return Math.min(1, Math.pow(noiseGated, .55));
       }
       function drawWaveform() {
         const canvas = el.waveform;
@@ -1732,8 +1770,12 @@
         context.fillStyle = getComputedStyle(el.transport)
           .getPropertyValue(capturePhase === 'recording' ? '--rec' : '--wave-idle').trim();
         for (let index = 0; index < capacity; index += 1) {
-          const level = visible[visible.length - capacity + index] ?? 0;
-          const barHeight = Math.max(barWidth, level * canvas.height);
+          const sourceIndex = visible.length - capacity + index;
+          const previous = visible[sourceIndex - 1] ?? visible[sourceIndex] ?? 0;
+          const level = visible[sourceIndex] ?? 0;
+          const next = visible[sourceIndex + 1] ?? level;
+          const smoothedLevel = (previous + (2 * level) + next) / 4;
+          const barHeight = Math.max(barWidth, smoothedLevel * canvas.height * .94);
           const x = index * step;
           const y = (canvas.height - barHeight) / 2;
           context.beginPath();
@@ -1744,10 +1786,12 @@
       }
       function waveTick(now) {
         if (now - lastSampleAt >= SAMPLE_EVERY_MS) {
-          levels.push(sampleLevel());
-          if (levels.length > 600) levels.splice(0, levels.length - 600);
+          waveformTarget = sampleLevel();
           lastSampleAt = now;
         }
+        waveformLevel += (waveformTarget - waveformLevel) * .16;
+        levels.push(waveformLevel);
+        if (levels.length > 900) levels.splice(0, levels.length - 900);
         updateTimer();
         drawWaveform();
         waveFrame = requestAnimationFrame(waveTick);
@@ -1760,6 +1804,9 @@
         elapsedMs = 0;
         runningSince = 0;
         levels = [];
+        waveformTarget = 0;
+        waveformLevel = 0;
+        lastSampleAt = 0;
         updateTimer();
         setCapturePhase('idle', hint);
         drawWaveform();
@@ -1768,18 +1815,35 @@
         if (recordingWorkspace) return loadWorkspace(recordingWorkspace.id);
         return loadLibrary(recordingDestination?.id);
       }
+      function setCaptureNotesOpen(open, focus = false) {
+        el['capture-notes-panel'].hidden = !open;
+        el['capture-layout'].classList.toggle('notes-open', open);
+        el['capture-notes-toggle'].setAttribute('aria-expanded', String(open));
+        el['capture-notes-toggle'].innerHTML = open
+          ? 'Hide notes'
+          : '<span class="create-symbol">＋</span>Add notes';
+        if (open) {
+          requestAnimationFrame(sizeWaveform);
+          if (focus) setTimeout(() => el['capture-notes'].focus(), 0);
+        }
+      }
       function openRecording(workspace = null) {
         recordingWorkspace = workspace;
         const folder = workspace?.folder_id ? allFolders.find(item => item.id === workspace.folder_id) : activeFolder;
         recordingDestination = folder ? { id: folder.id, name: folder.name } : null;
         discardCapture = false;
         el['recording-title'].value = '';
+        el['capture-notes'].value = '';
+        setCaptureNotesOpen(false);
         el['recording-location'].textContent = workspace
           ? `●  Adding a session to ${workspace.title}`
           : `●  Saving to ${recordingDestination?.name || 'Unfiled'}`;
         el['recording-helper'].textContent = workspace
           ? 'This recording will stay attached to these lecture notes.'
           : 'Tap once to begin. A new lecture note will be created when you save.';
+        el['capture-notes-context'].textContent = workspace
+          ? `These notes will append to ${workspace.title} when you save.`
+          : 'These notes will become the first notes in your new class note.';
         resetCaptureControls();
         show('recording');
       }
@@ -1798,6 +1862,8 @@
       el['empty-folder-action'].addEventListener('click', openFolderForm);
       el['empty-workspace-action'].addEventListener('click', () => createWorkspace());
       el['record-from-library'].addEventListener('click', () => openRecording());
+      el['capture-notes-toggle'].addEventListener('click', () => setCaptureNotesOpen(el['capture-notes-panel'].hidden, true));
+      el['capture-notes-close'].addEventListener('click', () => setCaptureNotesOpen(false));
       el['cancel-folder'].addEventListener('click', () => loadLibrary(activeFolder?.id));
       el['folder-form'].addEventListener('submit', async event => {
         event.preventDefault();
@@ -1888,6 +1954,7 @@
         audioContext.resume();
         analyser = audioContext.createAnalyser();
         analyser.fftSize = 1024;
+        analyser.smoothingTimeConstant = .86;
         samples = new Float32Array(analyser.fftSize);
         audioContext.createMediaStreamSource(stream).connect(analyser);
         recorder = new MediaRecorder(stream);
@@ -1906,6 +1973,9 @@
         recorder.start();
         elapsedMs = 0;
         levels = [];
+        waveformTarget = 0;
+        waveformLevel = 0;
+        lastSampleAt = 0;
         runningSince = performance.now();
         setCapturePhase('recording');
         startWaveLoop();
@@ -2014,6 +2084,7 @@
         form.append('audio', blob, `lecture.${extension}`);
         form.append('title', el['recording-title'].value);
         form.append('model', el.quality.value);
+        form.append('capture_notes', el['capture-notes'].value);
         if (recordingWorkspace?.id) form.append('workspace_id', recordingWorkspace.id);
         if (recordingDestination?.id) form.append('folder_id', recordingDestination.id);
         try {
