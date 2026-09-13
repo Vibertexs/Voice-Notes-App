@@ -561,16 +561,8 @@
       .session-date { display: block; margin-bottom: .18rem; color: #77859b; font-size: .7rem; font-weight: 740; letter-spacing: .03em; text-transform: uppercase; }
       .session-title { display: block; overflow: hidden; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
       .session-count { display: block; margin-top: .3rem; color: #61718a; font-size: .72rem; }
-      .materials-card { padding: 1rem; border: 4px solid #c8d4e5; border-radius: 1.25rem; background: rgba(249,251,254,.8); }
-      .materials-card h3 { margin: 0; font-size: .9rem; }
-      .materials-card > p { margin: .45rem 0 .75rem; color: var(--muted); font-size: .8rem; line-height: 1.45; }
-      .material-dropzone { display: grid; place-items: center; min-height: 7rem; padding: .9rem; border: 2px dashed #9eb3d1; border-radius: .95rem; color: #45618e; background: #f6f9fe; cursor: pointer; text-align: center; transition: border-color .18s ease, background .18s ease; }
-      .material-dropzone:hover, .material-dropzone:focus-visible, .material-dropzone:focus-within, .material-dropzone.dragging { border-color: #3775d2; background: #eaf3ff; }
-      .material-dropzone strong { color: #24477f; font-size: .8rem; }
-      .material-dropzone span { margin-top: .25rem; font-size: .72rem; line-height: 1.35; }
       .material-status { min-height: 1.1rem; margin: .55rem 0 0; color: #64728a; font-size: .72rem; line-height: 1.35; }
       .material-list { display: grid; gap: .45rem; margin-top: .7rem; }
-      .material-empty { margin: 0; color: #6f7d92; font-size: .75rem; line-height: 1.45; }
       .material-item { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: .55rem; padding: .62rem; border: 2px solid #d9e2ef; border-radius: .8rem; background: #fff; }
       .material-type { display: grid; place-items: center; width: 2.2rem; height: 2.2rem; border-radius: .6rem; color: #fff; background: #2859a8; font-size: .61rem; font-weight: 800; letter-spacing: .04em; }
       .material-info { min-width: 0; }
@@ -695,6 +687,8 @@
             <div class="folder-actions">
               <button id="new-workspace" class="button primary"><span class="create-symbol">＋</span>Note</button>
               <button id="record-from-library" class="button secondary"><span class="create-symbol">＋</span>Recording</button>
+              <button id="add-folder-material" class="button secondary"><span class="create-symbol">＋</span>File</button>
+              <input id="folder-material-upload" type="file" accept=".pdf,.txt,.md,.doc,.docx,.ppt,.pptx" multiple hidden />
               <button id="open-class-ai" class="button secondary" hidden>✦&nbsp; Class AI</button>
               <div id="folder-color-control" class="color-menu" hidden aria-label="Folder color">
                 <button type="button" class="color-swatch" data-color="blue" aria-label="Blue"></button><button type="button" class="color-swatch" data-color="violet" aria-label="Violet"></button><button type="button" class="color-swatch" data-color="rose" aria-label="Rose"></button><button type="button" class="color-swatch" data-color="coral" aria-label="Coral"></button><button type="button" class="color-swatch" data-color="amber" aria-label="Amber"></button><button type="button" class="color-swatch" data-color="lime" aria-label="Lime"></button><button type="button" class="color-swatch" data-color="mint" aria-label="Mint"></button><button type="button" class="color-swatch" data-color="sky" aria-label="Sky"></button><button type="button" class="color-swatch" data-color="slate" aria-label="Slate"></button>
@@ -730,6 +724,10 @@
           <h3 class="section-title">Loose recordings</h3>
           <div id="recording-list" class="list"></div>
           <div id="no-recordings" class="empty" hidden><span>No loose recordings here yet.</span></div>
+          <h3 class="section-title">Imported files</h3>
+          <p id="file-status" class="material-status" role="status"></p>
+          <div id="file-list" class="material-list"></div>
+          <div id="no-files" class="empty" hidden><span>No imported files here yet.</span><button id="empty-file-action" class="button secondary">＋ Import file</button></div>
           <section id="capture-launch" class="capture-launch" hidden><p id="capture-copy"></p></section>
         </section>
 
@@ -812,7 +810,6 @@
               <label class="workspace-title-label" for="workspace-title">Topic or lecture title<input id="workspace-title" class="workspace-title-input" maxlength="180" aria-label="Topic or lecture title" /></label>
             </div>
             <div class="workspace-actions">
-              <button id="add-material" class="button secondary"><span class="create-symbol">＋</span>File</button>
               <button id="new-topic" class="button secondary"><span class="create-symbol">＋</span>New topic</button>
               <button id="workspace-class-ai" class="button secondary" hidden>✦&nbsp; Class AI</button>
               <button id="delete-workspace" class="button danger">Delete note</button>
@@ -832,16 +829,6 @@
                 <textarea id="workspace-notes" class="workspace-notes" maxlength="100000" spellcheck="true" placeholder="Start writing, or paste the notes your teacher shared…"></textarea>
               </section>
               <aside class="workspace-side-stack">
-                <section class="materials-card" aria-label="Class materials">
-                  <h3>Class materials</h3>
-                  <p>Attach the handout, slides, or reading. Compatible text is read privately on this laptop for Class AI.</p>
-                  <label id="material-dropzone" class="material-dropzone" for="material-upload" role="button" tabindex="0">
-                    <strong>Drop files here or browse</strong><span>PDF, Word, PowerPoint, text, or Markdown · up to 25 MB each</span>
-                  </label>
-                  <input id="material-upload" type="file" accept=".pdf,.txt,.md,.doc,.docx,.ppt,.pptx" multiple hidden />
-                  <p id="material-status" class="material-status" role="status"></p>
-                  <div id="material-list" class="material-list"></div>
-                </section>
                 <section class="workspace-inspector">
                   <h3>Keep this together</h3>
                   <p>Use one class note for a lecture or a topic that returns on another day. Add another session whenever the material continues.</p>
@@ -922,7 +909,7 @@
           </div>
           <section class="class-ai-source-card" aria-labelledby="class-ai-source-heading">
             <h3 id="class-ai-source-heading">Your whole class is connected</h3>
-            <p>Class AI can use every lecture note, recording, and capture note saved in this class. It never reaches into another class folder.</p>
+            <p>Class AI can use every lecture note, recording, capture note, and imported file saved in this class. It never reaches into another class folder.</p>
             <p id="class-ai-source-summary" class="class-ai-source-summary" role="status"></p>
           </section>
           <div class="study-stack">
@@ -983,17 +970,17 @@
 
     <script>
       const elementIds = [
-        'library-home', 'new-workspace', 'new-folder', 'record-from-library', 'open-class-ai', 'empty-folder-action', 'empty-workspace-action', 'capture-launch', 'capture-copy',
+        'library-home', 'new-workspace', 'new-folder', 'record-from-library', 'add-folder-material', 'folder-material-upload', 'open-class-ai', 'empty-folder-action', 'empty-workspace-action', 'empty-file-action', 'capture-launch', 'capture-copy',
         'recent-toggle', 'recent-menu', 'recent-recording-list', 'recent-empty', 'library-view', 'breadcrumb', 'library-title',
         'library-subtitle', 'delete-folder', 'folder-color-toggle', 'folder-color-control', 'parent-target', 'parent-title', 'parent-copy',
-        'folder-list', 'no-folders', 'workspace-list', 'no-workspaces', 'recording-list', 'no-recordings', 'folder-view',
+        'folder-list', 'no-folders', 'workspace-list', 'no-workspaces', 'recording-list', 'no-recordings', 'file-list', 'no-files', 'file-status', 'folder-view',
         'folder-context', 'folder-form', 'folder-name', 'new-folder-colors', 'cancel-folder', 'folder-status',
         'recording-view', 'capture-layout', 'recording-title', 'quality', 'record', 'recording-location', 'recording-helper', 'recording-timer', 'transport', 'phase-label', 'waveform',
         'finish-group', 'finish-recording', 'discard-reveal', 'discard-slider', 'discard-thumb',
         'cancel-recording', 'recording-status', 'capture-notes-toggle', 'capture-notes-panel', 'capture-notes-close', 'capture-notes-context', 'capture-notes', 'capture-notes-footer', 'detail-view', 'back-to-library', 'detail-heading',
         'delete-recording', 'saved-title', 'save-recording', 'save-status', 'saved-date', 'playback',
         'move-target', 'attach-recording-panel', 'attach-target', 'attach-recording', 'transcript', 'workspace-view', 'workspace-back', 'workspace-heading', 'workspace-location',
-        'workspace-title', 'workspace-notes', 'workspace-notes-status', 'workspace-notes-save', 'record-from-workspace', 'workspace-class-ai', 'delete-workspace', 'new-topic', 'add-material',
+        'workspace-title', 'workspace-notes', 'workspace-notes-status', 'workspace-notes-save', 'record-from-workspace', 'workspace-class-ai', 'delete-workspace', 'new-topic',
         'workspace-tab-notes', 'workspace-tab-review', 'workspace-tab-study', 'notes-pane', 'review-pane', 'study-pane',
         'session-list', 'review-session-list', 'review-empty', 'review-content', 'review-session-title', 'review-session-meta',
         'session-playback', 'marker-label', 'add-marker', 'marker-list', 'session-transcript', 'detach-session', 'delete-session',
@@ -1003,7 +990,7 @@
         'class-ai-view', 'class-ai-back', 'class-ai-title', 'class-ai-subtitle', 'class-ai-source-summary',
         'class-ai-setup', 'class-ai-model', 'class-ai-refresh', 'class-generate-ai-notes', 'class-ai-notes', 'class-ai-notes-status', 'class-ai-notes-save',
         'class-ai-chat-list', 'class-ai-question-form', 'class-ai-question', 'class-ai-question-send', 'class-ai-chat-clear',
-        'material-upload', 'material-dropzone', 'material-status', 'material-list', 'toast'
+        'toast'
       ];
       const el = Object.fromEntries(elementIds.map(id => [id, document.getElementById(id)]));
       let activeFolder = null;
@@ -1011,6 +998,7 @@
       let activeRecording = null;
       let activeWorkspace = null;
       let activeSession = null;
+      let activeMaterials = [];
       let activeWorkspaceTab = 'notes';
       let localAIStatus = null;
       let aiMessages = [];
@@ -1211,15 +1199,12 @@
         };
         return labels[material.ai_status] || 'Not read for AI yet';
       }
-      function renderWorkspaceMaterials(materials) {
+      function renderFolderMaterials(materials) {
         if (!materials?.length) {
-          const empty = document.createElement('p');
-          empty.className = 'material-empty';
-          empty.textContent = 'No files attached yet.';
-          el['material-list'].replaceChildren(empty);
+          el['file-list'].replaceChildren();
           return;
         }
-        el['material-list'].replaceChildren(...materials.map(material => {
+        el['file-list'].replaceChildren(...materials.map(material => {
           const item = document.createElement('div');
           item.className = 'material-item';
           const type = document.createElement('span');
@@ -1251,65 +1236,65 @@
             readForAI.textContent = 'AI';
             readForAI.setAttribute('aria-label', `Read ${material.original_filename} for Class AI`);
             readForAI.title = material.ai_message || 'Read file text locally for Class AI';
-            readForAI.addEventListener('click', () => extractWorkspaceMaterial(material));
+            readForAI.addEventListener('click', () => extractFolderMaterial(material));
             actions.append(readForAI);
           }
           const remove = document.createElement('button');
           remove.className = 'material-remove';
           remove.type = 'button';
           remove.textContent = '×';
-          remove.setAttribute('aria-label', `Remove ${material.original_filename}`);
-          remove.addEventListener('click', () => removeWorkspaceMaterial(material));
+          remove.setAttribute('aria-label', `Delete ${material.original_filename}`);
+          remove.addEventListener('click', () => removeFolderMaterial(material));
           actions.append(download, remove);
           item.append(type, info, actions);
           return item;
         }));
       }
-      async function extractWorkspaceMaterial(material) {
-        if (!activeWorkspace) return;
-        el['material-status'].textContent = `Reading ${material.original_filename} locally for Class AI…`;
+      async function extractFolderMaterial(material) {
+        el['file-status'].textContent = `Reading ${material.original_filename} locally for Class AI…`;
         try {
-          const updated = await api(`/api/workspaces/${activeWorkspace.id}/materials/${material.id}/extract`, { method: 'POST' });
-          activeWorkspace.materials = (activeWorkspace.materials || []).map(item => item.id === updated.id ? updated : item);
-          renderWorkspaceMaterials(activeWorkspace.materials);
-          el['material-status'].textContent = updated.ai_message || materialAIStatus(updated);
-        } catch (error) { el['material-status'].textContent = error.message; }
+          const updated = await api(`/api/materials/${material.id}/extract`, { method: 'POST' });
+          activeMaterials = activeMaterials.map(item => item.id === updated.id ? updated : item);
+          renderFolderMaterials(activeMaterials);
+          el['file-status'].textContent = updated.ai_message || materialAIStatus(updated);
+        } catch (error) { el['file-status'].textContent = error.message; }
       }
-      async function uploadWorkspaceMaterials(files) {
-        if (!activeWorkspace || !files?.length) return;
+      async function uploadFolderMaterials(files) {
+        if (!files?.length) return;
         const selected = [...files];
-        el['material-status'].textContent = selected.length === 1 ? 'Uploading file…' : `Uploading ${selected.length} files…`;
-        el['add-material'].disabled = true;
+        el['file-status'].textContent = selected.length === 1 ? 'Importing file…' : `Importing ${selected.length} files…`;
+        el['add-folder-material'].disabled = true;
         let uploaded = 0;
         try {
           for (const file of selected) {
             const form = new FormData();
             form.append('material', file, file.name);
-            const material = await api(`/api/workspaces/${activeWorkspace.id}/materials`, { method: 'POST', body: form });
-            activeWorkspace.materials = [material, ...(activeWorkspace.materials || [])];
+            const suffix = activeFolder ? `?folder_id=${encodeURIComponent(activeFolder.id)}` : '';
+            const material = await api(`/api/materials${suffix}`, { method: 'POST', body: form });
+            activeMaterials = [material, ...activeMaterials];
             uploaded += 1;
           }
-          renderWorkspaceMaterials(activeWorkspace.materials);
-          const readyCount = activeWorkspace.materials.filter(material => material.ai_status === 'ready').length;
-          el['material-status'].textContent = uploaded === 1
-            ? `${activeWorkspace.materials[0]?.ai_message || 'File attached privately.'}`
-            : `${uploaded} files attached privately. ${readyCount} file${readyCount === 1 ? '' : 's'} are ready for Class AI.`;
+          renderFolderMaterials(activeMaterials);
+          const readyCount = activeMaterials.filter(material => material.ai_status === 'ready').length;
+          el['file-status'].textContent = uploaded === 1
+            ? `${activeMaterials[0]?.ai_message || 'File imported privately.'}`
+            : `${uploaded} files imported privately. ${readyCount} file${readyCount === 1 ? '' : 's'} are ready for Class AI.`;
         } catch (error) {
-          renderWorkspaceMaterials(activeWorkspace.materials || []);
-          el['material-status'].textContent = uploaded ? `${uploaded} file${uploaded === 1 ? '' : 's'} attached. ${error.message}` : error.message;
+          renderFolderMaterials(activeMaterials);
+          el['file-status'].textContent = uploaded ? `${uploaded} file${uploaded === 1 ? '' : 's'} imported. ${error.message}` : error.message;
         } finally {
-          el['add-material'].disabled = false;
-          el['material-upload'].value = '';
+          el['add-folder-material'].disabled = false;
+          el['folder-material-upload'].value = '';
         }
       }
-      async function removeWorkspaceMaterial(material) {
-        if (!activeWorkspace || !confirm(`Remove ${material.original_filename} from this class note?`)) return;
+      async function removeFolderMaterial(material) {
+        if (!confirm(`Delete ${material.original_filename} from this folder?`)) return;
         try {
-          await api(`/api/workspaces/${activeWorkspace.id}/materials/${material.id}`, { method: 'DELETE' });
-          activeWorkspace.materials = (activeWorkspace.materials || []).filter(item => item.id !== material.id);
-          renderWorkspaceMaterials(activeWorkspace.materials);
-          el['material-status'].textContent = 'File removed.';
-        } catch (error) { el['material-status'].textContent = error.message; }
+          await api(`/api/materials/${material.id}`, { method: 'DELETE' });
+          activeMaterials = activeMaterials.filter(item => item.id !== material.id);
+          renderFolderMaterials(activeMaterials);
+          el['file-status'].textContent = 'File deleted.';
+        } catch (error) { el['file-status'].textContent = error.message; }
       }
       function formatPlaybackTime(seconds) {
         const safeSeconds = Math.max(0, Math.floor(Number(seconds) || 0));
@@ -1421,8 +1406,6 @@
           el['study-notes-status'].textContent = workspace.study_notes_updated_at
             ? `Saved ${formatDate(workspace.study_notes_updated_at)}`
             : 'No study draft yet.';
-          el['material-status'].textContent = '';
-          renderWorkspaceMaterials(workspace.materials || []);
           renderWorkspaceSessions(workspace.sessions || []);
           renderActiveSession();
           el['ai-notes'].value = workspace.ai_notes || '';
@@ -1662,7 +1645,7 @@
         return el['class-ai-model'].value || activeClassAI?.ai_notes_model || localAIStatus?.default_model || 'student edit';
       }
       function syncClassAIControls() {
-        const enabled = Boolean(localAIStatus?.ready && activeClassAI && (activeClassAI.lecture_count || activeClassAI.recording_count));
+        const enabled = Boolean(localAIStatus?.ready && activeClassAI && (activeClassAI.lecture_count || activeClassAI.recording_count || activeClassAI.material_count));
         el['class-generate-ai-notes'].disabled = !enabled;
         el['class-ai-question'].disabled = !enabled;
         el['class-ai-question-send'].disabled = !enabled;
@@ -1725,8 +1708,8 @@
           const classAI = await api(`/api/folders/${folderId}/class-ai`);
           activeClassAI = classAI;
           el['class-ai-title'].textContent = `${classAI.folder.name} class AI`;
-          el['class-ai-subtitle'].textContent = `Class AI can use everything saved in ${classAI.folder.name}, including loose recordings and lecture notes.`;
-          el['class-ai-source-summary'].textContent = `${classAI.lecture_count} ${classAI.lecture_count === 1 ? 'lecture note' : 'lecture notes'} and ${classAI.recording_count} ${classAI.recording_count === 1 ? 'recording' : 'recordings'} are available to this class.`;
+          el['class-ai-subtitle'].textContent = `Class AI can use every note, recording, and imported file saved in ${classAI.folder.name}.`;
+          el['class-ai-source-summary'].textContent = `${classAI.lecture_count} ${classAI.lecture_count === 1 ? 'lecture note' : 'lecture notes'}, ${classAI.recording_count} ${classAI.recording_count === 1 ? 'recording' : 'recordings'}, and ${classAI.material_count} ${classAI.material_count === 1 ? 'imported file' : 'imported files'} are available to this class.`;
           el['class-ai-notes'].value = classAI.ai_notes || '';
           el['class-ai-notes-status'].textContent = classAI.ai_notes_updated_at
             ? `Saved ${formatDate(classAI.ai_notes_updated_at)} · ${classAI.ai_notes_model || 'local AI'}`
@@ -1829,14 +1812,10 @@
         if (!activeWorkspace) return;
         const workspace = activeWorkspace;
         const recordings = workspace.sessions?.length || 0;
-        const materials = workspace.materials?.length || 0;
         const recordingCopy = recordings
           ? `${recordings} recording${recordings === 1 ? '' : 's'} will become loose so the audio is not deleted.`
           : 'There are no recordings to move.';
-        const materialCopy = materials
-          ? ` ${materials} attached file${materials === 1 ? '' : 's'} will be removed from this computer.`
-          : '';
-        if (!confirm(`Delete the lecture note "${workspace.title}"?\n\nIts written notes will be deleted. ${recordingCopy}${materialCopy}`)) return;
+        if (!confirm(`Delete the lecture note "${workspace.title}"?\n\nIts written notes will be deleted. ${recordingCopy} Imported files in this class folder will stay.`)) return;
         try {
           const result = await api(`/api/workspaces/${workspace.id}`, { method: 'DELETE' });
           showToast(result.released_recording_count ? 'Lecture note deleted; recordings are now loose.' : 'Lecture note deleted.');
@@ -1936,8 +1915,9 @@
           activeRecording = null;
           activeWorkspace = null;
           activeSession = null;
+          activeMaterials = library.materials || [];
           el['library-title'].textContent = locationName();
-          el['library-subtitle'].textContent = activeFolder ? 'Drag loose recordings onto lecture notes to attach them, or into folders to organize them.' : 'Everything you need for class, in one place.';
+          el['library-subtitle'].textContent = activeFolder ? 'Keep notes, recordings, and imported files together in this class—without nesting one inside another.' : 'Everything you need for class, in one place.';
           el['capture-copy'].textContent = activeFolder
             ? `Record now and we’ll save it to ${activeFolder.name}. You can move it later if you need to.`
             : 'Record first. We’ll save it safely to Unfiled, ready for you to organize after class.';
@@ -1959,12 +1939,15 @@
           el['folder-list'].replaceChildren(...library.folders.map((folder, index) => folderTile(folder, index)));
           el['workspace-list'].replaceChildren(...(library.workspaces || []).map(workspaceCard));
           el['recording-list'].replaceChildren(...library.lectures.map(recording => listRow('recording', recording.title, `Loose · ${formatDate(recording.created_at)}`, () => loadRecording(recording.id), recording)));
+          renderFolderMaterials(activeMaterials);
           el['folder-list'].hidden = library.folders.length === 0;
           el['workspace-list'].hidden = !(library.workspaces || []).length;
           el['recording-list'].hidden = library.lectures.length === 0;
           el['no-folders'].hidden = library.folders.length > 0;
           el['no-workspaces'].hidden = (library.workspaces || []).length > 0;
           el['no-recordings'].hidden = library.lectures.length > 0;
+          el['file-list'].hidden = activeMaterials.length === 0;
+          el['no-files'].hidden = activeMaterials.length > 0;
           if (!el['parent-target'].dataset.dropReady) {
             addDropTarget(el['parent-target'], () => parentDestination().id);
             el['parent-target'].dataset.dropReady = 'true';
@@ -2191,6 +2174,9 @@
       el['empty-folder-action'].addEventListener('click', openFolderForm);
       el['empty-workspace-action'].addEventListener('click', () => createWorkspace());
       el['record-from-library'].addEventListener('click', () => startQuickRecording());
+      el['add-folder-material'].addEventListener('click', () => el['folder-material-upload'].click());
+      el['empty-file-action'].addEventListener('click', () => el['folder-material-upload'].click());
+      el['folder-material-upload'].addEventListener('change', event => uploadFolderMaterials(event.target.files));
       el['open-class-ai'].addEventListener('click', () => loadClassAI(activeFolder?.id));
       el['capture-notes-toggle'].addEventListener('click', () => setCaptureNotesOpen(el['capture-notes-panel'].hidden, true));
       el['capture-notes-close'].addEventListener('click', () => setCaptureNotesOpen(false));
@@ -2234,23 +2220,6 @@
       el['workspace-class-ai'].addEventListener('click', () => loadClassAI(activeWorkspace?.folder_id));
       el['delete-workspace'].addEventListener('click', deleteActiveWorkspace);
       el['new-topic'].addEventListener('click', createTopic);
-      el['add-material'].addEventListener('click', () => el['material-upload'].click());
-      el['material-upload'].addEventListener('change', event => uploadWorkspaceMaterials(event.target.files));
-      el['material-dropzone'].addEventListener('keydown', event => {
-        if (event.key !== 'Enter' && event.key !== ' ') return;
-        event.preventDefault();
-        el['material-upload'].click();
-      });
-      el['material-dropzone'].addEventListener('dragover', event => {
-        event.preventDefault();
-        el['material-dropzone'].classList.add('dragging');
-      });
-      el['material-dropzone'].addEventListener('dragleave', () => el['material-dropzone'].classList.remove('dragging'));
-      el['material-dropzone'].addEventListener('drop', event => {
-        event.preventDefault();
-        el['material-dropzone'].classList.remove('dragging');
-        uploadWorkspaceMaterials(event.dataTransfer.files);
-      });
       el['workspace-title'].addEventListener('change', saveWorkspaceTitle);
       el['workspace-notes-save'].addEventListener('click', saveWorkspaceNotes);
       el['workspace-notes'].addEventListener('input', scheduleWorkspaceNotesSave);

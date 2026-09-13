@@ -183,7 +183,8 @@ def initialize_database() -> None:
             """
             CREATE TABLE IF NOT EXISTS materials (
                 id TEXT PRIMARY KEY,
-                workspace_id TEXT NOT NULL,
+                workspace_id TEXT,
+                folder_id TEXT,
                 original_filename TEXT NOT NULL,
                 stored_filename TEXT NOT NULL,
                 mime_type TEXT NOT NULL,
@@ -245,10 +246,6 @@ def initialize_database() -> None:
             "ON session_markers (lecture_id, time_seconds)"
         )
         connection.execute(
-            "CREATE INDEX IF NOT EXISTS idx_materials_workspace_created "
-            "ON materials (workspace_id, created_at)"
-        )
-        connection.execute(
             "CREATE INDEX IF NOT EXISTS idx_workspace_ai_messages_created "
             "ON workspace_ai_messages (workspace_id, created_at)"
         )
@@ -278,6 +275,45 @@ def initialize_database() -> None:
             connection.execute("ALTER TABLE materials ADD COLUMN extraction_message TEXT NOT NULL DEFAULT ''")
         if "extracted_at" not in material_columns:
             connection.execute("ALTER TABLE materials ADD COLUMN extracted_at TEXT")
+        if "folder_id" not in material_columns:
+            connection.execute(
+                """
+                CREATE TABLE materials_migrating (
+                    id TEXT PRIMARY KEY,
+                    workspace_id TEXT,
+                    folder_id TEXT,
+                    original_filename TEXT NOT NULL,
+                    stored_filename TEXT NOT NULL,
+                    mime_type TEXT NOT NULL,
+                    size_bytes INTEGER NOT NULL,
+                    created_at TEXT NOT NULL,
+                    extracted_text TEXT NOT NULL DEFAULT '',
+                    extraction_status TEXT NOT NULL DEFAULT 'not_processed',
+                    extraction_message TEXT NOT NULL DEFAULT '',
+                    extracted_at TEXT
+                )
+                """
+            )
+            connection.execute(
+                """
+                INSERT INTO materials_migrating (
+                    id, workspace_id, folder_id, original_filename, stored_filename, mime_type,
+                    size_bytes, created_at, extracted_text, extraction_status, extraction_message, extracted_at
+                )
+                SELECT materials.id, NULL, workspaces.folder_id,
+                       materials.original_filename, materials.stored_filename, materials.mime_type,
+                       materials.size_bytes, materials.created_at, materials.extracted_text,
+                       materials.extraction_status, materials.extraction_message, materials.extracted_at
+                FROM materials
+                LEFT JOIN workspaces ON workspaces.id = materials.workspace_id
+                """
+            )
+            connection.execute("DROP TABLE materials")
+            connection.execute("ALTER TABLE materials_migrating RENAME TO materials")
+        connection.execute(
+            "CREATE INDEX IF NOT EXISTS idx_materials_folder_created "
+            "ON materials (folder_id, created_at)"
+        )
         folder_columns = {row["name"] for row in connection.execute("PRAGMA table_info(folders)")}
         if "color" not in folder_columns:
             connection.execute("ALTER TABLE folders ADD COLUMN color TEXT NOT NULL DEFAULT 'blue'")
@@ -611,15 +647,6 @@ def build_workspace_ai_context(workspace_id: str) -> str:
             "SELECT title, created_at, transcript FROM lectures WHERE workspace_id = ? ORDER BY created_at ASC",
             (workspace_id,),
         ).fetchall()
-        materials = connection.execute(
-            """
-            SELECT original_filename, extracted_text, extraction_status
-            FROM materials
-            WHERE workspace_id = ?
-            ORDER BY created_at ASC
-            """,
-            (workspace_id,),
-        ).fetchall()
 
     source_parts: list[tuple[str, str]] = []
     if notes and notes["note_body"].strip():
@@ -629,18 +656,10 @@ def build_workspace_ai_context(workspace_id: str) -> str:
             source_parts.append(
                 (f"Recording — {session['title']} ({session['created_at']})", session["transcript"].strip())
             )
-    unreadable_materials: list[str] = []
-    for material in materials:
-        if material["extracted_text"].strip():
-            source_parts.append(
-                (f"Attached material — {material['original_filename']}", material["extracted_text"].strip())
-            )
-        elif material["extraction_status"] != "ready":
-            unreadable_materials.append(material["original_filename"])
     if not source_parts:
         raise HTTPException(
             status_code=422,
-            detail="Add notes, save a recording, or attach an AI-readable class file first.",
+            detail="Add class notes or save a recording before using the local AI assistant.",
         )
 
     remaining = LOCAL_AI_CONTEXT_LIMIT
@@ -653,11 +672,6 @@ def build_workspace_ai_context(workspace_id: str) -> str:
             excerpt += "\n[Source truncated for this response.]"
         context.append(f"## {label}\n{excerpt}")
         remaining -= len(excerpt)
-    if unreadable_materials:
-        filenames = ", ".join(unreadable_materials)
-        context.append(
-            f"## Attached files not readable by local AI\n{filenames}"
-        )
     return "\n\n".join(context)
 
 
@@ -735,27 +749,6 @@ def build_class_ai_context(folder_id: str) -> str:
                             session["transcript"].strip(),
                         )
                     )
-            materials = connection.execute(
-                """
-                SELECT original_filename, extracted_text, extraction_status
-                FROM materials
-                WHERE workspace_id = ?
-                ORDER BY created_at ASC
-                """,
-                (workspace["id"],),
-            ).fetchall()
-            for material in materials:
-                if material["extracted_text"].strip():
-                    source_parts.append(
-                        (
-                            f"{workspace['title']} — attached material {material['original_filename']}",
-                            material["extracted_text"].strip(),
-                        )
-                    )
-                elif material["extraction_status"] != "ready":
-                    unreadable_material_labels.append(
-                        f"{workspace['title']}: {material['original_filename']}"
-                    )
         loose_recordings = connection.execute(
             f"""
             SELECT title, created_at, transcript, note_body
@@ -778,6 +771,25 @@ def build_class_ai_context(folder_id: str) -> str:
                         recording["transcript"].strip(),
                     )
                 )
+        materials = connection.execute(
+            f"""
+            SELECT original_filename, extracted_text, extraction_status
+            FROM materials
+            WHERE folder_id IN ({placeholders})
+            ORDER BY created_at ASC
+            """,
+            folder_ids,
+        ).fetchall()
+        for material in materials:
+            if material["extracted_text"].strip():
+                source_parts.append(
+                    (
+                        f"Imported file — {material['original_filename']}",
+                        material["extracted_text"].strip(),
+                    )
+                )
+            elif material["extraction_status"] != "ready":
+                unreadable_material_labels.append(material["original_filename"])
 
     if not source_parts:
         raise HTTPException(
@@ -865,7 +877,7 @@ def serialize_folder(row: sqlite3.Row) -> dict[str, object]:
 def serialize_material(row: sqlite3.Row) -> dict[str, object]:
     return {
         "id": row["id"],
-        "workspace_id": row["workspace_id"],
+        "folder_id": row["folder_id"],
         "original_filename": row["original_filename"],
         "mime_type": row["mime_type"],
         "size_bytes": row["size_bytes"],
@@ -873,7 +885,7 @@ def serialize_material(row: sqlite3.Row) -> dict[str, object]:
         "ai_status": row["extraction_status"],
         "ai_message": row["extraction_message"],
         "extracted_char_count": len(row["extracted_text"]),
-        "download_url": f"/api/workspaces/{row['workspace_id']}/materials/{row['id']}/file",
+        "download_url": f"/api/materials/{row['id']}/file",
     }
 
 
@@ -928,10 +940,6 @@ def serialize_workspace(row: sqlite3.Row, *, include_sessions: bool = False) -> 
                 "SELECT note_body, updated_at FROM workspace_study_notes WHERE workspace_id = ?",
                 (row["id"],),
             ).fetchone()
-            materials = connection.execute(
-                "SELECT * FROM materials WHERE workspace_id = ? ORDER BY created_at DESC",
-                (row["id"],),
-            ).fetchall()
             ai_notes = connection.execute(
                 "SELECT note_body, model, updated_at FROM workspace_ai_notes WHERE workspace_id = ?",
                 (row["id"],),
@@ -941,7 +949,6 @@ def serialize_workspace(row: sqlite3.Row, *, include_sessions: bool = False) -> 
         result["notes_updated_at"] = notes["updated_at"] if notes else None
         result["study_notes"] = study_notes["note_body"] if study_notes else ""
         result["study_notes_updated_at"] = study_notes["updated_at"] if study_notes else None
-        result["materials"] = [serialize_material(material) for material in materials]
         result["ai_notes"] = ai_notes["note_body"] if ai_notes else ""
         result["ai_notes_model"] = ai_notes["model"] if ai_notes else None
         result["ai_notes_updated_at"] = ai_notes["updated_at"] if ai_notes else None
@@ -998,14 +1005,11 @@ def get_workspace(workspace_id: str) -> sqlite3.Row:
     return row
 
 
-def get_material(workspace_id: str, material_id: str) -> sqlite3.Row:
+def get_material(material_id: str) -> sqlite3.Row:
     with connect_database() as connection:
-        row = connection.execute(
-            "SELECT * FROM materials WHERE id = ? AND workspace_id = ?",
-            (material_id, workspace_id),
-        ).fetchone()
+        row = connection.execute("SELECT * FROM materials WHERE id = ?", (material_id,)).fetchone()
     if row is None:
-        raise HTTPException(status_code=404, detail="Attached file not found.")
+        raise HTTPException(status_code=404, detail="Imported file not found.")
     return row
 
 
@@ -1041,6 +1045,9 @@ def list_library(folder_id: str | None = Query(default=None)) -> dict[str, objec
                 """,
                 (folder_id,),
             ).fetchall()
+            materials = connection.execute(
+                "SELECT * FROM materials WHERE folder_id = ? ORDER BY created_at DESC", (folder_id,)
+            ).fetchall()
         else:
             folders = connection.execute(
                 "SELECT * FROM folders WHERE parent_id IS NULL ORDER BY name COLLATE NOCASE"
@@ -1058,12 +1065,16 @@ def list_library(folder_id: str | None = Query(default=None)) -> dict[str, objec
                 ORDER BY workspaces.updated_at DESC
                 """
             ).fetchall()
+            materials = connection.execute(
+                "SELECT * FROM materials WHERE folder_id IS NULL ORDER BY created_at DESC"
+            ).fetchall()
     return {
         "current_folder": serialize_folder(current_folder) if current_folder else None,
         "breadcrumbs": get_folder_path(current_folder),
         "folders": [serialize_folder(folder) for folder in folders],
         "workspaces": [serialize_workspace(workspace) for workspace in workspaces],
         "lectures": [serialize_lecture(lecture, include_content=False) for lecture in lectures],
+        "materials": [serialize_material(material) for material in materials],
     }
 
 
@@ -1135,7 +1146,10 @@ def delete_folder(folder_id: str) -> dict[str, str]:
         has_workspaces = connection.execute(
             "SELECT 1 FROM workspaces WHERE folder_id = ? LIMIT 1", (folder_id,)
         ).fetchone()
-        if has_children or has_lectures or has_workspaces:
+        has_materials = connection.execute(
+            "SELECT 1 FROM materials WHERE folder_id = ? LIMIT 1", (folder_id,)
+        ).fetchone()
+        if has_children or has_lectures or has_workspaces or has_materials:
             raise HTTPException(
                 status_code=409,
                 detail="Move or delete the folder's contents before deleting the folder.",
@@ -1195,12 +1209,9 @@ def update_workspace(workspace_id: str, update: WorkspaceUpdate) -> dict[str, ob
 
 @app.delete("/api/workspaces/{workspace_id}")
 def delete_workspace(workspace_id: str) -> dict[str, object]:
-    """Delete a lecture note while preserving its recordings as loose items."""
+    """Delete a lecture note while preserving its sibling recordings and files."""
     get_workspace(workspace_id)
     with connect_database() as connection:
-        materials = connection.execute(
-            "SELECT stored_filename FROM materials WHERE workspace_id = ?", (workspace_id,)
-        ).fetchall()
         released_recording_count = connection.execute(
             """
             UPDATE lectures
@@ -1213,10 +1224,7 @@ def delete_workspace(workspace_id: str) -> dict[str, object]:
         connection.execute("DELETE FROM workspace_study_notes WHERE workspace_id = ?", (workspace_id,))
         connection.execute("DELETE FROM workspace_ai_notes WHERE workspace_id = ?", (workspace_id,))
         connection.execute("DELETE FROM workspace_ai_messages WHERE workspace_id = ?", (workspace_id,))
-        connection.execute("DELETE FROM materials WHERE workspace_id = ?", (workspace_id,))
         connection.execute("DELETE FROM workspaces WHERE id = ?", (workspace_id,))
-    for material in materials:
-        (MATERIALS_DIR / material["stored_filename"]).unlink(missing_ok=True)
     return {"status": "deleted", "released_recording_count": released_recording_count}
 
 
@@ -1241,11 +1249,12 @@ def save_workspace_notes(workspace_id: str, update: WorkspaceNotesUpdate) -> dic
     return {"status": "saved", "updated_at": saved_at}
 
 
-@app.post("/api/workspaces/{workspace_id}/materials", status_code=201)
-def upload_workspace_material(
-    workspace_id: str, material: UploadFile = File(...)
+@app.post("/api/materials", status_code=201)
+def upload_folder_material(
+    material: UploadFile = File(...), folder_id: str | None = Query(default=None)
 ) -> dict[str, object]:
-    get_workspace(workspace_id)
+    if folder_id:
+        get_folder(folder_id)
     original_filename = Path((material.filename or "").replace("\\", "/")).name.strip()
     suffix = Path(original_filename).suffix.lower()
     if not original_filename or suffix not in ALLOWED_MATERIAL_SUFFIXES:
@@ -1255,13 +1264,18 @@ def upload_workspace_material(
         )
 
     with connect_database() as connection:
-        material_count = connection.execute(
-            "SELECT COUNT(*) AS count FROM materials WHERE workspace_id = ?", (workspace_id,)
-        ).fetchone()["count"]
+        if folder_id:
+            material_count = connection.execute(
+                "SELECT COUNT(*) AS count FROM materials WHERE folder_id = ?", (folder_id,)
+            ).fetchone()["count"]
+        else:
+            material_count = connection.execute(
+                "SELECT COUNT(*) AS count FROM materials WHERE folder_id IS NULL"
+            ).fetchone()["count"]
     if material_count >= MAX_MATERIALS_PER_WORKSPACE:
         raise HTTPException(
             status_code=413,
-            detail=f"Keep up to {MAX_MATERIALS_PER_WORKSPACE} files in one class note.",
+            detail=f"Keep up to {MAX_MATERIALS_PER_WORKSPACE} files in one folder.",
         )
 
     material_id = str(uuid4())
@@ -1296,13 +1310,13 @@ def upload_workspace_material(
             connection.execute(
                 """
                 INSERT INTO materials (
-                    id, workspace_id, original_filename, stored_filename, mime_type, size_bytes, created_at,
+                    id, workspace_id, folder_id, original_filename, stored_filename, mime_type, size_bytes, created_at,
                     extracted_text, extraction_status, extraction_message, extracted_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     material_id,
-                    workspace_id,
+                    folder_id,
                     original_filename,
                     stored_filename,
                     mime_type or "application/octet-stream",
@@ -1314,19 +1328,16 @@ def upload_workspace_material(
                     created_at if extraction_status == "ready" else None,
                 ),
             )
-            connection.execute(
-                "UPDATE workspaces SET updated_at = ? WHERE id = ?", (created_at, workspace_id)
-            )
     except Exception:
         saved_path.unlink(missing_ok=True)
         raise
-    return serialize_material(get_material(workspace_id, material_id))
+    return serialize_material(get_material(material_id))
 
 
-@app.post("/api/workspaces/{workspace_id}/materials/{material_id}/extract")
-def extract_workspace_material(workspace_id: str, material_id: str) -> dict[str, object]:
-    """Make an existing local attachment available to Class AI without re-uploading it."""
-    material = get_material(workspace_id, material_id)
+@app.post("/api/materials/{material_id}/extract")
+def extract_folder_material(material_id: str) -> dict[str, object]:
+    """Make an existing local file available to Class AI without re-uploading it."""
+    material = get_material(material_id)
     material_path = MATERIALS_DIR / material["stored_filename"]
     if not material_path.is_file():
         raise HTTPException(status_code=404, detail="The saved file is unavailable.")
@@ -1339,7 +1350,7 @@ def extract_workspace_material(workspace_id: str, material_id: str) -> dict[str,
             """
             UPDATE materials
             SET extracted_text = ?, extraction_status = ?, extraction_message = ?, extracted_at = ?
-            WHERE id = ? AND workspace_id = ?
+            WHERE id = ?
             """,
             (
                 extracted_text,
@@ -1347,18 +1358,14 @@ def extract_workspace_material(workspace_id: str, material_id: str) -> dict[str,
                 extraction_message,
                 extracted_at if extraction_status == "ready" else None,
                 material_id,
-                workspace_id,
             ),
         )
-        connection.execute(
-            "UPDATE workspaces SET updated_at = ? WHERE id = ?", (extracted_at, workspace_id)
-        )
-    return serialize_material(get_material(workspace_id, material_id))
+    return serialize_material(get_material(material_id))
 
 
-@app.get("/api/workspaces/{workspace_id}/materials/{material_id}/file")
-def download_workspace_material(workspace_id: str, material_id: str) -> FileResponse:
-    material = get_material(workspace_id, material_id)
+@app.get("/api/materials/{material_id}/file")
+def download_folder_material(material_id: str) -> FileResponse:
+    material = get_material(material_id)
     material_path = MATERIALS_DIR / material["stored_filename"]
     if not material_path.is_file():
         raise HTTPException(status_code=404, detail="The saved file is unavailable.")
@@ -1369,15 +1376,11 @@ def download_workspace_material(workspace_id: str, material_id: str) -> FileResp
     )
 
 
-@app.delete("/api/workspaces/{workspace_id}/materials/{material_id}")
-def delete_workspace_material(workspace_id: str, material_id: str) -> dict[str, str]:
-    material = get_material(workspace_id, material_id)
-    updated_at = datetime.now(timezone.utc).isoformat()
+@app.delete("/api/materials/{material_id}")
+def delete_folder_material(material_id: str) -> dict[str, str]:
+    material = get_material(material_id)
     with connect_database() as connection:
         connection.execute("DELETE FROM materials WHERE id = ?", (material_id,))
-        connection.execute(
-            "UPDATE workspaces SET updated_at = ? WHERE id = ?", (updated_at, workspace_id)
-        )
     (MATERIALS_DIR / material["stored_filename"]).unlink(missing_ok=True)
     return {"status": "deleted"}
 
@@ -1410,11 +1413,16 @@ def read_class_ai(folder_id: str) -> dict[str, object]:
             """,
             folder_ids,
         ).fetchone()["count"]
+        material_count = connection.execute(
+            f"SELECT COUNT(*) AS count FROM materials WHERE folder_id IN ({placeholders})",
+            folder_ids,
+        ).fetchone()["count"]
     return {
         "folder": serialize_folder(folder),
         "lecture_count": len(workspace_sources),
         "recording_count": sum(source["session_count"] for source in workspace_sources)
         + loose_recording_count,
+        "material_count": material_count,
         "ai_notes": ai_notes["note_body"] if ai_notes else "",
         "ai_notes_model": ai_notes["model"] if ai_notes else None,
         "ai_notes_updated_at": ai_notes["updated_at"] if ai_notes else None,
@@ -1446,10 +1454,10 @@ def generate_class_ai_notes(folder_id: str, request: LocalAIRequest) -> dict[str
     get_folder(folder_id)
     context = build_class_ai_context(folder_id)
     prompt = (
-        "Write a focused class study guide from the class's saved lecture notes and recordings for a high "
+        "Write a focused class study guide from the class's saved lecture notes, recordings, and imported files for a high "
         "school or college student. Use the headings Overview, Connections across lectures, Key ideas, "
         "Terms to know, and Questions to review when the source supports them. Keep it accurate and "
-        "easy to scan. Do not claim that attached files were read unless their text appears in the source."
+        "easy to scan. Do not claim that imported files were read unless their text appears in the source."
     )
     note_body = ask_local_model(
         request.model,
@@ -1582,8 +1590,8 @@ def generate_workspace_ai_notes(workspace_id: str, request: LocalAIRequest) -> d
     prompt = (
         "Write study notes from the source material for a high school or college student. "
         "Use the headings Overview, Key ideas, Terms to know, and Questions to review when "
-        "the source supports them. Keep the notes focused, correct, and easy to scan. Do not "
-        "claim that attached files were read unless their text appears in the source material."
+        "the source supports them. Keep the notes focused, correct, and easy to scan. Base every "
+        "claim on the lecture note and recordings supplied in the source material."
     )
     note_body = ask_local_model(
         request.model,

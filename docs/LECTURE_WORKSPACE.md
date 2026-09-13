@@ -2,20 +2,21 @@
 
 ## Decision
 
-The library has two first-class objects: a **lecture note** and a **loose
-recording**. A lecture note is the durable home for a topic that returns over
-several class days; it can be opened empty and gradually collect student notes,
-materials, and multiple dated recording sessions. A loose recording is a fast,
-low-friction capture that has not been assigned to a lecture note yet.
+The library has three first-class objects: a **lecture note**, a **loose
+recording**, and an **imported file**. A lecture note is the durable home for a
+topic that returns over several class days; it can be opened empty and gradually
+collect student notes and multiple dated recording sessions. Imported files are
+course resources, not attachments to either note or recording. A loose recording
+is a fast, low-friction capture that has not been assigned to a lecture note yet.
 
 ```
 Library
 └── Course folder (optional)
     ├── Class AI            — one opt-in guide and question history
     │   └── All saved data in this class, within a bounded model context
+    ├── Imported files      — slides, handouts, readings, and external notes
     └── Lecture workspace
         ├── Notes           — student-authored or pasted
-        ├── Materials       — private original files (slides, handouts, readings)
         ├── Recording sessions
         │   ├── audio
         │   └── transcript
@@ -37,6 +38,8 @@ This yields one simple rule for students:
 - Use **+ Recording** when class is beginning and the destination is not yet
   clear. It starts capture immediately and stays loose until the student drops
   it onto a lecture note.
+- Use **+ File** to keep teacher slides, handouts, and notes from other apps in
+  the course folder. Files are never nested inside a recording or lecture note.
 - Add or drag a **recording session** onto the current lecture note when the
   topic continues, including on another day.
 - Add a **topic marker** during review when one recording moves to a new idea.
@@ -89,8 +92,8 @@ same single-pane tab order rather than compressing columns.
 
 The Class AI view is scoped to one course folder. Every generated guide or
 answer can use all saved lecture notes, attached recording transcripts, loose
-recordings, and capture notes in that course (including nested folders), but it
-never crosses into another course. The server labels and bounds the assembled
+recordings, capture notes, and imported files in that course (including nested
+folders), but it never crosses into another course. The server labels and bounds the assembled
 context to fit the installed model's context window. This removes manual source
 selection while preserving a predictable privacy and course boundary.
 
@@ -107,10 +110,11 @@ audio or transcript data:
 - `workspace_study_notes`: editable study-guide draft separate from student
   notes. Keeping it separate prevents generated text from silently overwriting
   what a student wrote.
-- `materials`: original filename, generated local filename, type, size,
-  workspace, upload time, locally extracted text, and extraction status. The
-  original stays available for download; the database never trusts a
-  browser-provided path.
+- `materials`: nullable `folder_id`, original filename, generated local
+  filename, type, size, upload time, locally extracted text, and extraction
+  status. A material has no lecture-note or recording relationship. The original
+  stays available for download; the database never trusts a browser-provided
+  path.
 - `session_markers`: a user label and an audio time on a recording session.
   This is the lightweight bridge when content changes mid-lecture.
 - `folder_ai_notes`: one editable AI study guide per class folder, kept
@@ -132,11 +136,12 @@ note with automatic saving and a manual Save notes action. A workspace now has
 three deliberate review spaces:
 
 1. **Notes** for writing or pasting source material.
-   The adjacent **Class materials** panel accepts private PDF, Word,
-   PowerPoint, text, and Markdown files. A file belongs to the class note, not
-   to an individual recording. Text from PDF, `.docx`, `.pptx`, Markdown, and
-   text files is extracted locally for Class AI; scanned PDFs are clearly
-   marked as needing OCR and older `.doc`/`.ppt` files need conversion first.
+   **Imported files** appear as their own collection in the course folder,
+   alongside notes and loose recordings. The collection accepts private PDF,
+   Word, PowerPoint, text, and Markdown files. Text from PDF, `.docx`, `.pptx`,
+   Markdown, and text files is extracted locally for Class AI; scanned PDFs are
+   clearly marked as needing OCR and older `.doc`/`.ppt` files need conversion
+   first.
 2. **Recordings & transcript** for listening to one dated session, reading its
    transcript, and placing/removing topic markers at the current audio time.
 3. **Class AI**, reached from a course folder or from any lecture inside it,
@@ -157,7 +162,7 @@ The local-AI option is intentionally a provider adapter, not a hard dependency:
 the browser app speaks only to this FastAPI server, and the server speaks only
 to an Ollama process at `127.0.0.1`. It constrains each prompt to the
 student's saved notes, attached recordings, and loose recordings from one class
-folder, plus locally extracted text from supported class materials, and bounds
+folder, plus locally extracted text from supported imported files, and bounds
 the assembled prompt to the local model's context window. It keeps unreadable
 or unprocessed files clearly labeled rather than pretending they are sources.
 It saves question history once for that class. The default setup

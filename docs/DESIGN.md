@@ -112,7 +112,7 @@ second recording list from repeating the current page's content.
 
 Audio, class materials, the SQLite database, transcripts, topic markers, and
 study-guide drafts live in the local `data/` folder, which is ignored by Git.
-Nothing is uploaded by this prototype. Attached materials use generated local
+Nothing is uploaded by this prototype. Imported materials use generated local
 filenames rather than browser paths, are limited to supported study formats and
 25 MB each, and can be removed one at a time. Their readable text is extracted
 locally from PDFs, `.docx`, `.pptx`, Markdown, and text files for Class AI;
@@ -120,17 +120,17 @@ the original is kept alongside the extracted source. Scanned PDFs are labeled
 as needing OCR, and older `.doc`/`.ppt` files are kept but require conversion
 before Class AI can read them. Deleting a recording removes its
 database entry and saved audio, but keeps the surrounding class note and its
-student-authored notes. Deleting a lecture note removes its written notes and
-attached files, but releases its recordings as loose recordings so audio is not
-silently destroyed. An occupied folder cannot be deleted until its contents are
-moved or deleted.
+student-authored notes. Deleting a lecture note removes only its written notes
+and releases its recordings as loose recordings; imported files are separate
+folder-level items and stay in place. An occupied folder cannot be deleted
+until its contents are moved or deleted.
 
 The optional AI integration is also local: the server communicates only with an
 Ollama process on `127.0.0.1`. It never sends class notes, transcripts, or
 question history to a hosted provider. AI belongs to a **class folder**, not a
 single lecture note: it can use every saved lecture note, attached recording,
-and loose recording in that class folder (including nested folders). It never
-uses data from another class. The server builds a bounded, labeled context for
+loose recording, and imported file in that class folder (including nested
+folders). It never uses data from another class. The server builds a bounded, labeled context for
 each response because a local model has a finite context window; this is a
 technical limit on one request, not a manual source-selection burden placed on
 the student. An installed model does consume local disk, memory, and processing
