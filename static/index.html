@@ -61,6 +61,12 @@
       .titlebar p { margin: .42rem 0 0; color: var(--muted); font-size: .98rem; }
       .titlebar .button { flex: 0 0 auto; }
       .folder-actions { display: flex; align-items: flex-start; gap: .5rem; }
+      .add-menu { position: relative; }
+      .add-menu-popover { position: absolute; z-index: 8; top: calc(100% + .55rem); right: 0; width: 13.5rem; padding: .38rem; border: 3px solid #c8d4e5; border-radius: 1rem; background: rgba(249,251,254,.96); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+      .add-menu-option { width: 100%; display: grid; gap: .12rem; padding: .68rem .72rem; border-radius: .68rem; color: #202a3c; background: transparent; text-align: left; }
+      .add-menu-option:hover, .add-menu-option:focus-visible { color: #123d86; background: #eaf3ff; outline: 0; }
+      .add-menu-option strong { font-size: .82rem; }
+      .add-menu-option span { color: #718097; font-size: .72rem; line-height: 1.3; }
       .section-title { margin: 1.85rem 0 .65rem; color: var(--muted); font-size: .75rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
       .capture-launch { display: grid; justify-items: center; gap: .5rem; margin: 2.75rem 0 0; padding: clamp(1.65rem, 4vw, 2.4rem) 1rem; border: 1px solid rgba(255,255,255,.73); border-radius: 1.15rem; background: rgba(255,255,255,.36); box-shadow: inset 0 1px rgba(255,255,255,.65), 0 .9rem 2rem rgba(57,96,154,.1); text-align: center; backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
       .capture-launch h3 { margin: 0; font-size: 1.25rem; letter-spacing: -.025em; }
@@ -575,9 +581,16 @@
       .material-remove:hover, .material-remove:focus-visible { background: #fff0f1; }
       .material-ai-read { min-width: auto; color: #176247; font-weight: 780; }
       .material-ai-read:hover, .material-ai-read:focus-visible { background: #e6f7ee; }
+      .folder-ai-entry { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-top: 2.2rem; padding: 1rem 1.05rem; border: 4px solid #c8d4e5; border-radius: 1.25rem; background: rgba(249,251,254,.78); }
+      .folder-ai-entry-copy { min-width: 0; }
+      .folder-ai-entry-kicker { display: block; margin-bottom: .22rem; color: #536177; font-size: .68rem; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
+      .folder-ai-entry h3 { margin: 0; font-size: 1rem; letter-spacing: -.02em; }
+      .folder-ai-entry p { max-width: 40rem; margin: .28rem 0 0; color: var(--muted); font-size: .8rem; line-height: 1.45; }
       @media (max-width: 540px) {
         .workspace-header { align-items: stretch; flex-direction: column; }
         .workspace-actions { justify-content: flex-start; padding-top: 0; }
+        .folder-ai-entry { align-items: stretch; flex-direction: column; }
+        .folder-ai-entry .button { width: 100%; }
       }
 
       .note-editor-card { overflow: hidden; border: 4px solid #c8d4e5; border-radius: 1.4rem; background: rgba(252,253,255,.88); }
@@ -684,17 +697,21 @@
           <nav id="breadcrumb" class="breadcrumb" aria-label="Folder path"></nav>
           <div class="titlebar">
             <div><h2 id="library-title">Library</h2><p id="library-subtitle">Everything you need for class, in one place.</p></div>
-            <div class="folder-actions">
-              <button id="new-workspace" class="button primary"><span class="create-symbol">＋</span>Note</button>
-              <button id="record-from-library" class="button secondary"><span class="create-symbol">＋</span>Recording</button>
-              <button id="add-folder-material" class="button secondary"><span class="create-symbol">＋</span>File</button>
+            <div class="folder-actions" aria-label="Folder actions">
+              <div class="add-menu">
+                <button id="add-menu-toggle" class="button primary" aria-expanded="false" aria-controls="add-menu"><span class="create-symbol">＋</span>Add</button>
+                <div id="add-menu" class="add-menu-popover" role="menu" hidden>
+                  <button id="record-from-library" type="button" class="add-menu-option" role="menuitem"><strong>Record now</strong><span>Start recording in this folder</span></button>
+                  <button id="new-workspace" type="button" class="add-menu-option" role="menuitem"><strong>New note</strong><span>Make a lecture or topic note</span></button>
+                </div>
+              </div>
+              <button id="add-folder-material" class="button secondary"><span class="create-symbol">＋</span>Add file</button>
               <input id="folder-material-upload" type="file" accept=".pdf,.txt,.md,.doc,.docx,.ppt,.pptx" multiple hidden />
-              <button id="open-class-ai" class="button secondary" hidden>✦&nbsp; Class AI</button>
               <div id="folder-color-control" class="color-menu" hidden aria-label="Folder color">
                 <button type="button" class="color-swatch" data-color="blue" aria-label="Blue"></button><button type="button" class="color-swatch" data-color="violet" aria-label="Violet"></button><button type="button" class="color-swatch" data-color="rose" aria-label="Rose"></button><button type="button" class="color-swatch" data-color="coral" aria-label="Coral"></button><button type="button" class="color-swatch" data-color="amber" aria-label="Amber"></button><button type="button" class="color-swatch" data-color="lime" aria-label="Lime"></button><button type="button" class="color-swatch" data-color="mint" aria-label="Mint"></button><button type="button" class="color-swatch" data-color="sky" aria-label="Sky"></button><button type="button" class="color-swatch" data-color="slate" aria-label="Slate"></button>
               </div>
               <button id="folder-color-toggle" class="button secondary" hidden>Color</button>
-              <button id="delete-folder" class="button danger" hidden>Delete folder</button>
+              <button id="delete-folder" class="button danger" hidden>Delete</button>
             </div>
           </div>
           <button id="parent-target" class="parent-target" hidden>
@@ -728,6 +745,10 @@
           <p id="file-status" class="material-status" role="status"></p>
           <div id="file-list" class="material-list"></div>
           <div id="no-files" class="empty" hidden><span>No imported files here yet.</span><button id="empty-file-action" class="button secondary">＋ Import file</button></div>
+          <section id="folder-ai-entry" class="folder-ai-entry" aria-labelledby="folder-ai-heading" hidden>
+            <div class="folder-ai-entry-copy"><span class="folder-ai-entry-kicker">Class AI</span><h3 id="folder-ai-heading">Study across this class</h3><p>Bring together this folder’s notes, recordings, transcripts, and imported files when you want to review or ask a question.</p></div>
+            <button id="folder-ai-open" class="button secondary">Open Class AI</button>
+          </section>
           <section id="capture-launch" class="capture-launch" hidden><p id="capture-copy"></p></section>
         </section>
 
@@ -811,7 +832,6 @@
             </div>
             <div class="workspace-actions">
               <button id="new-topic" class="button secondary"><span class="create-symbol">＋</span>New topic</button>
-              <button id="workspace-class-ai" class="button secondary" hidden>✦&nbsp; Class AI</button>
               <button id="delete-workspace" class="button danger">Delete note</button>
               <button id="record-from-workspace" class="button primary">●&nbsp; Record session</button>
             </div>
@@ -970,7 +990,7 @@
 
     <script>
       const elementIds = [
-        'library-home', 'new-workspace', 'new-folder', 'record-from-library', 'add-folder-material', 'folder-material-upload', 'open-class-ai', 'empty-folder-action', 'empty-workspace-action', 'empty-file-action', 'capture-launch', 'capture-copy',
+        'library-home', 'new-workspace', 'new-folder', 'record-from-library', 'add-menu-toggle', 'add-menu', 'add-folder-material', 'folder-material-upload', 'folder-ai-entry', 'folder-ai-open', 'empty-folder-action', 'empty-workspace-action', 'empty-file-action', 'capture-launch', 'capture-copy',
         'recent-toggle', 'recent-menu', 'recent-recording-list', 'recent-empty', 'library-view', 'breadcrumb', 'library-title',
         'library-subtitle', 'delete-folder', 'folder-color-toggle', 'folder-color-control', 'parent-target', 'parent-title', 'parent-copy',
         'folder-list', 'no-folders', 'workspace-list', 'no-workspaces', 'recording-list', 'no-recordings', 'file-list', 'no-files', 'file-status', 'folder-view',
@@ -980,7 +1000,7 @@
         'cancel-recording', 'recording-status', 'capture-notes-toggle', 'capture-notes-panel', 'capture-notes-close', 'capture-notes-context', 'capture-notes', 'capture-notes-footer', 'detail-view', 'back-to-library', 'detail-heading',
         'delete-recording', 'saved-title', 'save-recording', 'save-status', 'saved-date', 'playback',
         'move-target', 'attach-recording-panel', 'attach-target', 'attach-recording', 'transcript', 'workspace-view', 'workspace-back', 'workspace-heading', 'workspace-location',
-        'workspace-title', 'workspace-notes', 'workspace-notes-status', 'workspace-notes-save', 'record-from-workspace', 'workspace-class-ai', 'delete-workspace', 'new-topic',
+        'workspace-title', 'workspace-notes', 'workspace-notes-status', 'workspace-notes-save', 'record-from-workspace', 'delete-workspace', 'new-topic',
         'workspace-tab-notes', 'workspace-tab-review', 'workspace-tab-study', 'notes-pane', 'review-pane', 'study-pane',
         'session-list', 'review-session-list', 'review-empty', 'review-content', 'review-session-title', 'review-session-meta',
         'session-playback', 'marker-label', 'add-marker', 'marker-list', 'session-transcript', 'detach-session', 'delete-session',
@@ -1397,7 +1417,6 @@
           el['workspace-heading'].textContent = workspace.title;
           el['workspace-title'].value = workspace.title;
           el['workspace-location'].textContent = folder ? `Inside ${folder.name}` : 'Unfiled lecture';
-          el['workspace-class-ai'].hidden = !workspace.folder_id;
           el['workspace-notes'].value = workspace.note_body || '';
           el['workspace-notes-status'].textContent = workspace.notes_updated_at
             ? `Saved ${formatDate(workspace.notes_updated_at)}`
@@ -1908,6 +1927,7 @@
       }
       async function loadLibrary(folderId) {
         try {
+          closeAddMenu();
           const suffix = folderId ? `?folder_id=${encodeURIComponent(folderId)}` : '';
           const library = await api(`/api/library${suffix}`);
           activeFolder = library.current_folder;
@@ -1923,7 +1943,7 @@
             : 'Record first. We’ll save it safely to Unfiled, ready for you to organize after class.';
           el['delete-folder'].hidden = !activeFolder;
           el['folder-color-toggle'].hidden = !activeFolder;
-          el['open-class-ai'].hidden = !activeFolder;
+          el['folder-ai-entry'].hidden = !activeFolder;
           if (!activeFolder) el['folder-color-control'].hidden = true;
           if (activeFolder) setSelectedSwatch(el['folder-color-control'], activeFolder.color || 'blue');
           el['parent-target'].hidden = !activeFolder;
@@ -2159,6 +2179,10 @@
         openRecording(workspace);
         startRecording();
       }
+      function closeAddMenu() {
+        el['add-menu'].hidden = true;
+        el['add-menu-toggle'].setAttribute('aria-expanded', 'false');
+      }
       el['library-home'].addEventListener('click', () => loadLibrary());
       el['recent-toggle'].addEventListener('click', event => {
         event.stopPropagation();
@@ -2168,16 +2192,26 @@
       });
       el['recent-menu'].addEventListener('click', event => event.stopPropagation());
       document.addEventListener('click', closeRecentMenu);
+      el['add-menu-toggle'].addEventListener('click', event => {
+        event.stopPropagation();
+        const opening = el['add-menu'].hidden;
+        el['add-menu'].hidden = !opening;
+        el['add-menu-toggle'].setAttribute('aria-expanded', String(opening));
+      });
+      el['add-menu'].addEventListener('click', event => event.stopPropagation());
+      document.addEventListener('click', event => {
+        if (!event.target.closest('.add-menu')) closeAddMenu();
+      });
       el['parent-target'].addEventListener('click', () => loadLibrary(parentDestination().id));
-      el['new-workspace'].addEventListener('click', () => createWorkspace());
+      el['new-workspace'].addEventListener('click', () => { closeAddMenu(); createWorkspace(); });
       el['new-folder'].addEventListener('click', openFolderForm);
       el['empty-folder-action'].addEventListener('click', openFolderForm);
       el['empty-workspace-action'].addEventListener('click', () => createWorkspace());
-      el['record-from-library'].addEventListener('click', () => startQuickRecording());
+      el['record-from-library'].addEventListener('click', () => { closeAddMenu(); startQuickRecording(); });
       el['add-folder-material'].addEventListener('click', () => el['folder-material-upload'].click());
       el['empty-file-action'].addEventListener('click', () => el['folder-material-upload'].click());
       el['folder-material-upload'].addEventListener('change', event => uploadFolderMaterials(event.target.files));
-      el['open-class-ai'].addEventListener('click', () => loadClassAI(activeFolder?.id));
+      el['folder-ai-open'].addEventListener('click', () => loadClassAI(activeFolder?.id));
       el['capture-notes-toggle'].addEventListener('click', () => setCaptureNotesOpen(el['capture-notes-panel'].hidden, true));
       el['capture-notes-close'].addEventListener('click', () => setCaptureNotesOpen(false));
       el['cancel-folder'].addEventListener('click', () => loadLibrary(activeFolder?.id));
@@ -2217,7 +2251,6 @@
       }));
       el['workspace-back'].addEventListener('click', () => loadLibrary(activeWorkspace?.folder_id));
       el['record-from-workspace'].addEventListener('click', () => startQuickRecording(activeWorkspace));
-      el['workspace-class-ai'].addEventListener('click', () => loadClassAI(activeWorkspace?.folder_id));
       el['delete-workspace'].addEventListener('click', deleteActiveWorkspace);
       el['new-topic'].addEventListener('click', createTopic);
       el['workspace-title'].addEventListener('change', saveWorkspaceTitle);

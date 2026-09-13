@@ -26,6 +26,14 @@ The centered workspace keeps the current class context visible without a
 permanent navigation rail. The Library button and breadcrumbs provide a direct
 route home, while the record action remains at the bottom of every folder view.
 
+Inside a folder, the action row is deliberately limited to **Add**, **File**,
+**Color**, and **Delete**. **Add** is a small menu with just two choices:
+record immediately in the current folder or make a new lecture/topic note.
+This keeps creation choices together without making the header feel like a
+toolbar. Class AI is a dedicated section after the folder's imported files,
+where it is clearly a class-wide study tool rather than an action attached to
+one note or recording.
+
 ## Capture before organization
 
 Every new recording inherits the folder from which the student starts capture.
