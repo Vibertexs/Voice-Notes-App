@@ -2,16 +2,17 @@
 
 ## Decision
 
-The primary object is a **class note**, not a single audio recording. A class
-note is the durable home for either one lecture or a study topic that returns
-over several class days. It can be opened with nothing in it, then gradually
-collect student notes and multiple dated recording sessions.
+The library has two first-class objects: a **lecture note** and a **loose
+recording**. A lecture note is the durable home for a topic that returns over
+several class days; it can be opened empty and gradually collect student notes,
+materials, and multiple dated recording sessions. A loose recording is a fast,
+low-friction capture that has not been assigned to a lecture note yet.
 
 ```
 Library
 └── Course folder (optional)
     ├── Class AI            — one opt-in guide and question history
-    │   └── Selected recent lecture notes (up to five per request)
+    │   └── All saved data in this class, within a bounded model context
     └── Lecture workspace
         ├── Notes           — student-authored or pasted
         ├── Materials       — private original files (slides, handouts, readings)
@@ -19,6 +20,9 @@ Library
         │   ├── audio
         │   └── transcript
         │   └── topic markers
+    └── Loose recording
+        ├── audio + transcript
+        └── optional capture notes
 ```
 
 A folder remains an organizational container: normally a course or semester.
@@ -30,8 +34,11 @@ is starting.
 This yields one simple rule for students:
 
 - Start a **new topic** when class shifts to a distinct subject.
-- Add a **recording session** when the current lecture or topic continues,
-  including on another day.
+- Use **+ Recording** when class is beginning and the destination is not yet
+  clear. It starts capture immediately and stays loose until the student drops
+  it onto a lecture note.
+- Add or drag a **recording session** onto the current lecture note when the
+  topic continues, including on another day.
 - Add a **topic marker** during review when one recording moves to a new idea.
   It points to the exact audio time, so the original session stays intact.
 
@@ -43,14 +50,17 @@ There are two deliberate ways in:
    invoked from a folder, that folder is selected automatically. This is the
    right route when a student wants to write notes or add a PDF before recording.
 2. **Record a lecture** opens capture immediately. It inherits the current
-   folder. On a successful first save, it creates a workspace and its first
-   recording session together. Cancelling or denying microphone access creates
-   nothing, so the library never fills with empty abandoned workspaces.
+   folder. On a successful save it creates a loose recording with a readable
+   default title. The student can drag it onto a lecture note later; it can also
+   be made loose again during review. Cancelling or denying microphone access
+   creates nothing, so the library never fills with empty abandoned workspaces.
 
 Inside an existing workspace, the persistent recording dock adds another
 session to that same workspace. A session is therefore a dated piece of audio,
 not a new lecture. A student can come back tomorrow and keep recording into the
-same lecture context.
+same lecture context. Capture notes saved with a loose recording remain with it
+until it is attached, then are appended to the target lecture note with a clear
+recording label.
 
 The default workspace title uses the existing readable date-and-time title.
 Students can rename it later. Starting at the Library root creates an unfiled
@@ -77,11 +87,12 @@ header on every tab. The review tab isolates replay and transcript reading from
 writing. Mobile is not part of this desktop proof of concept; it will use this
 same single-pane tab order rather than compressing columns.
 
-The Class AI view starts with the three most recently updated lecture notes and
-lets the student change that selection, up to five notes. Every generated guide
-or answer is scoped to that selection. This provides continuity—such as asking
-how today connects to last week—without treating an entire course as one opaque
-prompt or generating redundant AI notes inside every lecture.
+The Class AI view is scoped to one course folder. Every generated guide or
+answer can use all saved lecture notes, attached recording transcripts, loose
+recordings, and capture notes in that course (including nested folders), but it
+never crosses into another course. The server labels and bounds the assembled
+context to fit the installed model's context window. This removes manual source
+selection while preserving a predictable privacy and course boundary.
 
 ## Data contract for the implementation phase
 
@@ -90,8 +101,8 @@ audio or transcript data:
 
 - `workspaces`: `id`, nullable `folder_id`, `title`, `created_at`, `updated_at`.
 - `lectures` becomes the recording-session store by adding nullable
-  `workspace_id`. Its existing audio, transcription model, and transcript
-  fields remain intact.
+  `workspace_id`, plus `is_standalone` for a loose recording. Its existing
+  audio, transcription model, and transcript fields remain intact.
 - `workspace_notes`: editable, local text notes linked directly to a workspace.
 - `workspace_study_notes`: editable study-guide draft separate from student
   notes. Keeping it separate prevents generated text from silently overwriting
@@ -128,8 +139,9 @@ three deliberate review spaces:
 3. **Class AI**, reached from a course folder or from any lecture inside it,
    for one editable course guide and one question history. It uses an installed
    local Ollama model only when the student opts in; it is disabled with plain
-   setup directions otherwise. The student selects which recent lecture notes
-   provide context for each request.
+   setup directions otherwise. It has access to all saved data in that course,
+   including loose recordings, rather than asking the student to choose sources
+   on each request.
 
 The current study-draft generator is deliberately local and extractive. It is
 not represented as an AI model: it never sends student notes, audio, or
@@ -141,9 +153,10 @@ content is not silently parsed into the study draft yet.
 The local-AI option is intentionally a provider adapter, not a hard dependency:
 the browser app speaks only to this FastAPI server, and the server speaks only
 to an Ollama process at `127.0.0.1`. It constrains each prompt to the
-student-selected recent lecture notes and recording transcripts from one class
-folder, labels attached but unparsed files, and saves question history once for
-that class. The default setup
+student's saved notes, attached recordings, and loose recordings from one class
+folder, labels attached but unparsed files, and bounds the assembled prompt to
+the local model's context window. It saves question history once for that class.
+The default setup
 recommendation is `qwen3:1.7b`, a roughly 1.4 GB Apache-2.0 open-weight model;
 students can select another model that is already installed locally.
 
@@ -153,20 +166,20 @@ creation time. Audio and transcript files are not rewritten.
 
 ## Next implementation check-in
 
-Test whether a student can find their notes, one session's transcript, and the
-study guide without explanation. Next, install and test the local model on this
-laptop before measuring note quality and response time. Then add source
-extraction—text/Markdown first, then PDF/Office—so AI notes can cite attached
-class materials. Flashcards should come only after the AI notes have a
+Test whether a student can find their notes, a loose recording, one session's
+transcript, and the class guide without explanation. Next, install and test the
+local model on this laptop before measuring note quality and response time. Then
+add source extraction—text/Markdown first, then PDF/Office—so AI notes can cite
+attached class materials. Flashcards should come only after the AI notes have a
 trustworthy source and a student-visible edit/review step.
 
 ## Check-in required before implementation
 
-Approve or change this proposed default:
+The implemented default is:
 
-> **Record a lecture** creates a fresh workspace only after the first recording
-> is successfully saved; **New lecture workspace** is the explicit blank-canvas
-> route.
+> **+ Recording** saves a loose recording after capture; **+ Note** is the
+> explicit blank-canvas route. A loose recording can be dragged to a lecture
+> note or made loose again later.
 
 This keeps class-time capture fast while giving students a clean way to prepare
-their notes before class.
+their notes before class without guessing the eventual lecture destination.

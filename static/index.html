@@ -658,14 +658,8 @@
       .class-ai-source-card h3 { margin: 0; font-size: 1rem; }
       .class-ai-source-card p { margin: .35rem 0 0; color: var(--muted); font-size: .8rem; line-height: 1.45; }
       .class-ai-source-summary { margin-top: .8rem !important; color: #244b88 !important; font-weight: 720; }
-      .class-ai-source-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(13.5rem, 1fr)); gap: .6rem; margin-top: .8rem; }
-      .class-ai-source { min-height: 5rem; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: .55rem; margin: 0; padding: .7rem; border: 2px solid #d9e2ef; border-radius: .9rem; color: #354158; background: #fff; cursor: pointer; text-transform: none; letter-spacing: normal; }
-      .class-ai-source:has(input:checked) { border-color: #5d8bd8; color: #173b79; background: #eef5ff; }
-      .class-ai-source input { width: 1.15rem; min-height: 1.15rem; margin: .1rem 0 0; accent-color: #1a56bd; }
-      .class-ai-source strong, .class-ai-source span { display: block; }
-      .class-ai-source strong { overflow: hidden; font-size: .82rem; text-overflow: ellipsis; white-space: nowrap; }
-      .class-ai-source span { margin-top: .24rem; color: #6b7990; font-size: .7rem; font-weight: 500; line-height: 1.35; }
-      .class-ai-source-empty { margin: .8rem 0 0; color: var(--muted); font-size: .82rem; }
+      .move-panel #attach-recording-panel { margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 2px solid #dbe4f0; }
+      .move-panel #attach-recording { width: 100%; margin-top: .7rem; }
       @media (max-width: 840px) { .workspace-note-layout, .review-layout { grid-template-columns: 1fr; } }
       @media (max-width: 840px) { .capture-layout.notes-open { grid-template-columns: minmax(0, 1fr); } .capture-notes-card { position: static; } .capture-notes { min-height: 15rem; } }
       @media (max-width: 540px) { .topic-marker, .ai-question-form { grid-template-columns: 1fr; } .topic-marker .button, .ai-question-form .button { justify-self: stretch; } .class-ai-header { align-items: stretch; flex-direction: column; } }
@@ -697,7 +691,7 @@
             <div><h2 id="library-title">Library</h2><p id="library-subtitle">Everything you need for class, in one place.</p></div>
             <div class="folder-actions">
               <button id="new-workspace" class="button primary"><span class="create-symbol">＋</span>Note</button>
-              <button id="record-from-library" class="button secondary">●&nbsp; Record</button>
+              <button id="record-from-library" class="button secondary"><span class="create-symbol">＋</span>Recording</button>
               <button id="open-class-ai" class="button secondary" hidden>✦&nbsp; Class AI</button>
               <div id="folder-color-control" class="color-menu" hidden aria-label="Folder color">
                 <button type="button" class="color-swatch" data-color="blue" aria-label="Blue"></button><button type="button" class="color-swatch" data-color="violet" aria-label="Violet"></button><button type="button" class="color-swatch" data-color="rose" aria-label="Rose"></button><button type="button" class="color-swatch" data-color="coral" aria-label="Coral"></button><button type="button" class="color-swatch" data-color="amber" aria-label="Amber"></button><button type="button" class="color-swatch" data-color="lime" aria-label="Lime"></button><button type="button" class="color-swatch" data-color="mint" aria-label="Mint"></button><button type="button" class="color-swatch" data-color="sky" aria-label="Sky"></button><button type="button" class="color-swatch" data-color="slate" aria-label="Slate"></button>
@@ -730,9 +724,9 @@
           <h3 class="section-title">Lecture notes</h3>
           <div id="workspace-list" class="workspace-grid"></div>
           <div id="no-workspaces" class="empty"><span>No lecture notes here yet.</span><button id="empty-workspace-action" class="button secondary">＋ New note</button></div>
-          <h3 class="section-title" hidden>Recordings</h3>
+          <h3 class="section-title">Loose recordings</h3>
           <div id="recording-list" class="list"></div>
-          <div id="no-recordings" class="empty" hidden>No recordings here yet.</div>
+          <div id="no-recordings" class="empty" hidden><span>No loose recordings here yet.</span></div>
           <section id="capture-launch" class="capture-launch" hidden><p id="capture-copy"></p></section>
         </section>
 
@@ -801,7 +795,7 @@
                 <button id="capture-notes-close" class="capture-notes-close" type="button" aria-label="Close capture notes">×</button>
               </div>
               <textarea id="capture-notes" class="capture-notes" maxlength="100000" spellcheck="true" placeholder="Key idea, question, assignment, or something to revisit…"></textarea>
-              <p class="capture-notes-footer"><strong>Saved with this recording.</strong> When you tap Done, these notes are added to the class note.</p>
+              <p id="capture-notes-footer" class="capture-notes-footer"><strong>Saved with this recording.</strong> When you tap Done, these notes are added to the class note.</p>
             </aside>
           </div>
         </section>
@@ -864,7 +858,7 @@
               <section class="review-card" aria-label="Recording review">
                 <div id="review-empty" class="review-empty">Record a session to see its audio and transcript here.</div>
                 <div id="review-content" hidden>
-                  <div class="review-card-head"><div><h3 id="review-session-title">Recording</h3><p id="review-session-meta"></p></div></div>
+                  <div class="review-card-head"><div><h3 id="review-session-title">Recording</h3><p id="review-session-meta"></p></div><button id="detach-session" type="button" class="button secondary">Make loose</button></div>
                   <audio id="session-playback" class="session-player" controls></audio>
                   <div class="topic-marker">
                     <label for="marker-label">Mark a topic change at the current audio time<input id="marker-label" maxlength="120" placeholder="e.g. Moved to cellular respiration" /></label>
@@ -923,14 +917,13 @@
             <span class="study-label">On this laptop</span>
           </div>
           <section class="class-ai-source-card" aria-labelledby="class-ai-source-heading">
-            <h3 id="class-ai-source-heading">Choose the lecture context</h3>
-            <p>Class AI defaults to your three most recent lecture notes. Select up to five when you need to reach further back.</p>
+            <h3 id="class-ai-source-heading">Your whole class is connected</h3>
+            <p>Class AI can use every lecture note, recording, and capture note saved in this class. It never reaches into another class folder.</p>
             <p id="class-ai-source-summary" class="class-ai-source-summary" role="status"></p>
-            <div id="class-ai-source-list" class="class-ai-source-list"></div>
           </section>
           <div class="study-stack">
             <section class="ai-notes-card" aria-label="Class AI notes">
-              <div class="ai-card-head"><div><h3>Class study guide</h3><p>Make one editable guide that connects the lectures you selected.</p></div><span class="study-label">Local AI</span></div>
+              <div class="ai-card-head"><div><h3>Class study guide</h3><p>Make one editable guide from everything saved for this class.</p></div><span class="study-label">Local AI</span></div>
               <p id="class-ai-setup" class="ai-setup" role="status">Checking local AI…</p>
               <div class="ai-controls">
                 <label class="ai-model-label" for="class-ai-model">Local model<select id="class-ai-model" disabled></select></label>
@@ -942,7 +935,7 @@
             </section>
 
             <section class="ai-chat-card" aria-label="Ask your class">
-              <div class="ai-card-head"><div><h3>Ask this class</h3><p>Answers use only the selected lecture notes and recordings.</p></div></div>
+              <div class="ai-card-head"><div><h3>Ask this class</h3><p>Answers use only notes and recordings saved in this class.</p></div></div>
               <div id="class-ai-chat-list" class="ai-chat-list"></div>
               <form id="class-ai-question-form" class="ai-question-form">
                 <textarea id="class-ai-question" class="ai-question" maxlength="4000" rows="2" placeholder="e.g. How does this connect to last week’s lecture?" disabled></textarea>
@@ -965,6 +958,12 @@
               <audio id="playback" controls></audio>
             </div>
             <aside class="detail-section move-panel">
+              <div id="attach-recording-panel">
+                <h3>Attach to lecture</h3>
+                <p>Pick a lecture now if drag-and-drop is not convenient. Your capture notes will join that lecture's notes.</p>
+                <label>Lecture note<select id="attach-target"></select></label>
+                <button id="attach-recording" type="button" class="button primary">Attach recording</button>
+              </div>
               <h3>Save to folder</h3>
               <p>Select a destination now. It will not move until you save below.</p>
               <label>Folder<select id="move-target"></select></label>
@@ -987,17 +986,17 @@
         'folder-context', 'folder-form', 'folder-name', 'new-folder-colors', 'cancel-folder', 'folder-status',
         'recording-view', 'capture-layout', 'recording-title', 'quality', 'record', 'recording-location', 'recording-helper', 'recording-timer', 'transport', 'phase-label', 'waveform',
         'finish-group', 'finish-recording', 'discard-reveal', 'discard-slider', 'discard-thumb',
-        'cancel-recording', 'recording-status', 'capture-notes-toggle', 'capture-notes-panel', 'capture-notes-close', 'capture-notes-context', 'capture-notes', 'detail-view', 'back-to-library', 'detail-heading',
+        'cancel-recording', 'recording-status', 'capture-notes-toggle', 'capture-notes-panel', 'capture-notes-close', 'capture-notes-context', 'capture-notes', 'capture-notes-footer', 'detail-view', 'back-to-library', 'detail-heading',
         'delete-recording', 'saved-title', 'save-recording', 'save-status', 'saved-date', 'playback',
-        'move-target', 'transcript', 'workspace-view', 'workspace-back', 'workspace-heading', 'workspace-location',
+        'move-target', 'attach-recording-panel', 'attach-target', 'attach-recording', 'transcript', 'workspace-view', 'workspace-back', 'workspace-heading', 'workspace-location',
         'workspace-title', 'workspace-notes', 'workspace-notes-status', 'workspace-notes-save', 'record-from-workspace', 'workspace-class-ai', 'new-topic', 'add-material',
         'workspace-tab-notes', 'workspace-tab-review', 'workspace-tab-study', 'notes-pane', 'review-pane', 'study-pane',
         'session-list', 'review-session-list', 'review-empty', 'review-content', 'review-session-title', 'review-session-meta',
-        'session-playback', 'marker-label', 'add-marker', 'marker-list', 'session-transcript',
+        'session-playback', 'marker-label', 'add-marker', 'marker-list', 'session-transcript', 'detach-session',
         'study-notes', 'study-notes-status', 'study-notes-save', 'generate-study-notes',
         'ai-setup', 'ai-model', 'ai-refresh', 'generate-ai-notes', 'ai-notes', 'ai-notes-status', 'ai-notes-save',
         'ai-chat-list', 'ai-question-form', 'ai-question', 'ai-question-send', 'ai-chat-clear',
-        'class-ai-view', 'class-ai-back', 'class-ai-title', 'class-ai-subtitle', 'class-ai-source-summary', 'class-ai-source-list',
+        'class-ai-view', 'class-ai-back', 'class-ai-title', 'class-ai-subtitle', 'class-ai-source-summary',
         'class-ai-setup', 'class-ai-model', 'class-ai-refresh', 'class-generate-ai-notes', 'class-ai-notes', 'class-ai-notes-status', 'class-ai-notes-save',
         'class-ai-chat-list', 'class-ai-question-form', 'class-ai-question', 'class-ai-question-send', 'class-ai-chat-clear',
         'material-upload', 'material-dropzone', 'material-status', 'material-list', 'toast'
@@ -1012,7 +1011,6 @@
       let localAIStatus = null;
       let aiMessages = [];
       let activeClassAI = null;
-      let classAISourceIds = [];
       let classAIMessages = [];
       let allFolders = [];
       let allRecordings = [];
@@ -1106,6 +1104,21 @@
           if (recordingId) await moveRecording(recordingId, typeof destination === 'function' ? destination() : destination);
         });
       }
+      function addWorkspaceDropTarget(node, workspaceId) {
+        node.addEventListener('dragover', event => {
+          if (!event.dataTransfer.types.includes('text/plain')) return;
+          event.preventDefault();
+          event.dataTransfer.dropEffect = 'move';
+          node.classList.add('drop-target');
+        });
+        node.addEventListener('dragleave', () => node.classList.remove('drop-target'));
+        node.addEventListener('drop', async event => {
+          event.preventDefault();
+          node.classList.remove('drop-target');
+          const recordingId = event.dataTransfer.getData('text/plain');
+          if (recordingId) await attachRecording(recordingId, workspaceId);
+        });
+      }
       function addRecordingDrag(node, recording) {
         node.draggable = true;
         node.addEventListener('dragstart', event => {
@@ -1163,13 +1176,14 @@
         title.textContent = workspace.title;
         const copy = document.createElement('p');
         copy.textContent = workspace.session_count
-          ? `${workspace.session_count} ${workspace.session_count === 1 ? 'recording attached' : 'recordings attached'}`
-          : 'Start or paste your notes';
+          ? `${workspace.session_count} ${workspace.session_count === 1 ? 'recording attached' : 'recordings attached'} · drop another recording here`
+          : 'Start or paste notes · drop a loose recording here';
         const footer = document.createElement('span');
         footer.className = 'workspace-card-footer';
         footer.innerHTML = '<span>Open notes</span><span aria-hidden="true">↗</span>';
         node.append(kicker, title, copy, footer);
         node.addEventListener('click', () => loadWorkspace(workspace.id));
+        addWorkspaceDropTarget(node, workspace.id);
         return node;
       }
       function formatFileSize(bytes) {
@@ -1603,12 +1617,11 @@
           renderAIMessages([]);
         } catch (error) { showToast(error.message); }
       }
-      function classAIHasSources() { return classAISourceIds.length > 0; }
       function selectedClassAIModel() {
         return el['class-ai-model'].value || activeClassAI?.ai_notes_model || localAIStatus?.default_model || 'student edit';
       }
       function syncClassAIControls() {
-        const enabled = Boolean(localAIStatus?.ready && classAIHasSources());
+        const enabled = Boolean(localAIStatus?.ready && activeClassAI && (activeClassAI.lecture_count || activeClassAI.recording_count));
         el['class-generate-ai-notes'].disabled = !enabled;
         el['class-ai-question'].disabled = !enabled;
         el['class-ai-question-send'].disabled = !enabled;
@@ -1622,7 +1635,7 @@
         el['class-ai-model'].disabled = !status.ready;
         syncClassAIControls();
         if (status.ready) {
-          el['class-ai-setup'].textContent = 'Ready on this laptop. Only the lecture notes you select are used.';
+          el['class-ai-setup'].textContent = 'Ready on this laptop. Class AI can use every saved note and recording in this class.';
         } else {
           const link = document.createElement('a');
           link.href = 'https://ollama.com/download/windows';
@@ -1632,65 +1645,12 @@
           el['class-ai-setup'].replaceChildren(status.message, ' ', link, ', then run ', `ollama pull ${status.default_model}`, ' in a terminal.');
         }
       }
-      function renderClassAISources() {
-        const sources = activeClassAI?.sources || [];
-        const validIds = new Set(sources.map(source => source.id));
-        classAISourceIds = classAISourceIds.filter(id => validIds.has(id));
-        const selectedCount = classAISourceIds.length;
-        el['class-ai-source-summary'].textContent = selectedCount
-          ? `Using ${selectedCount} selected ${selectedCount === 1 ? 'lecture note' : 'lecture notes'} for Class AI.`
-          : 'Choose at least one lecture note to use Class AI.';
-        if (!sources.length) {
-          const empty = document.createElement('p');
-          empty.className = 'class-ai-source-empty';
-          empty.textContent = 'No lecture notes have been saved in this class yet. Create a note or record a session first.';
-          el['class-ai-source-list'].replaceChildren(empty);
-          syncClassAIControls();
-          return;
-        }
-        el['class-ai-source-list'].replaceChildren(...sources.map(source => {
-          const choice = document.createElement('label');
-          choice.className = 'class-ai-source';
-          const checkbox = document.createElement('input');
-          checkbox.type = 'checkbox';
-          checkbox.checked = classAISourceIds.includes(source.id);
-          checkbox.setAttribute('aria-label', `Use ${source.title} in Class AI`);
-          const copy = document.createElement('span');
-          const title = document.createElement('strong');
-          title.textContent = source.title;
-          const meta = document.createElement('span');
-          const sessions = source.session_count || 0;
-          meta.textContent = source.has_content
-            ? `${formatDate(source.updated_at)} · ${sessions} ${sessions === 1 ? 'recording' : 'recordings'}`
-            : 'No notes or transcript yet';
-          copy.append(title, meta);
-          checkbox.addEventListener('change', () => {
-            if (checkbox.checked) {
-              if (classAISourceIds.length >= 5) {
-                checkbox.checked = false;
-                showToast('Use up to five lecture notes at once.');
-                return;
-              }
-              classAISourceIds = [...classAISourceIds, source.id];
-            } else {
-              classAISourceIds = classAISourceIds.filter(id => id !== source.id);
-            }
-            renderClassAISources();
-            if (activeClassAI?.ai_notes) {
-              el['class-ai-notes-status'].textContent = 'Lecture selection changed. Regenerate the guide if needed.';
-            }
-          });
-          choice.append(checkbox, copy);
-          return choice;
-        }));
-        syncClassAIControls();
-      }
       function renderClassAIMessages(messages) {
         classAIMessages = messages || [];
         if (!classAIMessages.length) {
           const empty = document.createElement('p');
           empty.className = 'ai-chat-empty';
-          empty.textContent = 'Ask a question after local AI is ready. Answers use only the lecture notes you selected above.';
+          empty.textContent = 'Ask a question after local AI is ready. Answers use everything saved in this class.';
           el['class-ai-chat-list'].replaceChildren(empty);
           el['class-ai-chat-clear'].hidden = true;
           return;
@@ -1722,21 +1682,14 @@
         }
         try {
           const classAI = await api(`/api/folders/${folderId}/class-ai`);
-          const isSameClass = activeClassAI?.folder?.id === classAI.folder.id;
-          const availableIds = new Set(classAI.sources.map(source => source.id));
-          const retained = isSameClass ? classAISourceIds.filter(id => availableIds.has(id)) : [];
           activeClassAI = classAI;
-          const readySources = classAI.sources.filter(source => source.has_content);
-          classAISourceIds = retained.length
-            ? retained
-            : (readySources.length ? readySources : classAI.sources).slice(0, 3).map(source => source.id);
           el['class-ai-title'].textContent = `${classAI.folder.name} class AI`;
-          el['class-ai-subtitle'].textContent = `Use a focused set of recent ${classAI.folder.name} lectures. Your whole class is not automatically sent to the model.`;
+          el['class-ai-subtitle'].textContent = `Class AI can use everything saved in ${classAI.folder.name}, including loose recordings and lecture notes.`;
+          el['class-ai-source-summary'].textContent = `${classAI.lecture_count} ${classAI.lecture_count === 1 ? 'lecture note' : 'lecture notes'} and ${classAI.recording_count} ${classAI.recording_count === 1 ? 'recording' : 'recordings'} are available to this class.`;
           el['class-ai-notes'].value = classAI.ai_notes || '';
           el['class-ai-notes-status'].textContent = classAI.ai_notes_updated_at
             ? `Saved ${formatDate(classAI.ai_notes_updated_at)} · ${classAI.ai_notes_model || 'local AI'}`
             : 'No class guide yet.';
-          renderClassAISources();
           renderClassAIMessages(classAI.messages);
           show('class-ai');
           await refreshClassAIStatus();
@@ -1766,13 +1719,13 @@
         }
       }
       async function generateClassAINotes() {
-        if (!activeClassAI || !classAIHasSources()) return;
+        if (!activeClassAI) return;
         el['class-generate-ai-notes'].disabled = true;
         el['class-ai-notes-status'].textContent = 'Writing class guide locally…';
         try {
           const result = await api(`/api/folders/${activeClassAI.folder.id}/class-ai/notes`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ model: selectedClassAIModel(), workspace_ids: classAISourceIds })
+            body: JSON.stringify({ model: selectedClassAIModel() })
           });
           el['class-ai-notes'].value = result.note_body;
           activeClassAI.ai_notes = result.note_body;
@@ -1787,7 +1740,7 @@
       }
       async function askClassAI(event) {
         event.preventDefault();
-        if (!activeClassAI || !classAIHasSources()) return;
+        if (!activeClassAI) return;
         const question = el['class-ai-question'].value.trim();
         if (!question) { el['class-ai-question'].focus(); return; }
         el['class-ai-question-send'].disabled = true;
@@ -1795,7 +1748,7 @@
         try {
           const result = await api(`/api/folders/${activeClassAI.folder.id}/class-ai/questions`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ model: selectedClassAIModel(), question, workspace_ids: classAISourceIds })
+            body: JSON.stringify({ model: selectedClassAIModel(), question })
           });
           classAIMessages = [...classAIMessages, result.question, result.answer];
           renderClassAIMessages(classAIMessages);
@@ -1811,6 +1764,14 @@
         try {
           await api(`/api/folders/${activeClassAI.folder.id}/class-ai/messages`, { method: 'DELETE' });
           renderClassAIMessages([]);
+        } catch (error) { showToast(error.message); }
+      }
+      async function detachActiveSession() {
+        if (!activeSession || !confirm('Make this recording loose? Its transcript stays safe, and you can drag it onto a lecture again later.')) return;
+        try {
+          const recording = await api(`/api/lectures/${activeSession.id}/detach`, { method: 'POST' });
+          showToast('Recording is loose and ready to organize.');
+          await loadLibrary(recording.folder_id);
         } catch (error) { showToast(error.message); }
       }
       async function addSessionMarker() {
@@ -1907,7 +1868,7 @@
           activeWorkspace = null;
           activeSession = null;
           el['library-title'].textContent = locationName();
-          el['library-subtitle'].textContent = activeFolder ? 'Drag a recording here to add it to this folder.' : 'Everything you need for class, in one place.';
+          el['library-subtitle'].textContent = activeFolder ? 'Drag loose recordings onto lecture notes to attach them, or into folders to organize them.' : 'Everything you need for class, in one place.';
           el['capture-copy'].textContent = activeFolder
             ? `Record now and we’ll save it to ${activeFolder.name}. You can move it later if you need to.`
             : 'Record first. We’ll save it safely to Unfiled, ready for you to organize after class.';
@@ -1928,7 +1889,7 @@
           renderBreadcrumb();
           el['folder-list'].replaceChildren(...library.folders.map((folder, index) => folderTile(folder, index)));
           el['workspace-list'].replaceChildren(...(library.workspaces || []).map(workspaceCard));
-          el['recording-list'].replaceChildren(...library.lectures.map(recording => listRow('recording', recording.title, formatDate(recording.created_at), () => loadRecording(recording.id), recording)));
+          el['recording-list'].replaceChildren(...library.lectures.map(recording => listRow('recording', recording.title, `Loose · ${formatDate(recording.created_at)}`, () => loadRecording(recording.id), recording)));
           el['folder-list'].hidden = library.folders.length === 0;
           el['workspace-list'].hidden = !(library.workspaces || []).length;
           el['recording-list'].hidden = library.lectures.length === 0;
@@ -1959,7 +1920,15 @@
           el['saved-date'].textContent = `${formatDate(recording.created_at)} · ${recording.model}`;
           el.playback.src = recording.audio_url;
           el.transcript.textContent = recording.transcript || 'No speech was detected.';
-          await refreshNavigation();
+          const folderSuffix = recording.folder_id ? `?folder_id=${encodeURIComponent(recording.folder_id)}` : '';
+          const [_, destinations] = await Promise.all([refreshNavigation(), api(`/api/library${folderSuffix}`)]);
+          const attachOptions = destinations.workspaces || [];
+          el['attach-target'].replaceChildren(
+            new Option(attachOptions.length ? 'Choose a lecture note…' : 'No lecture notes here yet', ''),
+            ...attachOptions.map(workspace => new Option(workspace.title, workspace.id))
+          );
+          el['attach-recording'].disabled = !attachOptions.length;
+          el['attach-recording-panel'].hidden = false;
           show('detail');
         } catch (error) {
           el['save-status'].textContent = error.message;
@@ -1975,6 +1944,15 @@
           showToast(`Moved to ${destination}`);
           if (keepDetail) { activeRecording = recording; await loadRecording(recording.id); }
           else await loadLibrary(activeFolder?.id);
+        } catch (error) { showToast(error.message); }
+      }
+      async function attachRecording(recordingId, workspaceId) {
+        try {
+          const recording = await api(`/api/lectures/${recordingId}/attach`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ workspace_id: workspaceId })
+          });
+          showToast(`Added ${recording.title} to a lecture note.`);
+          await loadLibrary(recording.folder_id);
         } catch (error) { showToast(error.message); }
       }
 
@@ -2112,15 +2090,22 @@
         setCaptureNotesOpen(false);
         el['recording-location'].textContent = workspace
           ? `●  Adding a session to ${workspace.title}`
-          : `●  Saving to ${recordingDestination?.name || 'Unfiled'}`;
+          : `●  Loose recording in ${recordingDestination?.name || 'Unfiled'}`;
         el['recording-helper'].textContent = workspace
           ? 'This recording will stay attached to these lecture notes.'
-          : 'Tap once to begin. A new lecture note will be created when you save.';
+          : 'This recording stays loose until you drag it onto a lecture note.';
         el['capture-notes-context'].textContent = workspace
           ? `These notes will append to ${workspace.title} when you save.`
-          : 'These notes will become the first notes in your new class note.';
+          : 'These notes stay with this recording until you add it to a lecture note.';
+        el['capture-notes-footer'].textContent = workspace
+          ? 'Saved with this recording. When you tap Done, these notes are added to the class note.'
+          : 'Saved with this recording. When you add it to a lecture note later, these notes are appended there.';
         resetCaptureControls();
         show('recording');
+      }
+      function startQuickRecording(workspace = null) {
+        openRecording(workspace);
+        startRecording();
       }
       el['library-home'].addEventListener('click', () => loadLibrary());
       el['recent-toggle'].addEventListener('click', event => {
@@ -2136,7 +2121,7 @@
       el['new-folder'].addEventListener('click', openFolderForm);
       el['empty-folder-action'].addEventListener('click', openFolderForm);
       el['empty-workspace-action'].addEventListener('click', () => createWorkspace());
-      el['record-from-library'].addEventListener('click', () => openRecording());
+      el['record-from-library'].addEventListener('click', () => startQuickRecording());
       el['open-class-ai'].addEventListener('click', () => loadClassAI(activeFolder?.id));
       el['capture-notes-toggle'].addEventListener('click', () => setCaptureNotesOpen(el['capture-notes-panel'].hidden, true));
       el['capture-notes-close'].addEventListener('click', () => setCaptureNotesOpen(false));
@@ -2176,7 +2161,7 @@
         } catch (error) { showToast(error.message); }
       }));
       el['workspace-back'].addEventListener('click', () => loadLibrary(activeWorkspace?.folder_id));
-      el['record-from-workspace'].addEventListener('click', () => openRecording(activeWorkspace));
+      el['record-from-workspace'].addEventListener('click', () => startQuickRecording(activeWorkspace));
       el['workspace-class-ai'].addEventListener('click', () => loadClassAI(activeWorkspace?.folder_id));
       el['new-topic'].addEventListener('click', createTopic);
       el['add-material'].addEventListener('click', () => el['material-upload'].click());
@@ -2215,6 +2200,7 @@
       el['class-ai-notes-save'].addEventListener('click', saveClassAINotes);
       el['class-ai-question-form'].addEventListener('submit', askClassAI);
       el['class-ai-chat-clear'].addEventListener('click', clearClassAIChat);
+      el['detach-session'].addEventListener('click', detachActiveSession);
       el['add-marker'].addEventListener('click', addSessionMarker);
       function releaseMicrophone() {
         stream?.getTracks().forEach(track => track.stop());
@@ -2372,14 +2358,20 @@
         if (recordingDestination?.id) form.append('folder_id', recordingDestination.id);
         try {
           const recording = await api('/api/lectures', { method: 'POST', body: form });
-          showToast(`Recording saved to ${recordingDestination?.name || 'Unfiled'}`);
+          showToast(recording.workspace_id ? 'Recording added to this lecture.' : 'Loose recording saved. Drag it onto a lecture when you are ready.');
           if (recording.workspace_id) await loadWorkspace(recording.workspace_id);
-          else await loadRecording(recording.id);
+          else await loadLibrary(recording.folder_id);
         } catch (error) {
           resetCaptureControls(error.message);
         }
       }
       el['back-to-library'].addEventListener('click', () => loadLibrary(activeRecording?.folder_id));
+      el['attach-recording'].addEventListener('click', () => {
+        if (!activeRecording) return;
+        const workspaceId = el['attach-target'].value;
+        if (!workspaceId) { el['attach-target'].focus(); return; }
+        attachRecording(activeRecording.id, workspaceId);
+      });
       el['save-recording'].addEventListener('click', async () => {
         if (!activeRecording) return;
         el['save-recording'].disabled = true; el['save-status'].textContent = 'Saving…';

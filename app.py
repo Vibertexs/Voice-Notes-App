@@ -30,7 +30,6 @@ LOCAL_AI_URL = "http://127.0.0.1:11434"
 LOCAL_AI_DEFAULT_MODEL = "qwen3:1.7b"
 LOCAL_AI_CONTEXT_LIMIT = 50_000
 LOCAL_AI_HISTORY_LIMIT = 8
-MAX_CLASS_AI_SOURCES = 5
 ALLOWED_SUFFIXES = {".wav", ".mp3", ".m4a", ".ogg", ".webm", ".mp4"}
 ALLOWED_MATERIAL_SUFFIXES = {".pdf", ".txt", ".md", ".doc", ".docx", ".ppt", ".pptx"}
 TRANSCRIPTION_MODELS = {"tiny.en", "base.en", "small.en"}
@@ -55,6 +54,10 @@ class LectureUpdate(BaseModel):
 
 class RecordingMove(BaseModel):
     folder_id: str | None = None
+
+
+class RecordingAttach(BaseModel):
+    workspace_id: str = Field(min_length=1)
 
 
 class WorkspaceCreate(BaseModel):
@@ -90,14 +93,6 @@ class LocalAIQuestion(LocalAIRequest):
 
 class LocalAINotesUpdate(LocalAIRequest):
     note_body: str = Field(max_length=100_000)
-
-
-class ClassAIRequest(LocalAIRequest):
-    workspace_ids: list[str] = Field(min_length=1, max_length=MAX_CLASS_AI_SOURCES)
-
-
-class ClassAIQuestion(ClassAIRequest):
-    question: str = Field(min_length=1, max_length=4_000)
 
 
 def connect_database() -> sqlite3.Connection:
@@ -254,6 +249,12 @@ def initialize_database() -> None:
             connection.execute("ALTER TABLE lectures ADD COLUMN folder_id TEXT")
         if "workspace_id" not in columns:
             connection.execute("ALTER TABLE lectures ADD COLUMN workspace_id TEXT")
+        if "is_standalone" not in columns:
+            connection.execute(
+                "ALTER TABLE lectures ADD COLUMN is_standalone INTEGER NOT NULL DEFAULT 0"
+            )
+        if "capture_notes_workspace_id" not in columns:
+            connection.execute("ALTER TABLE lectures ADD COLUMN capture_notes_workspace_id TEXT")
         folder_columns = {row["name"] for row in connection.execute("PRAGMA table_info(folders)")}
         if "color" not in folder_columns:
             connection.execute("ALTER TABLE folders ADD COLUMN color TEXT NOT NULL DEFAULT 'blue'")
@@ -261,7 +262,7 @@ def initialize_database() -> None:
             """
             SELECT id, folder_id, title, created_at, note_body
             FROM lectures
-            WHERE workspace_id IS NULL
+            WHERE workspace_id IS NULL AND is_standalone = 0
             """
         ).fetchall()
         for lecture in legacy_rows:
@@ -280,8 +281,8 @@ def initialize_database() -> None:
                 ),
             )
             connection.execute(
-                "UPDATE lectures SET workspace_id = ? WHERE id = ?",
-                (workspace_id, lecture["id"]),
+                "UPDATE lectures SET workspace_id = ?, capture_notes_workspace_id = ? WHERE id = ?",
+                (workspace_id, workspace_id, lecture["id"]),
             )
             connection.execute(
                 """
@@ -313,6 +314,15 @@ def initialize_database() -> None:
                 """,
                 (workspace["id"], workspace["note_body"], workspace["updated_at"]),
             )
+        connection.execute(
+            """
+            UPDATE lectures
+            SET capture_notes_workspace_id = workspace_id
+            WHERE capture_notes_workspace_id IS NULL
+              AND workspace_id IS NOT NULL
+              AND trim(note_body) <> ''
+            """
+        )
 
 
 @asynccontextmanager
@@ -349,10 +359,15 @@ def new_note_template(title: str) -> str:
 """
 
 
-def append_capture_notes(existing_notes: str, capture_notes: str, created_at: datetime) -> str:
+def append_capture_notes(
+    existing_notes: str,
+    capture_notes: str,
+    created_at: datetime,
+    heading: str = "Capture notes",
+) -> str:
     """Append an in-recording note in a way that stays readable in the class note."""
     note_heading = created_at.astimezone().strftime("%b %d, %Y at %I:%M %p")
-    addition = f"## Capture notes — {note_heading}\n\n{capture_notes.strip()}"
+    addition = f"## {heading} — {note_heading}\n\n{capture_notes.strip()}"
     return f"{existing_notes.rstrip()}\n\n{addition}\n" if existing_notes.strip() else f"{addition}\n"
 
 
@@ -556,44 +571,16 @@ def class_ai_sources(folder_id: str) -> list[sqlite3.Row]:
             WHERE workspaces.folder_id IN ({placeholders})
             GROUP BY workspaces.id
             ORDER BY workspaces.updated_at DESC
-            LIMIT 12
             """,
             folder_ids,
         ).fetchall()
 
 
-def serialize_class_ai_source(row: sqlite3.Row) -> dict[str, object]:
-    return {
-        "id": row["id"],
-        "title": row["title"],
-        "folder_id": row["folder_id"],
-        "folder_name": row["folder_name"],
-        "updated_at": row["updated_at"],
-        "session_count": row["session_count"],
-        "has_content": bool(row["has_content"]),
-    }
-
-
-def selected_class_ai_sources(folder_id: str, workspace_ids: list[str]) -> list[sqlite3.Row]:
+def build_class_ai_context(folder_id: str) -> str:
+    """Build a bounded context from every note and recording saved in one class."""
     sources = class_ai_sources(folder_id)
-    requested = list(dict.fromkeys(workspace_ids))
-    if not requested:
-        raise HTTPException(status_code=422, detail="Choose at least one lecture for Class AI.")
-    if len(requested) > MAX_CLASS_AI_SOURCES:
-        raise HTTPException(
-            status_code=422,
-            detail=f"Choose at most {MAX_CLASS_AI_SOURCES} lectures for one Class AI request.",
-        )
-    available_ids = {source["id"] for source in sources}
-    if any(workspace_id not in available_ids for workspace_id in requested):
-        raise HTTPException(status_code=422, detail="Choose lectures that belong to this class.")
-    requested_ids = set(requested)
-    return [source for source in sources if source["id"] in requested_ids]
-
-
-def build_class_ai_context(folder_id: str, workspace_ids: list[str]) -> str:
-    """Build a bounded context from a student's selected recent class notes."""
-    sources = selected_class_ai_sources(folder_id, workspace_ids)
+    folder_ids = descendant_folder_ids(folder_id)
+    placeholders = ", ".join("?" for _ in folder_ids)
     source_parts: list[tuple[str, str]] = []
     material_labels: list[str] = []
     with connect_database() as connection:
@@ -626,11 +613,33 @@ def build_class_ai_context(folder_id: str, workspace_ids: list[str]) -> str:
             material_labels.extend(
                 f"{workspace['title']}: {material['original_filename']}" for material in materials
             )
+        loose_recordings = connection.execute(
+            f"""
+            SELECT title, created_at, transcript, note_body
+            FROM lectures
+            WHERE workspace_id IS NULL AND is_standalone = 1
+              AND folder_id IN ({placeholders})
+            ORDER BY created_at DESC
+            """,
+            folder_ids,
+        ).fetchall()
+        for recording in loose_recordings:
+            if recording["note_body"].strip():
+                source_parts.append(
+                    (f"Loose recording {recording['title']} — capture notes", recording["note_body"].strip())
+                )
+            if recording["transcript"].strip():
+                source_parts.append(
+                    (
+                        f"Loose recording {recording['title']} ({recording['created_at']})",
+                        recording["transcript"].strip(),
+                    )
+                )
 
     if not source_parts:
         raise HTTPException(
             status_code=422,
-            detail="The selected lectures need notes or saved transcripts before Class AI can help.",
+            detail="Add class notes or save a recording before Class AI can help.",
         )
 
     remaining = LOCAL_AI_CONTEXT_LIMIT
@@ -726,6 +735,7 @@ def serialize_lecture(row: sqlite3.Row, *, include_content: bool) -> dict[str, o
     result: dict[str, object] = {
         "id": row["id"],
         "workspace_id": row["workspace_id"],
+        "is_standalone": bool(row["is_standalone"]),
         "folder_id": row["folder_id"],
         "course": row["course"],
         "title": row["title"],
@@ -1166,6 +1176,9 @@ def read_local_ai_status() -> dict[str, object]:
 @app.get("/api/folders/{folder_id}/class-ai")
 def read_class_ai(folder_id: str) -> dict[str, object]:
     folder = get_folder(folder_id)
+    workspace_sources = class_ai_sources(folder_id)
+    folder_ids = descendant_folder_ids(folder_id)
+    placeholders = ", ".join("?" for _ in folder_ids)
     with connect_database() as connection:
         ai_notes = connection.execute(
             "SELECT note_body, model, updated_at FROM folder_ai_notes WHERE folder_id = ?",
@@ -1175,9 +1188,19 @@ def read_class_ai(folder_id: str) -> dict[str, object]:
             "SELECT * FROM folder_ai_messages WHERE folder_id = ? ORDER BY created_at ASC",
             (folder_id,),
         ).fetchall()
+        loose_recording_count = connection.execute(
+            f"""
+            SELECT COUNT(*) AS count FROM lectures
+            WHERE workspace_id IS NULL AND is_standalone = 1
+              AND folder_id IN ({placeholders})
+            """,
+            folder_ids,
+        ).fetchone()["count"]
     return {
         "folder": serialize_folder(folder),
-        "sources": [serialize_class_ai_source(source) for source in class_ai_sources(folder_id)],
+        "lecture_count": len(workspace_sources),
+        "recording_count": sum(source["session_count"] for source in workspace_sources)
+        + loose_recording_count,
         "ai_notes": ai_notes["note_body"] if ai_notes else "",
         "ai_notes_model": ai_notes["model"] if ai_notes else None,
         "ai_notes_updated_at": ai_notes["updated_at"] if ai_notes else None,
@@ -1205,11 +1228,11 @@ def save_class_ai_notes(folder_id: str, update: LocalAINotesUpdate) -> dict[str,
 
 
 @app.post("/api/folders/{folder_id}/class-ai/notes")
-def generate_class_ai_notes(folder_id: str, request: ClassAIRequest) -> dict[str, object]:
+def generate_class_ai_notes(folder_id: str, request: LocalAIRequest) -> dict[str, object]:
     get_folder(folder_id)
-    context = build_class_ai_context(folder_id, request.workspace_ids)
+    context = build_class_ai_context(folder_id)
     prompt = (
-        "Write a focused class study guide from the selected lecture notes and recordings for a high "
+        "Write a focused class study guide from the class's saved lecture notes and recordings for a high "
         "school or college student. Use the headings Overview, Connections across lectures, Key ideas, "
         "Terms to know, and Questions to review when the source supports them. Keep it accurate and "
         "easy to scan. Do not claim that attached files were read unless their text appears in the source."
@@ -1238,12 +1261,12 @@ def generate_class_ai_notes(folder_id: str, request: ClassAIRequest) -> dict[str
 
 
 @app.post("/api/folders/{folder_id}/class-ai/questions")
-def ask_class_ai_question(folder_id: str, request: ClassAIQuestion) -> dict[str, object]:
+def ask_class_ai_question(folder_id: str, request: LocalAIQuestion) -> dict[str, object]:
     get_folder(folder_id)
     question = " ".join(request.question.split())
     if not question:
         raise HTTPException(status_code=422, detail="Ask a question before sending it.")
-    context = build_class_ai_context(folder_id, request.workspace_ids)
+    context = build_class_ai_context(folder_id)
     with connect_database() as connection:
         history = connection.execute(
             """
@@ -1594,33 +1617,12 @@ def create_lecture(
         saved_audio_path = AUDIO_DIR / audio_filename
         shutil.copyfile(temporary_audio_path, saved_audio_path)
 
-    note_body = capture_notes or new_note_template(clean_title)
+    note_body = capture_notes
+    is_standalone = selected_workspace is None
     course = selected_folder["name"] if selected_folder else "Unfiled recordings"
     try:
         with connect_database() as connection:
-            if selected_workspace is None:
-                selected_workspace_id = str(uuid4())
-                connection.execute(
-                    """
-                    INSERT INTO workspaces (id, folder_id, title, created_at, updated_at)
-                    VALUES (?, ?, ?, ?, ?)
-                    """,
-                    (
-                        selected_workspace_id,
-                        selected_folder_id,
-                        clean_title,
-                        created_at_datetime.isoformat(),
-                        created_at_datetime.isoformat(),
-                    ),
-                )
-                connection.execute(
-                    """
-                    INSERT INTO workspace_notes (workspace_id, note_body, updated_at)
-                    VALUES (?, ?, ?)
-                    """,
-                    (selected_workspace_id, note_body, created_at_datetime.isoformat()),
-                )
-            elif capture_notes:
+            if selected_workspace and capture_notes:
                 current_notes = connection.execute(
                     "SELECT note_body FROM workspace_notes WHERE workspace_id = ?",
                     (selected_workspace_id,),
@@ -1647,12 +1649,14 @@ def create_lecture(
             connection.execute(
                 """
                 INSERT INTO lectures (
-                    id, workspace_id, folder_id, course, title, created_at, audio_filename, model, transcript, note_body
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    id, workspace_id, is_standalone, capture_notes_workspace_id, folder_id, course, title, created_at, audio_filename, model, transcript, note_body
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     lecture_id,
                     selected_workspace_id,
+                    int(is_standalone),
+                    selected_workspace_id if capture_notes and selected_workspace_id else None,
                     selected_folder_id,
                     course,
                     clean_title,
@@ -1697,6 +1701,81 @@ def update_lecture(lecture_id: str, update: LectureUpdate) -> dict[str, object]:
                 "UPDATE lectures SET folder_id = ?, course = ? WHERE workspace_id = ?",
                 (folder_id, course, current["workspace_id"]),
             )
+    return serialize_lecture(get_lecture(lecture_id), include_content=True)
+
+
+@app.post("/api/lectures/{lecture_id}/attach")
+def attach_recording_to_workspace(lecture_id: str, attach: RecordingAttach) -> dict[str, object]:
+    recording = get_lecture(lecture_id)
+    workspace = get_workspace(attach.workspace_id)
+    if recording["workspace_id"] == workspace["id"]:
+        return serialize_lecture(recording, include_content=True)
+    if recording["workspace_id"]:
+        raise HTTPException(
+            status_code=422,
+            detail="This recording already belongs to a lecture. Detach it before moving it again.",
+        )
+    folder_id = workspace["folder_id"]
+    folder = get_folder(folder_id) if folder_id else None
+    course = folder["name"] if folder else "Unfiled recordings"
+    attached_at = datetime.now(timezone.utc)
+    capture_notes = recording["note_body"].strip()
+    with connect_database() as connection:
+        connection.execute(
+            """
+            UPDATE lectures
+            SET workspace_id = ?, is_standalone = 0, capture_notes_workspace_id = ?, folder_id = ?, course = ?
+            WHERE id = ?
+            """,
+            (workspace["id"], workspace["id"], folder_id, course, lecture_id),
+        )
+        if capture_notes and recording["capture_notes_workspace_id"] != workspace["id"]:
+            current_notes = connection.execute(
+                "SELECT note_body FROM workspace_notes WHERE workspace_id = ?",
+                (workspace["id"],),
+            ).fetchone()
+            merged_notes = append_capture_notes(
+                current_notes["note_body"] if current_notes else "",
+                capture_notes,
+                attached_at,
+                f"Notes from {recording['title']}",
+            )
+            connection.execute(
+                """
+                INSERT INTO workspace_notes (workspace_id, note_body, updated_at)
+                VALUES (?, ?, ?)
+                ON CONFLICT(workspace_id) DO UPDATE SET
+                    note_body = excluded.note_body,
+                    updated_at = excluded.updated_at
+                """,
+                (workspace["id"], merged_notes, attached_at.isoformat()),
+            )
+        connection.execute(
+            "UPDATE workspaces SET updated_at = ? WHERE id = ?",
+            (attached_at.isoformat(), workspace["id"]),
+        )
+    return serialize_lecture(get_lecture(lecture_id), include_content=True)
+
+
+@app.post("/api/lectures/{lecture_id}/detach")
+def detach_recording_from_workspace(lecture_id: str) -> dict[str, object]:
+    recording = get_lecture(lecture_id)
+    if not recording["workspace_id"]:
+        raise HTTPException(status_code=422, detail="This recording is already loose.")
+    detached_at = datetime.now(timezone.utc).isoformat()
+    with connect_database() as connection:
+        connection.execute(
+            """
+            UPDATE lectures
+            SET workspace_id = NULL, is_standalone = 1
+            WHERE id = ?
+            """,
+            (lecture_id,),
+        )
+        connection.execute(
+            "UPDATE workspaces SET updated_at = ? WHERE id = ?",
+            (detached_at, recording["workspace_id"]),
+        )
     return serialize_lecture(get_lecture(lecture_id), include_content=True)
 
 

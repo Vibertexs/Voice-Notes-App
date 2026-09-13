@@ -122,12 +122,14 @@ are moved or deleted.
 The optional AI integration is also local: the server communicates only with an
 Ollama process on `127.0.0.1`. It never sends class notes, transcripts, or
 question history to a hosted provider. AI belongs to a **class folder**, not a
-single lecture note: the student chooses up to five recent lecture notes for a
-request (the three most recent are selected initially). This preserves useful
-continuity across days without repeating every lecture or silently filling the
-model context with an entire course. An installed model does consume local disk,
-memory, and processing power, so the interface does not silently download one;
-it shows the required one-time setup and stays usable without it.
+single lecture note: it can use every saved lecture note, attached recording,
+and loose recording in that class folder (including nested folders). It never
+uses data from another class. The server builds a bounded, labeled context for
+each response because a local model has a finite context window; this is a
+technical limit on one request, not a manual source-selection burden placed on
+the student. An installed model does consume local disk, memory, and processing
+power, so the interface does not silently download one; it shows the required
+one-time setup and stays usable without it.
 
 ## Scope intentionally deferred
 
