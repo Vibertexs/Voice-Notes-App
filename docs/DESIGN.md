@@ -28,9 +28,10 @@ route home, while the record action remains at the bottom of every folder view.
 
 Inside a folder, the action row is deliberately limited to **Record & note**,
 **Add file**, **Color**, and **Delete**. **Record & note** begins recording in
-the current folder immediately and opens the companion notes panel alongside
-it; there is no up-front choice between audio and writing. The student can hide
-the notes panel if they need focus, but it is ready by default. Class AI is a
+the current folder immediately and opens the companion lecture-notes panel
+directly below the recorder; there is no up-front choice between audio and
+writing. The student can hide the notes panel if they need focus, but it is
+ready by default. Class AI is a
 dedicated section after the folder's imported files, where it is clearly a
 class-wide study tool rather than an action attached to one note or recording.
 

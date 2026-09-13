@@ -638,12 +638,11 @@
       .ai-question { min-height: 2.65rem; margin: 0; padding: .6rem .7rem; border: 2px solid #c8d4e5; border-radius: .8rem; color: #25344c; background: #fff; font: inherit; resize: vertical; }
       .ai-question-form .button { align-self: end; }
       .ai-chat-actions { display: flex; justify-content: flex-end; margin: 0 1rem 1rem; }
-      .capture-layout { display: grid; grid-template-columns: minmax(0, 42rem); justify-content: center; gap: 1rem; }
-      .capture-layout.notes-open { grid-template-columns: minmax(0, 1fr) minmax(16rem, 20rem); justify-content: stretch; }
+      .capture-layout, .capture-layout.notes-open { display: grid; grid-template-columns: minmax(0, 42rem); justify-content: center; gap: 1rem; }
       .capture-layout.notes-open .capture-panel { width: 100%; }
       .capture-note-trigger { display: flex; align-items: center; flex-wrap: wrap; gap: .55rem; margin-top: 1rem; }
       .capture-note-trigger span { color: var(--muted); font-size: .78rem; line-height: 1.35; }
-      .capture-notes-card { position: sticky; top: 6.25rem; overflow: hidden; border: 4px solid #c8d4e5; border-radius: 1.4rem; background: rgba(252,253,255,.9); }
+      .capture-notes-card { position: static; width: 100%; overflow: hidden; border: 4px solid #c8d4e5; border-radius: 1.4rem; background: rgba(252,253,255,.9); }
       .capture-notes-head { display: flex; align-items: flex-start; justify-content: space-between; gap: .7rem; padding: 1rem; border-bottom: 2px solid #dbe4f0; }
       .capture-notes-head h3 { margin: 0; font-size: .98rem; }
       .capture-notes-head p { margin: .28rem 0 0; color: var(--muted); font-size: .76rem; line-height: 1.4; }
@@ -663,7 +662,7 @@
       .move-panel #attach-recording-panel { margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 2px solid #dbe4f0; }
       .move-panel #attach-recording { width: 100%; margin-top: .7rem; }
       @media (max-width: 840px) { .workspace-note-layout, .review-layout { grid-template-columns: 1fr; } }
-      @media (max-width: 840px) { .capture-layout.notes-open { grid-template-columns: minmax(0, 1fr); } .capture-notes-card { position: static; } .capture-notes { min-height: 15rem; } }
+      @media (max-width: 840px) { .capture-notes { min-height: 15rem; } }
       @media (max-width: 540px) { .topic-marker, .ai-question-form { grid-template-columns: 1fr; } .topic-marker .button, .ai-question-form .button { justify-self: stretch; } .class-ai-header { align-items: stretch; flex-direction: column; } }
     </style>
   </head>
@@ -765,7 +764,7 @@
               <p id="recording-helper">Tap once to begin. You can rename or move the recording after it is saved.</p>
               <div class="capture-note-trigger">
                 <button id="capture-notes-toggle" type="button" class="button secondary" aria-controls="capture-notes-panel" aria-expanded="false"><span class="create-symbol">＋</span>Add notes</button>
-                <span>Keep quick thoughts beside the recording.</span>
+                <span>Keep quick thoughts with this recording.</span>
               </div>
               <div class="recording-options">
                 <label>Recording name <span>(optional)</span><input id="recording-title" maxlength="180" placeholder="e.g. Cell respiration" /></label>
@@ -801,7 +800,7 @@
             </div>
             <aside id="capture-notes-panel" class="capture-notes-card" aria-labelledby="capture-notes-heading" hidden>
               <div class="capture-notes-head">
-                <div><h3 id="capture-notes-heading">Capture notes</h3><p id="capture-notes-context">These notes will be saved with this recording.</p></div>
+                <div><h3 id="capture-notes-heading">Lecture notes</h3><p id="capture-notes-context">These notes will be saved with this recording.</p></div>
                 <button id="capture-notes-close" class="capture-notes-close" type="button" aria-label="Close capture notes">×</button>
               </div>
               <textarea id="capture-notes" class="capture-notes" maxlength="100000" spellcheck="true" placeholder="Key idea, question, assignment, or something to revisit…"></textarea>
