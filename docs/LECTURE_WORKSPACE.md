@@ -36,16 +36,15 @@ is starting.
 
 This yields one simple rule for students:
 
-- Start a **new topic** when class shifts to a distinct subject.
-- Use **+ Recording** when class is beginning and the destination is not yet
-  clear. It starts capture immediately and stays loose until the student drops
-  it onto a lecture note.
-- Use **+ File** to keep teacher slides, handouts, and notes from other apps in
-  the course folder. Files are never nested inside a recording or lecture note.
-- Add or drag a **recording session** onto the current lecture note when the
-  topic continues, including on another day.
-- Add a **topic marker** during review when one recording moves to a new idea.
-  It points to the exact audio time, so the original session stays intact.
+- Use **Record & note** from a class folder for a new lecture. Saving its first
+  capture makes the durable lecture page automatically.
+- Use **Continue recording** from an open lecture whenever the material
+  continues, including on another day. The new session stays with that note.
+- Use **Attach file** for slides, handouts, readings, or a GoodNotes PDF export
+  that belongs to that lecture; use the folder file collection for class-wide
+  materials.
+- Add a **marker** while recording when the instructor changes topic. The
+  marker is saved at that exact audio time and stays clickable during review.
 
 ## Entry points
 
@@ -60,7 +59,7 @@ There are two deliberate ways in:
    be made loose again during review. Cancelling or denying microphone access
    creates nothing, so the library never fills with empty abandoned workspaces.
 
-Inside an existing workspace, the persistent recording dock adds another
+Inside an existing workspace, the blue **Continue recording** bar adds another
 session to that same workspace. A session is therefore a dated piece of audio,
 not a new lecture. A student can come back tomorrow and keep recording into the
 same lecture context. Capture notes saved with a loose recording remain with it
@@ -81,16 +80,20 @@ folder or a shortcut that opens the course's Class AI view.
 ```
 Breadcrumb + lecture title
 ────────────────────────────────────────────────
+  Continue recording
+────────────────────────────────────────────────
   Notes  |  Recordings & transcript
 ────────────────────────────────────────────────
   Notes:      student-owned notes + session list
-  Review:     one selected session, audio, transcript, topic markers
+  Review:     one selected session, scrubber, transcript, topic markers
 ```
 
-The notes editor is the default focus. The recording action is visible in the
-header on every tab. The review tab isolates replay and transcript reading from
-writing. Mobile is not part of this desktop proof of concept; it will use this
-same single-pane tab order rather than compressing columns.
+The notes editor is the default focus. The recording action is visible above
+every tab. The review tab isolates replay and transcript reading from writing.
+Its audio deck exposes play/pause, ten-second skips, an accessible scrubber,
+and clear elapsed/total time rather than depending on the browser's native
+audio appearance. Mobile is not part of this desktop proof of concept; it will
+use this same single-pane tab order rather than compressing columns.
 
 The Class AI view is scoped to one course folder. Every generated guide or
 answer can use all saved lecture notes, attached recording transcripts, loose

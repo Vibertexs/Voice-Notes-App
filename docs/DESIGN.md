@@ -84,6 +84,11 @@ review tab has an **Add recordings** picker for selecting several loose
 recordings at once. Each selected recording is attached independently and its
 capture notes are appended to the lecture note once.
 
+An open lecture puts a large blue **Continue recording** bar above its tabs.
+This is the obvious next action when class resumes; it starts another dated
+session in the same note rather than asking the student to make a new topic.
+The note still supports a separate title field for genuine topic changes.
+
 ## Visual language
 
 The interface uses an editorial card system over an airy cool-grey, lightly
@@ -104,11 +109,15 @@ empty folder state, while a prominent recording action stays at the bottom of
 the workspace. Motion is disabled for users who request reduced motion.
 
 Capture uses one oversized, tactile record control rather than a crowded row
-of actions. Once recording begins, a compact transport deck appears: elapsed
-time is visible, pause/resume is secondary, **Done** saves the audio
-for transcription, and a native, keyboard-accessible **Slide all the way to
-cancel** control discards the active capture. This gives the flow a confident
-audio-station feel while keeping the destructive action intentional.
+of actions. A blue capture strip at the top always shows the current state and
+elapsed time. Once recording begins, a compact transport deck appears: the
+student can add a labeled marker at the current moment without interrupting
+audio, then pause when ready to decide. **Done** appears only while paused, so
+it cannot accidentally end a live lecture; resume and the native,
+keyboard-accessible **Slide all the way to cancel** control remain available.
+Saved capture markers are attached to the finished recording and become direct
+return points in review. This gives the flow a confident audio-station feel
+while keeping the destructive action intentional.
 
 **Add notes** opens an optional companion panel beside capture. It is a
 save-bound draft rather than a competing second editor: when the student saves
@@ -131,7 +140,10 @@ organization or sharing state.
 Recordings use horizontal rows rather than square tiles because their title,
 date, and destination are the information students scan first. The Recent menu
 uses the same compact row shape and is placed in the top bar, preventing a
-second recording list from repeating the current page's content.
+second recording list from repeating the current page's content. In lecture
+review, a custom playback deck uses a large play/pause control, ten-second
+skip controls, elapsed/total time, and a full-width scrubber; topic markers
+remain clickable time anchors alongside the transcript.
 
 ## Privacy and data
 
