@@ -558,12 +558,26 @@
       .workspace-inspector, .sessions-card { padding: 1rem; }
       .workspace-inspector h3, .sessions-card h3 { margin: 0; font-size: .9rem; }
       .workspace-inspector p, .sessions-card p { margin: .45rem 0 0; color: var(--muted); font-size: .8rem; line-height: 1.45; }
+      .sessions-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: .75rem; }
+      .sessions-card-head .button { flex: 0 0 auto; }
       .session-list { display: grid; gap: .45rem; margin-top: .75rem; }
       .session-item { width: 100%; padding: .72rem; border: 2px solid #d9e2ef; border-radius: .8rem; color: #354158; background: #fff; text-align: left; font: inherit; font-size: .78rem; line-height: 1.35; }
       .session-item:hover, .session-item:focus-visible, .session-item.selected { border-color: #5d8bd8; color: #173b79; background: #eef5ff; }
       .session-date { display: block; margin-bottom: .18rem; color: #77859b; font-size: .7rem; font-weight: 740; letter-spacing: .03em; text-transform: uppercase; }
       .session-title { display: block; overflow: hidden; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
       .session-count { display: block; margin-top: .3rem; color: #61718a; font-size: .72rem; }
+      .add-recordings-panel { margin-top: .85rem; padding: .8rem; border: 2px solid #d9e2ef; border-radius: 1rem; background: #f7faff; }
+      .add-recordings-panel h4 { margin: 0; color: #334865; font-size: .8rem; }
+      .add-recordings-panel p { margin: .25rem 0 0; color: #68778d; font-size: .74rem; line-height: 1.4; }
+      .recording-picker { display: grid; gap: .38rem; max-height: 13.5rem; margin-top: .7rem; overflow: auto; }
+      .recording-choice { display: grid; grid-template-columns: 1rem minmax(0, 1fr); align-items: start; gap: .52rem; padding: .58rem; border: 2px solid #d9e2ef; border-radius: .75rem; color: #33445e; background: #fff; cursor: pointer; }
+      .recording-choice:has(input:checked) { border-color: #5d8bd8; background: #edf5ff; }
+      .recording-choice input { width: 1rem; min-height: 1rem; margin: .13rem 0 0; accent-color: #1769d2; }
+      .recording-choice strong, .recording-choice span { display: block; }
+      .recording-choice strong { overflow: hidden; font-size: .76rem; text-overflow: ellipsis; white-space: nowrap; }
+      .recording-choice span { margin-top: .14rem; color: #718097; font-size: .68rem; line-height: 1.3; }
+      .attach-existing-status { min-height: 1.1rem; margin: .55rem 0 0; color: #64728a; font-size: .72rem; line-height: 1.35; }
+      .attach-selected-recordings { width: 100%; margin-top: .55rem; }
       .material-status { min-height: 1.1rem; margin: .55rem 0 0; color: #64728a; font-size: .72rem; line-height: 1.35; }
       .material-list { display: grid; gap: .45rem; margin-top: .7rem; }
       .material-item { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: .55rem; padding: .62rem; border: 2px solid #d9e2ef; border-radius: .8rem; background: #fff; }
@@ -850,8 +864,14 @@
           <section id="review-pane" class="workspace-pane" role="tabpanel" aria-labelledby="workspace-tab-review" hidden>
             <div class="review-layout">
               <aside class="sessions-card">
-                <h3>Recording sessions</h3>
-                <p>Each date is one saved recording. Select one to replay and read its transcript.</p>
+                <div class="sessions-card-head"><div><h3>Recording sessions</h3><p>Each date is one saved recording. Select one to replay and read its transcript.</p></div><button id="add-existing-recordings" type="button" class="button secondary">＋ Add recordings</button></div>
+                <section id="add-recordings-panel" class="add-recordings-panel" aria-labelledby="add-recordings-heading" hidden>
+                  <h4 id="add-recordings-heading">Add saved recordings</h4>
+                  <p>Select one or more loose recordings. Their capture notes will join this lecture note.</p>
+                  <div id="loose-recording-options" class="recording-picker"></div>
+                  <p id="attach-existing-status" class="attach-existing-status" role="status"></p>
+                  <button id="attach-selected-recordings" type="button" class="button primary attach-selected-recordings" disabled>Add selected recordings</button>
+                </section>
                 <div id="review-session-list" class="session-list"></div>
               </aside>
               <section class="review-card" aria-label="Recording review">
@@ -963,9 +983,6 @@
                 <label>Lecture note<select id="attach-target"></select></label>
                 <button id="attach-recording" type="button" class="button primary">Attach recording</button>
               </div>
-              <h3>Save to folder</h3>
-              <p>Select a destination now. It will not move until you save below.</p>
-              <label>Folder<select id="move-target"></select></label>
             </aside>
           </div>
           <div class="save-bar"><span id="save-status" class="status" role="status"></span><button id="save-recording" class="button primary">Done</button></div>
@@ -987,10 +1004,10 @@
         'finish-group', 'finish-recording', 'discard-reveal', 'discard-slider', 'discard-thumb',
         'cancel-recording', 'recording-status', 'capture-notes-toggle', 'capture-notes-panel', 'capture-notes-close', 'capture-notes-context', 'capture-notes', 'capture-notes-footer', 'detail-view', 'back-to-library', 'detail-heading',
         'delete-recording', 'saved-title', 'save-recording', 'save-status', 'saved-date', 'playback',
-        'move-target', 'attach-recording-panel', 'attach-target', 'attach-recording', 'transcript', 'workspace-view', 'workspace-back', 'workspace-heading', 'workspace-location',
+        'attach-recording-panel', 'attach-target', 'attach-recording', 'transcript', 'workspace-view', 'workspace-back', 'workspace-heading', 'workspace-location',
         'workspace-title', 'workspace-notes', 'workspace-notes-status', 'workspace-notes-save', 'record-from-workspace', 'delete-workspace', 'new-topic',
         'workspace-tab-notes', 'workspace-tab-review', 'workspace-tab-study', 'notes-pane', 'review-pane', 'study-pane',
-        'session-list', 'review-session-list', 'review-empty', 'review-content', 'review-session-title', 'review-session-meta',
+        'session-list', 'review-session-list', 'add-existing-recordings', 'add-recordings-panel', 'loose-recording-options', 'attach-existing-status', 'attach-selected-recordings', 'review-empty', 'review-content', 'review-session-title', 'review-session-meta',
         'session-playback', 'marker-label', 'add-marker', 'marker-list', 'session-transcript', 'detach-session', 'delete-session',
         'study-notes', 'study-notes-status', 'study-notes-save', 'generate-study-notes',
         'ai-setup', 'ai-model', 'ai-refresh', 'generate-ai-notes', 'ai-notes', 'ai-notes-status', 'ai-notes-save',
@@ -1354,6 +1371,65 @@
           el['session-list'].textContent = 'No recordings yet. Start one when class begins.';
           el['review-session-list'].textContent = 'No recordings yet.';
         }
+      }
+      function renderAttachableRecordings() {
+        const candidates = allRecordings
+          .filter(recording => !recording.workspace_id)
+          .sort((left, right) => new Date(right.created_at) - new Date(left.created_at));
+        el['loose-recording-options'].replaceChildren(...candidates.map(recording => {
+          const choice = document.createElement('label');
+          choice.className = 'recording-choice';
+          const input = document.createElement('input');
+          input.type = 'checkbox';
+          input.value = recording.id;
+          input.addEventListener('change', syncAttachSelectedButton);
+          const copy = document.createElement('span');
+          const title = document.createElement('strong');
+          title.textContent = recording.title;
+          const location = recording.folder_id ? recording.course || 'Folder' : 'Unfiled';
+          const meta = document.createElement('span');
+          meta.textContent = `${formatDate(recording.created_at)} · ${location}`;
+          copy.append(title, meta);
+          choice.append(input, copy);
+          return choice;
+        }));
+        el['attach-existing-status'].textContent = candidates.length
+          ? `${candidates.length} loose recording${candidates.length === 1 ? '' : 's'} available.`
+          : 'No loose recordings are available right now.';
+        syncAttachSelectedButton();
+      }
+      function syncAttachSelectedButton() {
+        const selected = el['loose-recording-options'].querySelectorAll('input:checked').length;
+        el['attach-selected-recordings'].disabled = selected === 0;
+        el['attach-selected-recordings'].textContent = selected
+          ? `Add ${selected} recording${selected === 1 ? '' : 's'}`
+          : 'Add selected recordings';
+      }
+      async function toggleAttachableRecordings() {
+        const opening = el['add-recordings-panel'].hidden;
+        if (opening) {
+          await refreshNavigation();
+          renderAttachableRecordings();
+        }
+        el['add-recordings-panel'].hidden = !opening;
+        el['add-existing-recordings'].textContent = opening ? 'Hide recordings' : '＋ Add recordings';
+      }
+      async function attachSelectedRecordings() {
+        if (!activeWorkspace) return;
+        const recordingIds = [...el['loose-recording-options'].querySelectorAll('input:checked')].map(input => input.value);
+        if (!recordingIds.length) return;
+        const workspaceId = activeWorkspace.id;
+        el['attach-selected-recordings'].disabled = true;
+        el['attach-existing-status'].textContent = `Adding ${recordingIds.length} recording${recordingIds.length === 1 ? '' : 's'}…`;
+        const results = await Promise.allSettled(recordingIds.map(id => api(`/api/lectures/${id}/attach`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ workspace_id: workspaceId })
+        })));
+        const added = results.filter(result => result.status === 'fulfilled').length;
+        const failed = results.length - added;
+        await refreshNavigation();
+        await loadWorkspace(workspaceId);
+        setWorkspaceTab('review');
+        showToast(failed ? `${added} added. ${failed} could not be added.` : `${added} recording${added === 1 ? '' : 's'} added to this lecture.`);
       }
       function renderSessionMarkers(markers) {
         el['marker-list'].replaceChildren(...(markers || []).map(marker => {
@@ -1884,18 +1960,7 @@
           swatch.classList.toggle('selected', swatch.dataset.color === color);
         });
       }
-      function renderMoveTargets() {
-        el['move-target'].replaceChildren(new Option('Unfiled', ''));
-        const childrenOf = parentId => allFolders.filter(folder => (folder.parent_id || null) === parentId);
-        const appendOptions = (parentId, depth) => childrenOf(parentId).forEach(folder => {
-          el['move-target'].append(new Option(`${'— '.repeat(depth)}${folder.name}`, folder.id));
-          appendOptions(folder.id, depth + 1);
-        });
-        appendOptions(null, 0);
-        if (activeRecording) el['move-target'].value = activeRecording.folder_id || '';
-      }
       function renderMainNavigation() {
-        renderMoveTargets();
         const hasRecent = allRecordings.length > 0;
         el['recent-toggle'].hidden = !hasRecent;
         if (hasRecent) {
@@ -2242,6 +2307,11 @@
       }));
       el['workspace-back'].addEventListener('click', () => loadLibrary(activeWorkspace?.folder_id));
       el['record-from-workspace'].addEventListener('click', () => startQuickRecording(activeWorkspace));
+      el['add-existing-recordings'].addEventListener('click', () => toggleAttachableRecordings().catch(error => showToast(error.message)));
+      el['attach-selected-recordings'].addEventListener('click', () => attachSelectedRecordings().catch(error => {
+        el['attach-existing-status'].textContent = error.message;
+        syncAttachSelectedButton();
+      }));
       el['delete-workspace'].addEventListener('click', deleteActiveWorkspace);
       el['new-topic'].addEventListener('click', createTopic);
       el['workspace-title'].addEventListener('change', saveWorkspaceTitle);
@@ -2440,10 +2510,9 @@
         if (!activeRecording) return;
         el['save-recording'].disabled = true; el['save-status'].textContent = 'Saving…';
         try {
-          const destinationId = el['move-target'].value || null;
           const recording = await api(`/api/lectures/${activeRecording.id}`, {
             method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ title: el['saved-title'].value, folder_id: destinationId })
+            body: JSON.stringify({ title: el['saved-title'].value })
           });
           activeRecording = recording;
           el['detail-heading'].textContent = recording.title;

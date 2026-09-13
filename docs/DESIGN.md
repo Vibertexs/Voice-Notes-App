@@ -67,12 +67,17 @@ recording here to move it." Breadcrumbs remain available for direct jumps to
 any ancestor.
 
 Drag-and-drop is not reliable on every touch or keyboard environment, so the
-recording detail view also includes a destination selector. It is a draft:
-selecting a folder does not move the recording. The bottom **Done** button
-saves the title and chosen destination together in one request, then returns
-the student to that folder. This
-prevents an accidental move while the student is still reviewing a new
-recording, while drag-and-drop remains an intentional immediate action.
+recording detail view offers an **Attach to lecture** selector as an accessible
+alternative. Folder placement is inherited from the place where capture began,
+so there is no second “save to folder” decision during review. The bottom
+**Done** button saves a name change only. Moving between folders remains an
+intentional drag action from the library.
+
+A lecture note can hold any number of recording sessions. Besides recording a
+new session from the note itself or dragging one onto its card, the recording
+review tab has an **Add recordings** picker for selecting several loose
+recordings at once. Each selected recording is attached independently and its
+capture notes are appended to the lecture note once.
 
 ## Visual language
 
