@@ -596,6 +596,7 @@
       .note-save-bar .status { margin: 0; }
       .review-card, .study-card, .ai-notes-card, .ai-chat-card { overflow: hidden; }
       .review-card-head, .study-card-head, .ai-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding: 1rem 1rem .8rem; border-bottom: 2px solid #dbe4f0; }
+      .review-card-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .45rem; }
       .review-card h3, .study-card h3, .ai-notes-card h3, .ai-chat-card h3 { margin: 0; font-size: 1rem; }
       .review-card-head p, .study-card-head p, .ai-card-head p { margin: .3rem 0 0; color: var(--muted); font-size: .78rem; line-height: 1.45; }
       .review-empty { padding: 2rem 1rem; color: var(--muted); text-align: center; }
@@ -812,6 +813,7 @@
               <button id="add-material" class="button secondary"><span class="create-symbol">＋</span>File</button>
               <button id="new-topic" class="button secondary"><span class="create-symbol">＋</span>New topic</button>
               <button id="workspace-class-ai" class="button secondary" hidden>✦&nbsp; Class AI</button>
+              <button id="delete-workspace" class="button danger">Delete note</button>
               <button id="record-from-workspace" class="button primary">●&nbsp; Record session</button>
             </div>
           </div>
@@ -858,7 +860,7 @@
               <section class="review-card" aria-label="Recording review">
                 <div id="review-empty" class="review-empty">Record a session to see its audio and transcript here.</div>
                 <div id="review-content" hidden>
-                  <div class="review-card-head"><div><h3 id="review-session-title">Recording</h3><p id="review-session-meta"></p></div><button id="detach-session" type="button" class="button secondary">Make loose</button></div>
+                  <div class="review-card-head"><div><h3 id="review-session-title">Recording</h3><p id="review-session-meta"></p></div><div class="review-card-actions"><button id="detach-session" type="button" class="button secondary">Make loose</button><button id="delete-session" type="button" class="button danger">Delete recording</button></div></div>
                   <audio id="session-playback" class="session-player" controls></audio>
                   <div class="topic-marker">
                     <label for="marker-label">Mark a topic change at the current audio time<input id="marker-label" maxlength="120" placeholder="e.g. Moved to cellular respiration" /></label>
@@ -989,10 +991,10 @@
         'cancel-recording', 'recording-status', 'capture-notes-toggle', 'capture-notes-panel', 'capture-notes-close', 'capture-notes-context', 'capture-notes', 'capture-notes-footer', 'detail-view', 'back-to-library', 'detail-heading',
         'delete-recording', 'saved-title', 'save-recording', 'save-status', 'saved-date', 'playback',
         'move-target', 'attach-recording-panel', 'attach-target', 'attach-recording', 'transcript', 'workspace-view', 'workspace-back', 'workspace-heading', 'workspace-location',
-        'workspace-title', 'workspace-notes', 'workspace-notes-status', 'workspace-notes-save', 'record-from-workspace', 'workspace-class-ai', 'new-topic', 'add-material',
+        'workspace-title', 'workspace-notes', 'workspace-notes-status', 'workspace-notes-save', 'record-from-workspace', 'workspace-class-ai', 'delete-workspace', 'new-topic', 'add-material',
         'workspace-tab-notes', 'workspace-tab-review', 'workspace-tab-study', 'notes-pane', 'review-pane', 'study-pane',
         'session-list', 'review-session-list', 'review-empty', 'review-content', 'review-session-title', 'review-session-meta',
-        'session-playback', 'marker-label', 'add-marker', 'marker-list', 'session-transcript', 'detach-session',
+        'session-playback', 'marker-label', 'add-marker', 'marker-list', 'session-transcript', 'detach-session', 'delete-session',
         'study-notes', 'study-notes-status', 'study-notes-save', 'generate-study-notes',
         'ai-setup', 'ai-model', 'ai-refresh', 'generate-ai-notes', 'ai-notes', 'ai-notes-status', 'ai-notes-save',
         'ai-chat-list', 'ai-question-form', 'ai-question', 'ai-question-send', 'ai-chat-clear',
@@ -1774,6 +1776,34 @@
           await loadLibrary(recording.folder_id);
         } catch (error) { showToast(error.message); }
       }
+      async function deleteActiveSession() {
+        if (!activeSession || !activeWorkspace) return;
+        if (!confirm('Delete this recording and its transcript from this computer? Your lecture note and its other recordings will stay safe.')) return;
+        const workspaceId = activeWorkspace.id;
+        try {
+          await api(`/api/lectures/${activeSession.id}`, { method: 'DELETE' });
+          showToast('Recording deleted.');
+          await loadWorkspace(workspaceId);
+        } catch (error) { showToast(error.message); }
+      }
+      async function deleteActiveWorkspace() {
+        if (!activeWorkspace) return;
+        const workspace = activeWorkspace;
+        const recordings = workspace.sessions?.length || 0;
+        const materials = workspace.materials?.length || 0;
+        const recordingCopy = recordings
+          ? `${recordings} recording${recordings === 1 ? '' : 's'} will become loose so the audio is not deleted.`
+          : 'There are no recordings to move.';
+        const materialCopy = materials
+          ? ` ${materials} attached file${materials === 1 ? '' : 's'} will be removed from this computer.`
+          : '';
+        if (!confirm(`Delete the lecture note "${workspace.title}"?\n\nIts written notes will be deleted. ${recordingCopy}${materialCopy}`)) return;
+        try {
+          const result = await api(`/api/workspaces/${workspace.id}`, { method: 'DELETE' });
+          showToast(result.released_recording_count ? 'Lecture note deleted; recordings are now loose.' : 'Lecture note deleted.');
+          await loadLibrary(workspace.folder_id);
+        } catch (error) { showToast(error.message); }
+      }
       async function addSessionMarker() {
         if (!activeSession) return;
         const label = el['marker-label'].value.trim();
@@ -2163,6 +2193,7 @@
       el['workspace-back'].addEventListener('click', () => loadLibrary(activeWorkspace?.folder_id));
       el['record-from-workspace'].addEventListener('click', () => startQuickRecording(activeWorkspace));
       el['workspace-class-ai'].addEventListener('click', () => loadClassAI(activeWorkspace?.folder_id));
+      el['delete-workspace'].addEventListener('click', deleteActiveWorkspace);
       el['new-topic'].addEventListener('click', createTopic);
       el['add-material'].addEventListener('click', () => el['material-upload'].click());
       el['material-upload'].addEventListener('change', event => uploadWorkspaceMaterials(event.target.files));
@@ -2201,6 +2232,7 @@
       el['class-ai-question-form'].addEventListener('submit', askClassAI);
       el['class-ai-chat-clear'].addEventListener('click', clearClassAIChat);
       el['detach-session'].addEventListener('click', detachActiveSession);
+      el['delete-session'].addEventListener('click', deleteActiveSession);
       el['add-marker'].addEventListener('click', addSessionMarker);
       function releaseMicrophone() {
         stream?.getTracks().forEach(track => track.stop());

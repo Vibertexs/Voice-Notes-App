@@ -1047,6 +1047,33 @@ def update_workspace(workspace_id: str, update: WorkspaceUpdate) -> dict[str, ob
     return serialize_workspace(get_workspace(workspace_id))
 
 
+@app.delete("/api/workspaces/{workspace_id}")
+def delete_workspace(workspace_id: str) -> dict[str, object]:
+    """Delete a lecture note while preserving its recordings as loose items."""
+    get_workspace(workspace_id)
+    with connect_database() as connection:
+        materials = connection.execute(
+            "SELECT stored_filename FROM materials WHERE workspace_id = ?", (workspace_id,)
+        ).fetchall()
+        released_recording_count = connection.execute(
+            """
+            UPDATE lectures
+            SET workspace_id = NULL, is_standalone = 1, capture_notes_workspace_id = NULL
+            WHERE workspace_id = ?
+            """,
+            (workspace_id,),
+        ).rowcount
+        connection.execute("DELETE FROM workspace_notes WHERE workspace_id = ?", (workspace_id,))
+        connection.execute("DELETE FROM workspace_study_notes WHERE workspace_id = ?", (workspace_id,))
+        connection.execute("DELETE FROM workspace_ai_notes WHERE workspace_id = ?", (workspace_id,))
+        connection.execute("DELETE FROM workspace_ai_messages WHERE workspace_id = ?", (workspace_id,))
+        connection.execute("DELETE FROM materials WHERE workspace_id = ?", (workspace_id,))
+        connection.execute("DELETE FROM workspaces WHERE id = ?", (workspace_id,))
+    for material in materials:
+        (MATERIALS_DIR / material["stored_filename"]).unlink(missing_ok=True)
+    return {"status": "deleted", "released_recording_count": released_recording_count}
+
+
 @app.put("/api/workspaces/{workspace_id}/notes")
 def save_workspace_notes(workspace_id: str, update: WorkspaceNotesUpdate) -> dict[str, object]:
     get_workspace(workspace_id)

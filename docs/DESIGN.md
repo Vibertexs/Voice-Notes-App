@@ -116,8 +116,10 @@ Nothing is uploaded by this prototype. Attached materials use generated local
 filenames rather than browser paths, are limited to supported study formats and
 25 MB each, and can be removed one at a time. Deleting a recording removes its
 database entry and saved audio, but keeps the surrounding class note and its
-student-authored notes. An occupied folder cannot be deleted until its contents
-are moved or deleted.
+student-authored notes. Deleting a lecture note removes its written notes and
+attached files, but releases its recordings as loose recordings so audio is not
+silently destroyed. An occupied folder cannot be deleted until its contents are
+moved or deleted.
 
 The optional AI integration is also local: the server communicates only with an
 Ollama process on `127.0.0.1`. It never sends class notes, transcripts, or
