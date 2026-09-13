@@ -314,6 +314,10 @@ def initialize_database() -> None:
             "CREATE INDEX IF NOT EXISTS idx_materials_folder_created "
             "ON materials (folder_id, created_at)"
         )
+        connection.execute(
+            "CREATE INDEX IF NOT EXISTS idx_materials_workspace_created "
+            "ON materials (workspace_id, created_at)"
+        )
         folder_columns = {row["name"] for row in connection.execute("PRAGMA table_info(folders)")}
         if "color" not in folder_columns:
             connection.execute("ALTER TABLE folders ADD COLUMN color TEXT NOT NULL DEFAULT 'blue'")
@@ -877,6 +881,7 @@ def serialize_folder(row: sqlite3.Row) -> dict[str, object]:
 def serialize_material(row: sqlite3.Row) -> dict[str, object]:
     return {
         "id": row["id"],
+        "workspace_id": row["workspace_id"],
         "folder_id": row["folder_id"],
         "original_filename": row["original_filename"],
         "mime_type": row["mime_type"],
@@ -944,6 +949,10 @@ def serialize_workspace(row: sqlite3.Row, *, include_sessions: bool = False) -> 
                 "SELECT note_body, model, updated_at FROM workspace_ai_notes WHERE workspace_id = ?",
                 (row["id"],),
             ).fetchone()
+            materials = connection.execute(
+                "SELECT * FROM materials WHERE workspace_id = ? ORDER BY created_at DESC",
+                (row["id"],),
+            ).fetchall()
         result["sessions"] = [serialize_lecture(session, include_content=True) for session in sessions]
         result["note_body"] = notes["note_body"] if notes else ""
         result["notes_updated_at"] = notes["updated_at"] if notes else None
@@ -952,6 +961,7 @@ def serialize_workspace(row: sqlite3.Row, *, include_sessions: bool = False) -> 
         result["ai_notes"] = ai_notes["note_body"] if ai_notes else ""
         result["ai_notes_model"] = ai_notes["model"] if ai_notes else None
         result["ai_notes_updated_at"] = ai_notes["updated_at"] if ai_notes else None
+        result["materials"] = [serialize_material(material) for material in materials]
     return result
 
 
@@ -1046,7 +1056,7 @@ def list_library(folder_id: str | None = Query(default=None)) -> dict[str, objec
                 (folder_id,),
             ).fetchall()
             materials = connection.execute(
-                "SELECT * FROM materials WHERE folder_id = ? ORDER BY created_at DESC", (folder_id,)
+                "SELECT * FROM materials WHERE folder_id = ? AND workspace_id IS NULL ORDER BY created_at DESC", (folder_id,)
             ).fetchall()
         else:
             folders = connection.execute(
@@ -1066,7 +1076,7 @@ def list_library(folder_id: str | None = Query(default=None)) -> dict[str, objec
                 """
             ).fetchall()
             materials = connection.execute(
-                "SELECT * FROM materials WHERE folder_id IS NULL ORDER BY created_at DESC"
+                "SELECT * FROM materials WHERE folder_id IS NULL AND workspace_id IS NULL ORDER BY created_at DESC"
             ).fetchall()
     return {
         "current_folder": serialize_folder(current_folder) if current_folder else None,
@@ -1224,6 +1234,7 @@ def delete_workspace(workspace_id: str) -> dict[str, object]:
         connection.execute("DELETE FROM workspace_study_notes WHERE workspace_id = ?", (workspace_id,))
         connection.execute("DELETE FROM workspace_ai_notes WHERE workspace_id = ?", (workspace_id,))
         connection.execute("DELETE FROM workspace_ai_messages WHERE workspace_id = ?", (workspace_id,))
+        connection.execute("UPDATE materials SET workspace_id = NULL WHERE workspace_id = ?", (workspace_id,))
         connection.execute("DELETE FROM workspaces WHERE id = ?", (workspace_id,))
     return {"status": "deleted", "released_recording_count": released_recording_count}
 
@@ -1250,10 +1261,17 @@ def save_workspace_notes(workspace_id: str, update: WorkspaceNotesUpdate) -> dic
 
 
 @app.post("/api/materials", status_code=201)
-def upload_folder_material(
-    material: UploadFile = File(...), folder_id: str | None = Query(default=None)
+def upload_material(
+    material: UploadFile = File(...),
+    folder_id: str | None = Query(default=None),
+    workspace_id: str | None = Query(default=None),
 ) -> dict[str, object]:
-    if folder_id:
+    if folder_id and workspace_id:
+        raise HTTPException(status_code=422, detail="Attach a file to either a folder or one lecture page.")
+    workspace = get_workspace(workspace_id) if workspace_id else None
+    if workspace:
+        folder_id = workspace["folder_id"]
+    elif folder_id:
         get_folder(folder_id)
     original_filename = Path((material.filename or "").replace("\\", "/")).name.strip()
     suffix = Path(original_filename).suffix.lower()
@@ -1264,18 +1282,23 @@ def upload_folder_material(
         )
 
     with connect_database() as connection:
-        if folder_id:
+        if workspace_id:
             material_count = connection.execute(
-                "SELECT COUNT(*) AS count FROM materials WHERE folder_id = ?", (folder_id,)
+                "SELECT COUNT(*) AS count FROM materials WHERE workspace_id = ?", (workspace_id,)
+            ).fetchone()["count"]
+        elif folder_id:
+            material_count = connection.execute(
+                "SELECT COUNT(*) AS count FROM materials WHERE folder_id = ? AND workspace_id IS NULL", (folder_id,)
             ).fetchone()["count"]
         else:
             material_count = connection.execute(
-                "SELECT COUNT(*) AS count FROM materials WHERE folder_id IS NULL"
+                "SELECT COUNT(*) AS count FROM materials WHERE folder_id IS NULL AND workspace_id IS NULL"
             ).fetchone()["count"]
     if material_count >= MAX_MATERIALS_PER_WORKSPACE:
+        location = "lecture page" if workspace_id else "folder"
         raise HTTPException(
             status_code=413,
-            detail=f"Keep up to {MAX_MATERIALS_PER_WORKSPACE} files in one folder.",
+            detail=f"Keep up to {MAX_MATERIALS_PER_WORKSPACE} files in one {location}.",
         )
 
     material_id = str(uuid4())
@@ -1312,10 +1335,11 @@ def upload_folder_material(
                 INSERT INTO materials (
                     id, workspace_id, folder_id, original_filename, stored_filename, mime_type, size_bytes, created_at,
                     extracted_text, extraction_status, extraction_message, extracted_at
-                ) VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     material_id,
+                    workspace_id,
                     folder_id,
                     original_filename,
                     stored_filename,

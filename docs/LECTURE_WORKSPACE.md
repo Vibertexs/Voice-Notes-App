@@ -5,9 +5,10 @@
 The library has three first-class objects: a **lecture note**, a **loose
 recording**, and an **imported file**. A lecture note is the durable home for a
 topic that returns over several class days; it can be opened empty and gradually
-collect student notes and multiple dated recording sessions. Imported files are
-course resources, not attachments to either note or recording. A loose recording
-is a fast, low-friction capture that has not been assigned to a lecture note yet.
+collect student notes, multiple dated recording sessions, and its own attached
+study files. Imported files can also be course-wide resources in a folder. A
+loose recording is a fast, low-friction capture that has not been assigned to a
+lecture note yet.
 
 ```
 Library
@@ -17,6 +18,7 @@ Library
     ├── Imported files      — slides, handouts, readings, and external notes
     └── Lecture workspace
         ├── Notes           — student-authored or pasted
+        ├── Attachments     — GoodNotes exports, slides, handouts, and readings
         ├── Recording sessions
         │   ├── audio
         │   └── transcript
@@ -110,11 +112,12 @@ audio or transcript data:
 - `workspace_study_notes`: editable study-guide draft separate from student
   notes. Keeping it separate prevents generated text from silently overwriting
   what a student wrote.
-- `materials`: nullable `folder_id`, original filename, generated local
-  filename, type, size, upload time, locally extracted text, and extraction
-  status. A material has no lecture-note or recording relationship. The original
-  stays available for download; the database never trusts a browser-provided
-  path.
+- `materials`: nullable `workspace_id` and `folder_id`, original filename,
+  generated local filename, type, size, upload time, locally extracted text,
+  and extraction status. A lecture attachment inherits its workspace's folder
+  so Class AI can use it; class-wide materials have no workspace relationship.
+  The original stays available for download; the database never trusts a
+  browser-provided path.
 - `session_markers`: a user label and an audio time on a recording session.
   This is the lightweight bridge when content changes mid-lecture.
 - `folder_ai_notes`: one editable AI study guide per class folder, kept
@@ -135,13 +138,14 @@ workspace in the active folder (or the Library root) and opens an editable local
 note with automatic saving and a manual Save notes action. A workspace now has
 three deliberate review spaces:
 
-1. **Notes** for writing or pasting source material.
-   **Imported files** appear as their own collection in the course folder,
-   alongside notes and loose recordings. The collection accepts private PDF,
-   Word, PowerPoint, text, and Markdown files. Text from PDF, `.docx`, `.pptx`,
-   Markdown, and text files is extracted locally for Class AI; scanned PDFs are
-   clearly marked as needing OCR and older `.doc`/`.ppt` files need conversion
-   first.
+1. **Notes** for writing or pasting source material, with **Attachments** below
+   for files that belong to that lecture. A lecture attachment can be a
+   GoodNotes export (PDF), slides, a handout, or a reading. Class-wide imported
+   files still appear as their own collection in the course folder. Both scopes
+   accept private PDF, Word, PowerPoint, text, and Markdown files. Text from
+   PDF, `.docx`, `.pptx`, Markdown, and text files is extracted locally for
+   Class AI; scanned PDFs are clearly marked as needing OCR and older
+   `.doc`/`.ppt` files need conversion first.
 2. **Recordings & transcript** for listening to one dated session, reading its
    transcript, and placing/removing topic markers at the current audio time.
 3. **Class AI**, reached from a course folder or from any lecture inside it,

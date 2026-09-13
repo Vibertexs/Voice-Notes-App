@@ -602,6 +602,7 @@
         .workspace-actions { justify-content: flex-start; padding-top: 0; }
         .folder-ai-entry { align-items: stretch; flex-direction: column; }
         .folder-ai-entry .button { width: 100%; }
+        .workspace-attachments-head { align-items: stretch; flex-direction: column; }
       }
 
       .note-editor-card { overflow: hidden; border: 4px solid #c8d4e5; border-radius: 1.4rem; background: rgba(252,253,255,.88); }
@@ -612,6 +613,12 @@
       .workspace-notes:focus { outline: 3px solid rgba(23,105,210,.28); outline-offset: -3px; box-shadow: none; }
       .note-save-bar { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin-top: 1rem; padding: .8rem 1rem; border: 4px solid #c8d4e5; border-radius: 1.1rem; background: rgba(235,241,250,.8); }
       .note-save-bar .status { margin: 0; }
+      .workspace-attachments { margin-top: 1rem; padding: 1rem; border: 4px solid #c8d4e5; border-radius: 1.25rem; background: rgba(249,251,254,.78); }
+      .workspace-attachments-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+      .workspace-attachments h3 { margin: 0; font-size: .96rem; }
+      .workspace-attachments p { margin: .25rem 0 0; color: var(--muted); font-size: .8rem; line-height: 1.45; }
+      .workspace-attachments .material-list { margin-top: .85rem; }
+      .workspace-attachments .material-status { min-height: 0; margin-top: .55rem; }
       .review-card, .study-card, .ai-notes-card, .ai-chat-card { overflow: hidden; }
       .review-card-head, .study-card-head, .ai-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding: 1rem 1rem .8rem; border-bottom: 2px solid #dbe4f0; }
       .review-card-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .45rem; }
@@ -834,6 +841,8 @@
             </div>
             <div class="workspace-actions">
               <button id="new-topic" class="button secondary"><span class="create-symbol">＋</span>New topic</button>
+              <button id="workspace-add-material" class="button secondary"><span class="create-symbol">＋</span>Attach file</button>
+              <input id="workspace-material-upload" type="file" accept=".pdf,.txt,.md,.doc,.docx,.ppt,.pptx" multiple hidden />
               <button id="delete-workspace" class="button danger">Delete note</button>
               <button id="record-from-workspace" class="button primary">●&nbsp; Record session</button>
             </div>
@@ -859,6 +868,14 @@
               </aside>
             </div>
             <div class="note-save-bar"><span id="workspace-notes-status" class="status" role="status"></span><button id="workspace-notes-save" class="button primary">Save notes</button></div>
+            <section class="workspace-attachments" aria-labelledby="workspace-attachments-heading">
+              <div class="workspace-attachments-head">
+                <div><h3 id="workspace-attachments-heading">Attachments</h3><p>Keep GoodNotes exports, PDFs, slides, and documents with this lecture.</p></div>
+              </div>
+              <p id="workspace-material-status" class="material-status" role="status"></p>
+              <div id="workspace-material-list" class="material-list"></div>
+              <div id="workspace-no-materials" class="empty"><span>No attachments yet. Export GoodNotes pages as a PDF, then choose Attach file.</span></div>
+            </section>
           </section>
 
           <section id="review-pane" class="workspace-pane" role="tabpanel" aria-labelledby="workspace-tab-review" hidden>
@@ -1007,7 +1024,7 @@
         'cancel-recording', 'recording-status', 'capture-notes-toggle', 'capture-notes-panel', 'capture-notes-close', 'capture-notes-context', 'capture-notes', 'capture-notes-footer', 'detail-view', 'back-to-library', 'detail-heading',
         'delete-recording', 'saved-title', 'save-recording', 'save-status', 'saved-date', 'playback',
         'attach-recording-panel', 'create-workspace-from-recording', 'attach-target', 'attach-recording', 'transcript', 'workspace-view', 'workspace-back', 'workspace-heading', 'workspace-location',
-        'workspace-title', 'workspace-notes', 'workspace-notes-status', 'workspace-notes-save', 'record-from-workspace', 'delete-workspace', 'new-topic',
+        'workspace-title', 'workspace-notes', 'workspace-notes-status', 'workspace-notes-save', 'workspace-add-material', 'workspace-material-upload', 'workspace-material-status', 'workspace-material-list', 'workspace-no-materials', 'record-from-workspace', 'delete-workspace', 'new-topic',
         'workspace-tab-notes', 'workspace-tab-review', 'workspace-tab-study', 'notes-pane', 'review-pane', 'study-pane',
         'session-list', 'review-session-list', 'add-existing-recordings', 'add-recordings-panel', 'loose-recording-options', 'attach-existing-status', 'attach-selected-recordings', 'review-empty', 'review-content', 'review-session-title', 'review-session-meta',
         'session-playback', 'marker-label', 'add-marker', 'marker-list', 'session-transcript', 'detach-session', 'delete-session',
@@ -1026,6 +1043,7 @@
       let activeWorkspace = null;
       let activeSession = null;
       let activeMaterials = [];
+      let activeWorkspaceMaterials = [];
       let activeWorkspaceTab = 'notes';
       let localAIStatus = null;
       let aiMessages = [];
@@ -1342,6 +1360,109 @@
           el['file-status'].textContent = 'File deleted.';
         } catch (error) { el['file-status'].textContent = error.message; }
       }
+      function renderWorkspaceMaterials(materials) {
+        const hasMaterials = Boolean(materials?.length);
+        el['workspace-material-list'].hidden = !hasMaterials;
+        el['workspace-no-materials'].hidden = hasMaterials;
+        if (!hasMaterials) {
+          el['workspace-material-list'].replaceChildren();
+          return;
+        }
+        el['workspace-material-list'].replaceChildren(...materials.map(material => {
+          const item = document.createElement('div');
+          item.className = 'material-item';
+          const type = document.createElement('span');
+          type.className = 'material-type';
+          type.textContent = materialKind(material.original_filename);
+          const info = document.createElement('span');
+          info.className = 'material-info';
+          const name = document.createElement('span');
+          name.className = 'material-name';
+          name.textContent = material.original_filename;
+          const meta = document.createElement('span');
+          meta.className = 'material-meta';
+          meta.textContent = `${formatFileSize(material.size_bytes)} · ${formatDate(material.created_at)} · ${materialAIStatus(material)}`;
+          if (material.ai_message) meta.title = material.ai_message;
+          info.append(name, meta);
+          const actions = document.createElement('span');
+          actions.className = 'material-actions';
+          const download = document.createElement('a');
+          download.className = 'material-download';
+          download.href = material.download_url;
+          download.target = '_blank';
+          download.rel = 'noopener';
+          download.textContent = '↓';
+          download.setAttribute('aria-label', `Download ${material.original_filename}`);
+          if (!['ready', 'needs_conversion', 'unsupported', 'needs_ocr', 'no_text', 'locked'].includes(material.ai_status)) {
+            const readForAI = document.createElement('button');
+            readForAI.className = 'material-ai-read';
+            readForAI.type = 'button';
+            readForAI.textContent = 'AI';
+            readForAI.setAttribute('aria-label', `Read ${material.original_filename} for Class AI`);
+            readForAI.title = material.ai_message || 'Read file text locally for Class AI';
+            readForAI.addEventListener('click', () => extractWorkspaceMaterial(material));
+            actions.append(readForAI);
+          }
+          const remove = document.createElement('button');
+          remove.className = 'material-remove';
+          remove.type = 'button';
+          remove.textContent = '×';
+          remove.setAttribute('aria-label', `Delete ${material.original_filename}`);
+          remove.addEventListener('click', () => removeWorkspaceMaterial(material));
+          actions.append(download, remove);
+          item.append(type, info, actions);
+          return item;
+        }));
+      }
+      async function extractWorkspaceMaterial(material) {
+        el['workspace-material-status'].textContent = `Reading ${material.original_filename} locally for Class AI…`;
+        try {
+          const updated = await api(`/api/materials/${material.id}/extract`, { method: 'POST' });
+          activeWorkspaceMaterials = activeWorkspaceMaterials.map(item => item.id === updated.id ? updated : item);
+          renderWorkspaceMaterials(activeWorkspaceMaterials);
+          el['workspace-material-status'].textContent = updated.ai_message || materialAIStatus(updated);
+        } catch (error) { el['workspace-material-status'].textContent = error.message; }
+      }
+      async function uploadWorkspaceMaterials(files) {
+        if (!files?.length || !activeWorkspace) return;
+        const workspaceId = activeWorkspace.id;
+        const selected = [...files];
+        el['workspace-material-status'].textContent = selected.length === 1 ? 'Attaching file…' : `Attaching ${selected.length} files…`;
+        el['workspace-add-material'].disabled = true;
+        let uploaded = 0;
+        try {
+          for (const file of selected) {
+            const form = new FormData();
+            form.append('material', file, file.name);
+            const material = await api(`/api/materials?workspace_id=${encodeURIComponent(workspaceId)}`, { method: 'POST', body: form });
+            if (activeWorkspace?.id === workspaceId) activeWorkspaceMaterials = [material, ...activeWorkspaceMaterials];
+            uploaded += 1;
+          }
+          if (activeWorkspace?.id === workspaceId) {
+            renderWorkspaceMaterials(activeWorkspaceMaterials);
+            el['workspace-material-status'].textContent = uploaded === 1
+              ? `Attached to this lecture. ${activeWorkspaceMaterials[0]?.ai_message || 'Ready for Class AI.'}`
+              : `${uploaded} files attached to this lecture.`;
+          }
+        } catch (error) {
+          if (activeWorkspace?.id === workspaceId) {
+            renderWorkspaceMaterials(activeWorkspaceMaterials);
+            el['workspace-material-status'].textContent = uploaded ? `${uploaded} file${uploaded === 1 ? '' : 's'} attached. ${error.message}` : error.message;
+          }
+        } finally {
+          el['workspace-add-material'].disabled = false;
+          el['workspace-material-upload'].value = '';
+        }
+      }
+      async function removeWorkspaceMaterial(material) {
+        if (!confirm(`Delete ${material.original_filename} from this lecture? This permanently removes the file.`)) return;
+        try {
+          await api(`/api/materials/${material.id}`, { method: 'DELETE' });
+          activeWorkspaceMaterials = activeWorkspaceMaterials.filter(item => item.id !== material.id);
+          renderWorkspaceMaterials(activeWorkspaceMaterials);
+          el['workspace-material-status'].textContent = 'Attachment deleted.';
+        } catch (error) { el['workspace-material-status'].textContent = error.message; }
+      }
       function formatPlaybackTime(seconds) {
         const safeSeconds = Math.max(0, Math.floor(Number(seconds) || 0));
         return `${Math.floor(safeSeconds / 60)}:${String(safeSeconds % 60).padStart(2, '0')}`;
@@ -1498,6 +1619,7 @@
           activeWorkspace = workspace;
           activeRecording = null;
           activeSession = workspace.sessions?.at(-1) || null;
+          activeWorkspaceMaterials = workspace.materials || [];
           const folder = workspace.folder_id ? allFolders.find(item => item.id === workspace.folder_id) : null;
           el['workspace-heading'].textContent = workspace.title;
           el['workspace-title'].value = workspace.title;
@@ -1506,6 +1628,10 @@
           el['workspace-notes-status'].textContent = workspace.notes_updated_at
             ? `Saved ${formatDate(workspace.notes_updated_at)}`
             : 'Add your notes for this lecture.';
+          el['workspace-material-status'].textContent = activeWorkspaceMaterials.length
+            ? `${activeWorkspaceMaterials.length} attachment${activeWorkspaceMaterials.length === 1 ? '' : 's'} saved with this lecture.`
+            : '';
+          renderWorkspaceMaterials(activeWorkspaceMaterials);
           el['study-notes'].value = workspace.study_notes || '';
           el['study-notes-status'].textContent = workspace.study_notes_updated_at
             ? `Saved ${formatDate(workspace.study_notes_updated_at)}`
@@ -2009,6 +2135,7 @@
           activeWorkspace = null;
           activeSession = null;
           activeMaterials = library.materials || [];
+          activeWorkspaceMaterials = [];
           el['library-title'].textContent = locationName();
           el['library-subtitle'].textContent = activeFolder ? 'Keep notes, recordings, and imported files together in this class—without nesting one inside another.' : 'Everything you need for class, in one place.';
           el['capture-copy'].textContent = activeFolder
@@ -2320,6 +2447,8 @@
       }));
       el['workspace-back'].addEventListener('click', () => loadLibrary(activeWorkspace?.folder_id));
       el['record-from-workspace'].addEventListener('click', () => startQuickRecording(activeWorkspace));
+      el['workspace-add-material'].addEventListener('click', () => el['workspace-material-upload'].click());
+      el['workspace-material-upload'].addEventListener('change', event => uploadWorkspaceMaterials(event.target.files));
       el['add-existing-recordings'].addEventListener('click', () => toggleAttachableRecordings().catch(error => showToast(error.message)));
       el['attach-selected-recordings'].addEventListener('click', () => attachSelectedRecordings().catch(error => {
         el['attach-existing-status'].textContent = error.message;

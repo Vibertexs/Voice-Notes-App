@@ -46,12 +46,14 @@ lecture page with that recording attached. Reopen the page to keep writing,
 record another session, or attach several earlier loose recordings at once.
 Older loose recordings can also be turned into their own lecture page in one
 click.
-**Imported files** are a separate folder-level collection, alongside notes and
-recordings. The File action accepts PDF, `.docx`, `.pptx`, text, and Markdown
-files up to 25 MB each. Compatible text is extracted locally and becomes a
-source for Class AI, while the original remains on this computer under `data/`,
-which is intentionally excluded from Git. Scanned PDFs need OCR, and older
-`.doc`/`.ppt` files should be exported to PDF, `.docx`, or `.pptx` first.
+**Imported files** can be kept class-wide in a folder or attached directly to
+one lecture page. Use a lecture's **Attach file** action for a GoodNotes export,
+slides, a handout, or a reading that belongs with that session; export GoodNotes
+pages as PDFs first. The file action accepts PDF, `.docx`, `.pptx`, text, and
+Markdown files up to 25 MB each. Compatible text is extracted locally and
+becomes a source for Class AI, while the original remains on this computer under
+`data/`, which is intentionally excluded from Git. Scanned PDFs need OCR, and
+older `.doc`/`.ppt` files should be exported to PDF, `.docx`, or `.pptx` first.
 
 ```powershell
 .\.venv\Scripts\python -m uvicorn app:app --reload

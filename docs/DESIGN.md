@@ -139,16 +139,18 @@ Audio, class materials, the SQLite database, transcripts, topic markers, and
 study-guide drafts live in the local `data/` folder, which is ignored by Git.
 Nothing is uploaded by this prototype. Imported materials use generated local
 filenames rather than browser paths, are limited to supported study formats and
-25 MB each, and can be removed one at a time. Their readable text is extracted
-locally from PDFs, `.docx`, `.pptx`, Markdown, and text files for Class AI;
-the original is kept alongside the extracted source. Scanned PDFs are labeled
-as needing OCR, and older `.doc`/`.ppt` files are kept but require conversion
-before Class AI can read them. Deleting a recording removes its
-database entry and saved audio, but keeps the surrounding class note and its
-student-authored notes. Deleting a lecture note removes only its written notes
-and releases its recordings as loose recordings; imported files are separate
-folder-level items and stay in place. An occupied folder cannot be deleted
-until its contents are moved or deleted.
+25 MB each, and can be removed one at a time. A material can be class-wide in a
+folder or attached directly to one lecture page—for example, a GoodNotes page
+exported as a PDF. Their readable text is extracted locally from PDFs, `.docx`,
+`.pptx`, Markdown, and text files for Class AI; the original is kept alongside
+the extracted source. Scanned PDFs are labeled as needing OCR, and older
+`.doc`/`.ppt` files are kept but require conversion before Class AI can read
+them. Deleting a recording removes its database entry and saved audio, but
+keeps the surrounding class note and its student-authored notes. Deleting a
+lecture note removes only its written notes and releases its recordings as
+loose recordings; its attachments are retained as class-wide files so a
+student does not lose imported work. An occupied folder cannot be deleted until
+its contents are moved or deleted.
 
 The optional AI integration is also local: the server communicates only with an
 Ollama process on `127.0.0.1`. It never sends class notes, transcripts, or
