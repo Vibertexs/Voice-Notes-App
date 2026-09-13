@@ -537,6 +537,9 @@
       .workspace-card h4 { margin: .45rem 0 0; overflow: hidden; font-size: 1.08rem; letter-spacing: -.035em; text-overflow: ellipsis; white-space: nowrap; }
       .workspace-card p { margin: .35rem 0 0; color: #b8c4df; font-size: .8rem; line-height: 1.35; }
       .workspace-card-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 1.25rem; color: #d9e2f8; font-size: .78rem; font-weight: 650; }
+      .workspace-card.recording-card { color: #1f3558; background: radial-gradient(circle at 84% 0, rgba(102,171,255,.82) 0, transparent 43%), rgba(248,251,255,.88); }
+      .workspace-card.recording-card:hover { border-color: #7fa4d8; background: radial-gradient(circle at 84% 0, rgba(124,184,255,.9) 0, transparent 43%), #fff; }
+      .recording-card .workspace-kicker, .recording-card p, .recording-card .workspace-card-footer { color: #5a7195; }
 
       .workspace-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
       .workspace-header h2 { margin: .55rem 0 0; font-size: clamp(1.55rem, 3vw, 2.2rem); letter-spacing: -.055em; }
@@ -638,11 +641,12 @@
       .ai-question { min-height: 2.65rem; margin: 0; padding: .6rem .7rem; border: 2px solid #c8d4e5; border-radius: .8rem; color: #25344c; background: #fff; font: inherit; resize: vertical; }
       .ai-question-form .button { align-self: end; }
       .ai-chat-actions { display: flex; justify-content: flex-end; margin: 0 1rem 1rem; }
-      .capture-layout, .capture-layout.notes-open { display: grid; grid-template-columns: minmax(0, 42rem); justify-content: center; gap: 1rem; }
+      .capture-layout { display: grid; grid-template-columns: minmax(0, 42rem); justify-content: center; gap: 1rem; }
+      .capture-layout.notes-open { grid-template-columns: minmax(0, 1fr) minmax(16rem, 20rem); justify-content: stretch; }
       .capture-layout.notes-open .capture-panel { width: 100%; }
       .capture-note-trigger { display: flex; align-items: center; flex-wrap: wrap; gap: .55rem; margin-top: 1rem; }
       .capture-note-trigger span { color: var(--muted); font-size: .78rem; line-height: 1.35; }
-      .capture-notes-card { position: static; width: 100%; overflow: hidden; border: 4px solid #c8d4e5; border-radius: 1.4rem; background: rgba(252,253,255,.9); }
+      .capture-notes-card { position: sticky; top: 6.25rem; overflow: hidden; border: 4px solid #c8d4e5; border-radius: 1.4rem; background: rgba(252,253,255,.9); }
       .capture-notes-head { display: flex; align-items: flex-start; justify-content: space-between; gap: .7rem; padding: 1rem; border-bottom: 2px solid #dbe4f0; }
       .capture-notes-head h3 { margin: 0; font-size: .98rem; }
       .capture-notes-head p { margin: .28rem 0 0; color: var(--muted); font-size: .76rem; line-height: 1.4; }
@@ -662,7 +666,7 @@
       .move-panel #attach-recording-panel { margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 2px solid #dbe4f0; }
       .move-panel #attach-recording { width: 100%; margin-top: .7rem; }
       @media (max-width: 840px) { .workspace-note-layout, .review-layout { grid-template-columns: 1fr; } }
-      @media (max-width: 840px) { .capture-notes { min-height: 15rem; } }
+      @media (max-width: 840px) { .capture-layout.notes-open { grid-template-columns: minmax(0, 1fr); } .capture-notes-card { position: static; } .capture-notes { min-height: 15rem; } }
       @media (max-width: 540px) { .topic-marker, .ai-question-form { grid-template-columns: 1fr; } .topic-marker .button, .ai-question-form .button { justify-self: stretch; } .class-ai-header { align-items: stretch; flex-direction: column; } }
     </style>
   </head>
@@ -722,12 +726,9 @@
             </button>
           </template>
           <div id="no-folders" class="empty"><span>No folders here yet.</span><button id="empty-folder-action" class="button secondary">＋ Create folder</button></div>
-          <h3 class="section-title">Lecture notes</h3>
+          <h3 class="section-title">Lectures</h3>
           <div id="workspace-list" class="workspace-grid"></div>
-          <div id="no-workspaces" class="empty"><span>No lecture notes here yet.</span><button id="empty-workspace-action" class="button secondary">＋ New note</button></div>
-          <h3 class="section-title">Loose recordings</h3>
-          <div id="recording-list" class="list"></div>
-          <div id="no-recordings" class="empty" hidden><span>No loose recordings here yet.</span></div>
+          <div id="no-workspaces" class="empty"><span>No lectures here yet. Start with Record &amp; note to keep audio and notes together.</span></div>
           <h3 class="section-title">Imported files</h3>
           <p id="file-status" class="material-status" role="status"></p>
           <div id="file-list" class="material-list"></div>
@@ -764,7 +765,7 @@
               <p id="recording-helper">Tap once to begin. You can rename or move the recording after it is saved.</p>
               <div class="capture-note-trigger">
                 <button id="capture-notes-toggle" type="button" class="button secondary" aria-controls="capture-notes-panel" aria-expanded="false"><span class="create-symbol">＋</span>Add notes</button>
-                <span>Keep quick thoughts with this recording.</span>
+                <span>Keep quick thoughts beside the recording.</span>
               </div>
               <div class="recording-options">
                 <label>Recording name <span>(optional)</span><input id="recording-title" maxlength="180" placeholder="e.g. Cell respiration" /></label>
@@ -800,7 +801,7 @@
             </div>
             <aside id="capture-notes-panel" class="capture-notes-card" aria-labelledby="capture-notes-heading" hidden>
               <div class="capture-notes-head">
-                <div><h3 id="capture-notes-heading">Lecture notes</h3><p id="capture-notes-context">These notes will be saved with this recording.</p></div>
+                <div><h3 id="capture-notes-heading">Capture notes</h3><p id="capture-notes-context">These notes will be saved with this recording.</p></div>
                 <button id="capture-notes-close" class="capture-notes-close" type="button" aria-label="Close capture notes">×</button>
               </div>
               <textarea id="capture-notes" class="capture-notes" maxlength="100000" spellcheck="true" placeholder="Key idea, question, assignment, or something to revisit…"></textarea>
@@ -977,10 +978,10 @@
 
     <script>
       const elementIds = [
-        'library-home', 'new-folder', 'record-from-library', 'add-folder-material', 'folder-material-upload', 'folder-ai-entry', 'folder-ai-open', 'empty-folder-action', 'empty-workspace-action', 'empty-file-action', 'capture-launch', 'capture-copy',
+        'library-home', 'new-folder', 'record-from-library', 'add-folder-material', 'folder-material-upload', 'folder-ai-entry', 'folder-ai-open', 'empty-folder-action', 'empty-file-action', 'capture-launch', 'capture-copy',
         'recent-toggle', 'recent-menu', 'recent-recording-list', 'recent-empty', 'library-view', 'breadcrumb', 'library-title',
         'library-subtitle', 'delete-folder', 'folder-color-toggle', 'folder-color-control', 'parent-target', 'parent-title', 'parent-copy',
-        'folder-list', 'no-folders', 'workspace-list', 'no-workspaces', 'recording-list', 'no-recordings', 'file-list', 'no-files', 'file-status', 'folder-view',
+        'folder-list', 'no-folders', 'workspace-list', 'no-workspaces', 'file-list', 'no-files', 'file-status', 'folder-view',
         'folder-context', 'folder-form', 'folder-name', 'new-folder-colors', 'cancel-folder', 'folder-status',
         'recording-view', 'capture-layout', 'recording-title', 'quality', 'record', 'recording-location', 'recording-helper', 'recording-timer', 'transport', 'phase-label', 'waveform',
         'finish-group', 'finish-recording', 'discard-reveal', 'discard-slider', 'discard-thumb',
@@ -1183,6 +1184,25 @@
         node.append(kicker, title, copy, footer);
         node.addEventListener('click', () => loadWorkspace(workspace.id));
         addWorkspaceDropTarget(node, workspace.id);
+        return node;
+      }
+      function looseRecordingCard(recording) {
+        const node = document.createElement('button');
+        node.className = 'workspace-card recording-card';
+        node.setAttribute('aria-label', `Open loose recording ${recording.title}`);
+        const kicker = document.createElement('span');
+        kicker.className = 'workspace-kicker';
+        kicker.textContent = 'RECORDING';
+        const title = document.createElement('h4');
+        title.textContent = recording.title;
+        const copy = document.createElement('p');
+        copy.textContent = `Loose · ${formatDate(recording.created_at)} · Open to review the transcript or add it to a lecture note`;
+        const footer = document.createElement('span');
+        footer.className = 'workspace-card-footer';
+        footer.innerHTML = '<span>Open recording</span><span aria-hidden="true">↗</span>';
+        node.append(kicker, title, copy, footer);
+        node.addEventListener('click', () => loadRecording(recording.id));
+        addRecordingDrag(node, recording);
         return node;
       }
       function formatFileSize(bytes) {
@@ -1943,15 +1963,16 @@
           await refreshNavigation();
           renderBreadcrumb();
           el['folder-list'].replaceChildren(...library.folders.map((folder, index) => folderTile(folder, index)));
-          el['workspace-list'].replaceChildren(...(library.workspaces || []).map(workspaceCard));
-          el['recording-list'].replaceChildren(...library.lectures.map(recording => listRow('recording', recording.title, `Loose · ${formatDate(recording.created_at)}`, () => loadRecording(recording.id), recording)));
+          const lectureItems = [
+            ...(library.workspaces || []).map(workspace => ({ type: 'workspace', item: workspace, sortDate: workspace.updated_at || workspace.created_at })),
+            ...library.lectures.map(recording => ({ type: 'recording', item: recording, sortDate: recording.created_at }))
+          ].sort((left, right) => new Date(right.sortDate) - new Date(left.sortDate));
+          el['workspace-list'].replaceChildren(...lectureItems.map(entry => entry.type === 'workspace' ? workspaceCard(entry.item) : looseRecordingCard(entry.item)));
           renderFolderMaterials(activeMaterials);
           el['folder-list'].hidden = library.folders.length === 0;
-          el['workspace-list'].hidden = !(library.workspaces || []).length;
-          el['recording-list'].hidden = library.lectures.length === 0;
+          el['workspace-list'].hidden = lectureItems.length === 0;
           el['no-folders'].hidden = library.folders.length > 0;
-          el['no-workspaces'].hidden = (library.workspaces || []).length > 0;
-          el['no-recordings'].hidden = library.lectures.length > 0;
+          el['no-workspaces'].hidden = lectureItems.length > 0;
           el['file-list'].hidden = activeMaterials.length === 0;
           el['no-files'].hidden = activeMaterials.length > 0;
           if (!el['parent-target'].dataset.dropReady) {
@@ -2177,7 +2198,6 @@
       el['parent-target'].addEventListener('click', () => loadLibrary(parentDestination().id));
       el['new-folder'].addEventListener('click', openFolderForm);
       el['empty-folder-action'].addEventListener('click', openFolderForm);
-      el['empty-workspace-action'].addEventListener('click', () => createWorkspace());
       el['record-from-library'].addEventListener('click', () => startQuickRecording());
       el['add-folder-material'].addEventListener('click', () => el['folder-material-upload'].click());
       el['empty-file-action'].addEventListener('click', () => el['folder-material-upload'].click());
