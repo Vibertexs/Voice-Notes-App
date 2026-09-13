@@ -42,12 +42,13 @@ Once this works, the next step is wrapping this script in a tiny API that the Ex
 
 The local browser UI is a student lecture library. Create a **Note** for a
 blank, persistent lecture note or record immediately from the Library or a
-folder. A successful first recording creates its own note workspace; later work
-can add more recording sessions and private class materials to that same
-workspace. The **Class materials** panel accepts PDF, Word, PowerPoint, text,
-and Markdown files up to 25 MB each; originals remain on this computer under
-`data/`, which is intentionally excluded from Git. File contents are not sent
-to an AI service or silently included in the local study draft yet.
+folder. A completed quick recording remains loose until it is dragged onto a
+lecture note; recording from inside a note adds a session there directly. The
+**Class materials** panel accepts PDF, `.docx`, `.pptx`, text, and Markdown
+files up to 25 MB each. Compatible text is extracted locally and becomes a
+source for Class AI, while the original remains on this computer under `data/`,
+which is intentionally excluded from Git. Scanned PDFs need OCR, and older
+`.doc`/`.ppt` files should be exported to PDF, `.docx`, or `.pptx` first.
 
 ```powershell
 .\.venv\Scripts\python -m uvicorn app:app --reload

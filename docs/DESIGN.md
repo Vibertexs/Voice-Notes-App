@@ -114,7 +114,11 @@ Audio, class materials, the SQLite database, transcripts, topic markers, and
 study-guide drafts live in the local `data/` folder, which is ignored by Git.
 Nothing is uploaded by this prototype. Attached materials use generated local
 filenames rather than browser paths, are limited to supported study formats and
-25 MB each, and can be removed one at a time. Deleting a recording removes its
+25 MB each, and can be removed one at a time. Their readable text is extracted
+locally from PDFs, `.docx`, `.pptx`, Markdown, and text files for Class AI;
+the original is kept alongside the extracted source. Scanned PDFs are labeled
+as needing OCR, and older `.doc`/`.ppt` files are kept but require conversion
+before Class AI can read them. Deleting a recording removes its
 database entry and saved audio, but keeps the surrounding class note and its
 student-authored notes. Deleting a lecture note removes its written notes and
 attached files, but releases its recordings as loose recordings so audio is not

@@ -5,6 +5,7 @@ import re
 import shutil
 import sqlite3
 import tempfile
+import zipfile
 from collections import Counter
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -12,9 +13,12 @@ from pathlib import Path
 from uuid import uuid4
 
 import requests
+from docx import Document
 from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
+from pypdf import PdfReader
 from pydantic import BaseModel, Field
+from pptx import Presentation
 
 from transcription import transcribe_audio
 
@@ -26,6 +30,10 @@ DATABASE_PATH = DATA_DIR / "voice_notes.db"
 MAX_UPLOAD_BYTES = 25 * 1024 * 1024
 MAX_MATERIAL_BYTES = 25 * 1024 * 1024
 MAX_MATERIALS_PER_WORKSPACE = 30
+MAX_MATERIAL_EXTRACTED_CHARS = 100_000
+MAX_PDF_PAGES_FOR_EXTRACTION = 100
+MAX_OFFICE_ARCHIVE_FILES = 10_000
+MAX_OFFICE_UNCOMPRESSED_BYTES = 60 * 1024 * 1024
 LOCAL_AI_URL = "http://127.0.0.1:11434"
 LOCAL_AI_DEFAULT_MODEL = "qwen3:1.7b"
 LOCAL_AI_CONTEXT_LIMIT = 50_000
@@ -180,7 +188,11 @@ def initialize_database() -> None:
                 stored_filename TEXT NOT NULL,
                 mime_type TEXT NOT NULL,
                 size_bytes INTEGER NOT NULL,
-                created_at TEXT NOT NULL
+                created_at TEXT NOT NULL,
+                extracted_text TEXT NOT NULL DEFAULT '',
+                extraction_status TEXT NOT NULL DEFAULT 'not_processed',
+                extraction_message TEXT NOT NULL DEFAULT '',
+                extracted_at TEXT
             )
             """
         )
@@ -255,6 +267,17 @@ def initialize_database() -> None:
             )
         if "capture_notes_workspace_id" not in columns:
             connection.execute("ALTER TABLE lectures ADD COLUMN capture_notes_workspace_id TEXT")
+        material_columns = {row["name"] for row in connection.execute("PRAGMA table_info(materials)")}
+        if "extracted_text" not in material_columns:
+            connection.execute("ALTER TABLE materials ADD COLUMN extracted_text TEXT NOT NULL DEFAULT ''")
+        if "extraction_status" not in material_columns:
+            connection.execute(
+                "ALTER TABLE materials ADD COLUMN extraction_status TEXT NOT NULL DEFAULT 'not_processed'"
+            )
+        if "extraction_message" not in material_columns:
+            connection.execute("ALTER TABLE materials ADD COLUMN extraction_message TEXT NOT NULL DEFAULT ''")
+        if "extracted_at" not in material_columns:
+            connection.execute("ALTER TABLE materials ADD COLUMN extracted_at TEXT")
         folder_columns = {row["name"] for row in connection.execute("PRAGMA table_info(folders)")}
         if "color" not in folder_columns:
             connection.execute("ALTER TABLE folders ADD COLUMN color TEXT NOT NULL DEFAULT 'blue'")
@@ -357,6 +380,99 @@ def new_note_template(title: str) -> str:
 ## Questions to review
 -
 """
+
+
+def normalize_extracted_text(text: str) -> str:
+    """Keep locally extracted material compact and safe to include in model context."""
+    normalized = text.replace("\x00", "").replace("\r\n", "\n").replace("\r", "\n")
+    normalized = re.sub(r"[ \t]+\n", "\n", normalized)
+    normalized = re.sub(r"\n{3,}", "\n\n", normalized).strip()
+    if len(normalized) > MAX_MATERIAL_EXTRACTED_CHARS:
+        return normalized[:MAX_MATERIAL_EXTRACTED_CHARS].rstrip() + "\n\n[Material text truncated locally.]"
+    return normalized
+
+
+def validate_office_archive(file_path: Path) -> None:
+    """Reject Office zip bombs before a document library expands them in memory."""
+    with zipfile.ZipFile(file_path) as archive:
+        members = archive.infolist()
+        if len(members) > MAX_OFFICE_ARCHIVE_FILES:
+            raise ValueError("Office archive contains too many files")
+        if sum(member.file_size for member in members) > MAX_OFFICE_UNCOMPRESSED_BYTES:
+            raise ValueError("Office archive expands beyond the local safety limit")
+
+
+def extract_material_text(file_path: Path, suffix: str) -> tuple[str, str, str]:
+    """Extract text locally; a failed extraction never prevents a student keeping their file."""
+    try:
+        if suffix in {".txt", ".md"}:
+            source_text = file_path.read_bytes().decode("utf-8", errors="replace")
+        elif suffix == ".pdf":
+            reader = PdfReader(file_path)
+            if reader.is_encrypted and not reader.decrypt(""):
+                return "", "locked", "Unlock this PDF before Class AI can read it."
+            parts: list[str] = []
+            for page_number, page in enumerate(reader.pages, start=1):
+                if page_number > MAX_PDF_PAGES_FOR_EXTRACTION:
+                    break
+                try:
+                    page_text = page.extract_text(extraction_mode="layout") or ""
+                except Exception:
+                    page_text = page.extract_text() or ""
+                if page_text.strip():
+                    parts.append(f"Page {page_number}\n{page_text}")
+                if sum(len(part) for part in parts) >= MAX_MATERIAL_EXTRACTED_CHARS:
+                    break
+            source_text = "\n\n".join(parts)
+        elif suffix == ".docx":
+            validate_office_archive(file_path)
+            document = Document(file_path)
+            parts = [paragraph.text for paragraph in document.paragraphs if paragraph.text.strip()]
+            for table_number, table in enumerate(document.tables, start=1):
+                rows = [
+                    " | ".join(cell.text.strip() for cell in row.cells if cell.text.strip())
+                    for row in table.rows
+                ]
+                rows = [row for row in rows if row]
+                if rows:
+                    parts.append(f"Table {table_number}\n" + "\n".join(rows))
+            source_text = "\n\n".join(parts)
+        elif suffix == ".pptx":
+            validate_office_archive(file_path)
+            presentation = Presentation(file_path)
+            parts = []
+            for slide_number, slide in enumerate(presentation.slides, start=1):
+                slide_parts: list[str] = []
+                for shape in slide.shapes:
+                    if getattr(shape, "has_text_frame", False) and shape.text.strip():
+                        slide_parts.append(shape.text)
+                    if getattr(shape, "has_table", False):
+                        for row in shape.table.rows:
+                            cells = [cell.text.strip() for cell in row.cells if cell.text.strip()]
+                            if cells:
+                                slide_parts.append(" | ".join(cells))
+                if slide_parts:
+                    parts.append(f"Slide {slide_number}\n" + "\n".join(slide_parts))
+            source_text = "\n\n".join(parts)
+        elif suffix in {".doc", ".ppt"}:
+            return (
+                "",
+                "needs_conversion",
+                "Export this older file as PDF, .docx, or .pptx for Class AI to read it.",
+            )
+        else:
+            return "", "unsupported", "This file type is attached, but Class AI cannot read it yet."
+    except Exception:
+        return "", "failed", "The file is attached, but its text could not be read locally."
+
+    extracted_text = normalize_extracted_text(source_text)
+    if not extracted_text:
+        if suffix == ".pdf":
+            return "", "needs_ocr", "No selectable text was found. A scanned PDF needs OCR before Class AI can read it."
+        return "", "no_text", "No readable text was found in this file."
+    if len(extracted_text) >= MAX_MATERIAL_EXTRACTED_CHARS:
+        return extracted_text, "ready", "Text was read locally; the saved AI source is capped for performance."
+    return extracted_text, "ready", "Text is ready for Class AI on this laptop."
 
 
 def append_capture_notes(
@@ -496,7 +612,12 @@ def build_workspace_ai_context(workspace_id: str) -> str:
             (workspace_id,),
         ).fetchall()
         materials = connection.execute(
-            "SELECT original_filename FROM materials WHERE workspace_id = ? ORDER BY created_at ASC",
+            """
+            SELECT original_filename, extracted_text, extraction_status
+            FROM materials
+            WHERE workspace_id = ?
+            ORDER BY created_at ASC
+            """,
             (workspace_id,),
         ).fetchall()
 
@@ -508,10 +629,18 @@ def build_workspace_ai_context(workspace_id: str) -> str:
             source_parts.append(
                 (f"Recording — {session['title']} ({session['created_at']})", session["transcript"].strip())
             )
+    unreadable_materials: list[str] = []
+    for material in materials:
+        if material["extracted_text"].strip():
+            source_parts.append(
+                (f"Attached material — {material['original_filename']}", material["extracted_text"].strip())
+            )
+        elif material["extraction_status"] != "ready":
+            unreadable_materials.append(material["original_filename"])
     if not source_parts:
         raise HTTPException(
             status_code=422,
-            detail="Add class notes or save a recording before using the local AI assistant.",
+            detail="Add notes, save a recording, or attach an AI-readable class file first.",
         )
 
     remaining = LOCAL_AI_CONTEXT_LIMIT
@@ -524,10 +653,10 @@ def build_workspace_ai_context(workspace_id: str) -> str:
             excerpt += "\n[Source truncated for this response.]"
         context.append(f"## {label}\n{excerpt}")
         remaining -= len(excerpt)
-    if materials:
-        filenames = ", ".join(material["original_filename"] for material in materials)
+    if unreadable_materials:
+        filenames = ", ".join(unreadable_materials)
         context.append(
-            f"## Attached files (stored locally, not yet parsed)\n{filenames}"
+            f"## Attached files not readable by local AI\n{filenames}"
         )
     return "\n\n".join(context)
 
@@ -582,7 +711,7 @@ def build_class_ai_context(folder_id: str) -> str:
     folder_ids = descendant_folder_ids(folder_id)
     placeholders = ", ".join("?" for _ in folder_ids)
     source_parts: list[tuple[str, str]] = []
-    material_labels: list[str] = []
+    unreadable_material_labels: list[str] = []
     with connect_database() as connection:
         for workspace in sources:
             notes = connection.execute(
@@ -607,12 +736,26 @@ def build_class_ai_context(folder_id: str) -> str:
                         )
                     )
             materials = connection.execute(
-                "SELECT original_filename FROM materials WHERE workspace_id = ? ORDER BY created_at ASC",
+                """
+                SELECT original_filename, extracted_text, extraction_status
+                FROM materials
+                WHERE workspace_id = ?
+                ORDER BY created_at ASC
+                """,
                 (workspace["id"],),
             ).fetchall()
-            material_labels.extend(
-                f"{workspace['title']}: {material['original_filename']}" for material in materials
-            )
+            for material in materials:
+                if material["extracted_text"].strip():
+                    source_parts.append(
+                        (
+                            f"{workspace['title']} — attached material {material['original_filename']}",
+                            material["extracted_text"].strip(),
+                        )
+                    )
+                elif material["extraction_status"] != "ready":
+                    unreadable_material_labels.append(
+                        f"{workspace['title']}: {material['original_filename']}"
+                    )
         loose_recordings = connection.execute(
             f"""
             SELECT title, created_at, transcript, note_body
@@ -639,7 +782,7 @@ def build_class_ai_context(folder_id: str) -> str:
     if not source_parts:
         raise HTTPException(
             status_code=422,
-            detail="Add class notes or save a recording before Class AI can help.",
+            detail="Add notes, save a recording, or attach an AI-readable class file first.",
         )
 
     remaining = LOCAL_AI_CONTEXT_LIMIT
@@ -652,9 +795,9 @@ def build_class_ai_context(folder_id: str) -> str:
             excerpt += "\n[Source truncated for this response.]"
         context.append(f"## {label}\n{excerpt}")
         remaining -= len(excerpt)
-    if material_labels:
+    if unreadable_material_labels:
         context.append(
-            "## Attached files (stored locally, not yet parsed)\n" + "\n".join(material_labels)
+            "## Attached files not readable by local AI\n" + "\n".join(unreadable_material_labels)
         )
     return "\n\n".join(context)
 
@@ -727,6 +870,9 @@ def serialize_material(row: sqlite3.Row) -> dict[str, object]:
         "mime_type": row["mime_type"],
         "size_bytes": row["size_bytes"],
         "created_at": row["created_at"],
+        "ai_status": row["extraction_status"],
+        "ai_message": row["extraction_message"],
+        "extracted_char_count": len(row["extracted_text"]),
         "download_url": f"/api/workspaces/{row['workspace_id']}/materials/{row['id']}/file",
     }
 
@@ -1133,6 +1279,9 @@ def upload_workspace_material(
                     destination.write(chunk)
             if total_bytes == 0:
                 raise HTTPException(status_code=400, detail="The uploaded file was empty.")
+            extracted_text, extraction_status, extraction_message = extract_material_text(
+                temporary_path, suffix
+            )
             shutil.copyfile(temporary_path, saved_path)
     except Exception:
         saved_path.unlink(missing_ok=True)
@@ -1147,8 +1296,9 @@ def upload_workspace_material(
             connection.execute(
                 """
                 INSERT INTO materials (
-                    id, workspace_id, original_filename, stored_filename, mime_type, size_bytes, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    id, workspace_id, original_filename, stored_filename, mime_type, size_bytes, created_at,
+                    extracted_text, extraction_status, extraction_message, extracted_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     material_id,
@@ -1158,6 +1308,10 @@ def upload_workspace_material(
                     mime_type or "application/octet-stream",
                     total_bytes,
                     created_at,
+                    extracted_text,
+                    extraction_status,
+                    extraction_message,
+                    created_at if extraction_status == "ready" else None,
                 ),
             )
             connection.execute(
@@ -1166,6 +1320,39 @@ def upload_workspace_material(
     except Exception:
         saved_path.unlink(missing_ok=True)
         raise
+    return serialize_material(get_material(workspace_id, material_id))
+
+
+@app.post("/api/workspaces/{workspace_id}/materials/{material_id}/extract")
+def extract_workspace_material(workspace_id: str, material_id: str) -> dict[str, object]:
+    """Make an existing local attachment available to Class AI without re-uploading it."""
+    material = get_material(workspace_id, material_id)
+    material_path = MATERIALS_DIR / material["stored_filename"]
+    if not material_path.is_file():
+        raise HTTPException(status_code=404, detail="The saved file is unavailable.")
+    extracted_text, extraction_status, extraction_message = extract_material_text(
+        material_path, Path(material["original_filename"]).suffix.lower()
+    )
+    extracted_at = datetime.now(timezone.utc).isoformat()
+    with connect_database() as connection:
+        connection.execute(
+            """
+            UPDATE materials
+            SET extracted_text = ?, extraction_status = ?, extraction_message = ?, extracted_at = ?
+            WHERE id = ? AND workspace_id = ?
+            """,
+            (
+                extracted_text,
+                extraction_status,
+                extraction_message,
+                extracted_at if extraction_status == "ready" else None,
+                material_id,
+                workspace_id,
+            ),
+        )
+        connection.execute(
+            "UPDATE workspaces SET updated_at = ? WHERE id = ?", (extracted_at, workspace_id)
+        )
     return serialize_material(get_material(workspace_id, material_id))
 
 

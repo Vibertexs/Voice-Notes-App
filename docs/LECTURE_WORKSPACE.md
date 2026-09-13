@@ -108,8 +108,9 @@ audio or transcript data:
   notes. Keeping it separate prevents generated text from silently overwriting
   what a student wrote.
 - `materials`: original filename, generated local filename, type, size,
-  workspace, and upload time. The original stays available for download; the
-  database never trusts a browser-provided path.
+  workspace, upload time, locally extracted text, and extraction status. The
+  original stays available for download; the database never trusts a
+  browser-provided path.
 - `session_markers`: a user label and an audio time on a recording session.
   This is the lightweight bridge when content changes mid-lecture.
 - `folder_ai_notes`: one editable AI study guide per class folder, kept
@@ -133,7 +134,9 @@ three deliberate review spaces:
 1. **Notes** for writing or pasting source material.
    The adjacent **Class materials** panel accepts private PDF, Word,
    PowerPoint, text, and Markdown files. A file belongs to the class note, not
-   to an individual recording.
+   to an individual recording. Text from PDF, `.docx`, `.pptx`, Markdown, and
+   text files is extracted locally for Class AI; scanned PDFs are clearly
+   marked as needing OCR and older `.doc`/`.ppt` files need conversion first.
 2. **Recordings & transcript** for listening to one dated session, reading its
    transcript, and placing/removing topic markers at the current audio time.
 3. **Class AI**, reached from a course folder or from any lecture inside it,
@@ -148,15 +151,16 @@ not represented as an AI model: it never sends student notes, audio, or
 transcripts to a cloud provider, and it is intended to validate the review
 workflow before selecting an AI provider or asking a student to provide an API
 key. Attached files are safely stored and downloadable in this phase; file
-content is not silently parsed into the study draft yet.
+content is not included in the no-model study draft yet.
 
 The local-AI option is intentionally a provider adapter, not a hard dependency:
 the browser app speaks only to this FastAPI server, and the server speaks only
 to an Ollama process at `127.0.0.1`. It constrains each prompt to the
 student's saved notes, attached recordings, and loose recordings from one class
-folder, labels attached but unparsed files, and bounds the assembled prompt to
-the local model's context window. It saves question history once for that class.
-The default setup
+folder, plus locally extracted text from supported class materials, and bounds
+the assembled prompt to the local model's context window. It keeps unreadable
+or unprocessed files clearly labeled rather than pretending they are sources.
+It saves question history once for that class. The default setup
 recommendation is `qwen3:1.7b`, a roughly 1.4 GB Apache-2.0 open-weight model;
 students can select another model that is already installed locally.
 
@@ -167,11 +171,11 @@ creation time. Audio and transcript files are not rewritten.
 ## Next implementation check-in
 
 Test whether a student can find their notes, a loose recording, one session's
-transcript, and the class guide without explanation. Next, install and test the
-local model on this laptop before measuring note quality and response time. Then
-add source extraction—text/Markdown first, then PDF/Office—so AI notes can cite
-attached class materials. Flashcards should come only after the AI notes have a
-trustworthy source and a student-visible edit/review step.
+transcript, uploaded materials, and the class guide without explanation. Next,
+install and test the local model on this laptop before measuring note quality,
+source coverage, and response time. Then add OCR or a student-visible source
+preview for scanned or diagram-heavy files. Flashcards should come only after
+the AI notes have a trustworthy source and a student-visible edit/review step.
 
 ## Check-in required before implementation
 

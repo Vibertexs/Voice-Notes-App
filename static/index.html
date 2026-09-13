@@ -577,10 +577,12 @@
       .material-name { display: block; overflow: hidden; color: #2d3a50; font-size: .78rem; font-weight: 720; text-overflow: ellipsis; white-space: nowrap; }
       .material-meta { display: block; margin-top: .16rem; color: #718097; font-size: .69rem; }
       .material-actions { display: flex; align-items: center; gap: .2rem; }
-      .material-download, .material-remove { display: inline-grid; place-items: center; min-width: 2rem; min-height: 2rem; padding: .3rem; border: 0; border-radius: .55rem; color: #355b96; background: transparent; font: inherit; font-size: .72rem; text-decoration: none; }
+      .material-download, .material-remove, .material-ai-read { display: inline-grid; place-items: center; min-width: 2rem; min-height: 2rem; padding: .3rem; border: 0; border-radius: .55rem; color: #355b96; background: transparent; font: inherit; font-size: .72rem; text-decoration: none; }
       .material-download:hover, .material-download:focus-visible { color: #1f4f9b; background: #ebf3ff; }
       .material-remove { color: #9a4b51; font-size: 1.12rem; line-height: 1; }
       .material-remove:hover, .material-remove:focus-visible { background: #fff0f1; }
+      .material-ai-read { min-width: auto; color: #176247; font-weight: 780; }
+      .material-ai-read:hover, .material-ai-read:focus-visible { background: #e6f7ee; }
       @media (max-width: 540px) {
         .workspace-header { align-items: stretch; flex-direction: column; }
         .workspace-actions { justify-content: flex-start; padding-top: 0; }
@@ -832,7 +834,7 @@
               <aside class="workspace-side-stack">
                 <section class="materials-card" aria-label="Class materials">
                   <h3>Class materials</h3>
-                  <p>Attach the handout, slides, or reading for this class note.</p>
+                  <p>Attach the handout, slides, or reading. Compatible text is read privately on this laptop for Class AI.</p>
                   <label id="material-dropzone" class="material-dropzone" for="material-upload" role="button" tabindex="0">
                     <strong>Drop files here or browse</strong><span>PDF, Word, PowerPoint, text, or Markdown · up to 25 MB each</span>
                   </label>
@@ -1196,6 +1198,19 @@
         const suffix = filename.split('.').pop()?.toUpperCase();
         return ({ MARKDOWN: 'MD', DOCX: 'DOC', PPTX: 'PPT' })[suffix] || suffix || 'FILE';
       }
+      function materialAIStatus(material) {
+        const labels = {
+          ready: material.extracted_char_count ? `AI ready · ${material.extracted_char_count.toLocaleString()} characters` : 'AI ready',
+          not_processed: 'Not read for AI yet',
+          needs_ocr: 'Needs OCR',
+          no_text: 'No readable text',
+          needs_conversion: 'Export as PDF, DOCX, or PPTX',
+          locked: 'Locked file',
+          failed: 'Could not read text',
+          unsupported: 'Not AI-readable yet'
+        };
+        return labels[material.ai_status] || 'Not read for AI yet';
+      }
       function renderWorkspaceMaterials(materials) {
         if (!materials?.length) {
           const empty = document.createElement('p');
@@ -1217,7 +1232,8 @@
           name.textContent = material.original_filename;
           const meta = document.createElement('span');
           meta.className = 'material-meta';
-          meta.textContent = `${formatFileSize(material.size_bytes)} · ${formatDate(material.created_at)}`;
+          meta.textContent = `${formatFileSize(material.size_bytes)} · ${formatDate(material.created_at)} · ${materialAIStatus(material)}`;
+          if (material.ai_message) meta.title = material.ai_message;
           info.append(name, meta);
           const actions = document.createElement('span');
           actions.className = 'material-actions';
@@ -1228,6 +1244,16 @@
           download.rel = 'noopener';
           download.textContent = '↓';
           download.setAttribute('aria-label', `Download ${material.original_filename}`);
+          if (!['ready', 'needs_conversion', 'unsupported', 'needs_ocr', 'no_text', 'locked'].includes(material.ai_status)) {
+            const readForAI = document.createElement('button');
+            readForAI.className = 'material-ai-read';
+            readForAI.type = 'button';
+            readForAI.textContent = 'AI';
+            readForAI.setAttribute('aria-label', `Read ${material.original_filename} for Class AI`);
+            readForAI.title = material.ai_message || 'Read file text locally for Class AI';
+            readForAI.addEventListener('click', () => extractWorkspaceMaterial(material));
+            actions.append(readForAI);
+          }
           const remove = document.createElement('button');
           remove.className = 'material-remove';
           remove.type = 'button';
@@ -1238,6 +1264,16 @@
           item.append(type, info, actions);
           return item;
         }));
+      }
+      async function extractWorkspaceMaterial(material) {
+        if (!activeWorkspace) return;
+        el['material-status'].textContent = `Reading ${material.original_filename} locally for Class AI…`;
+        try {
+          const updated = await api(`/api/workspaces/${activeWorkspace.id}/materials/${material.id}/extract`, { method: 'POST' });
+          activeWorkspace.materials = (activeWorkspace.materials || []).map(item => item.id === updated.id ? updated : item);
+          renderWorkspaceMaterials(activeWorkspace.materials);
+          el['material-status'].textContent = updated.ai_message || materialAIStatus(updated);
+        } catch (error) { el['material-status'].textContent = error.message; }
       }
       async function uploadWorkspaceMaterials(files) {
         if (!activeWorkspace || !files?.length) return;
@@ -1254,7 +1290,10 @@
             uploaded += 1;
           }
           renderWorkspaceMaterials(activeWorkspace.materials);
-          el['material-status'].textContent = uploaded === 1 ? 'File attached privately.' : `${uploaded} files attached privately.`;
+          const readyCount = activeWorkspace.materials.filter(material => material.ai_status === 'ready').length;
+          el['material-status'].textContent = uploaded === 1
+            ? `${activeWorkspace.materials[0]?.ai_message || 'File attached privately.'}`
+            : `${uploaded} files attached privately. ${readyCount} file${readyCount === 1 ? '' : 's'} are ready for Class AI.`;
         } catch (error) {
           renderWorkspaceMaterials(activeWorkspace.materials || []);
           el['material-status'].textContent = uploaded ? `${uploaded} file${uploaded === 1 ? '' : 's'} attached. ${error.message}` : error.message;
