@@ -40,10 +40,12 @@ Once this works, the next step is wrapping this script in a tiny API that the Ex
 
 ## Try the Browser UI
 
-The local browser UI is a student lecture library. Create a **Note** for a
-blank, persistent lecture note or record immediately from the Library or a
-folder. A completed quick recording remains loose until it is dragged onto a
-lecture note; recording from inside a note adds a session there directly.
+The local browser UI is a student lecture library. **Record & note** starts
+immediately from the Library or a folder; when saved, it becomes an editable
+lecture page with that recording attached. Reopen the page to keep writing,
+record another session, or attach several earlier loose recordings at once.
+Older loose recordings can also be turned into their own lecture page in one
+click.
 **Imported files** are a separate folder-level collection, alongside notes and
 recordings. The File action accepts PDF, `.docx`, `.pptx`, text, and Markdown
 files up to 25 MB each. Compatible text is extracted locally and becomes a

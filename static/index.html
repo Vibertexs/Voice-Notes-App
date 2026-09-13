@@ -978,8 +978,10 @@
             </div>
             <aside class="detail-section move-panel">
               <div id="attach-recording-panel">
-                <h3>Attach to lecture</h3>
-                <p>Pick a lecture now if drag-and-drop is not convenient. Your capture notes will join that lecture's notes.</p>
+                <h3>Make this a lecture</h3>
+                <p>Give this recording its own editable lecture page, then keep adding notes and recording sessions.</p>
+                <button id="create-workspace-from-recording" type="button" class="button primary">Create lecture page</button>
+                <p>Or add it to a lecture page you already have.</p>
                 <label>Lecture note<select id="attach-target"></select></label>
                 <button id="attach-recording" type="button" class="button primary">Attach recording</button>
               </div>
@@ -1004,7 +1006,7 @@
         'finish-group', 'finish-recording', 'discard-reveal', 'discard-slider', 'discard-thumb',
         'cancel-recording', 'recording-status', 'capture-notes-toggle', 'capture-notes-panel', 'capture-notes-close', 'capture-notes-context', 'capture-notes', 'capture-notes-footer', 'detail-view', 'back-to-library', 'detail-heading',
         'delete-recording', 'saved-title', 'save-recording', 'save-status', 'saved-date', 'playback',
-        'attach-recording-panel', 'attach-target', 'attach-recording', 'transcript', 'workspace-view', 'workspace-back', 'workspace-heading', 'workspace-location',
+        'attach-recording-panel', 'create-workspace-from-recording', 'attach-target', 'attach-recording', 'transcript', 'workspace-view', 'workspace-back', 'workspace-heading', 'workspace-location',
         'workspace-title', 'workspace-notes', 'workspace-notes-status', 'workspace-notes-save', 'record-from-workspace', 'delete-workspace', 'new-topic',
         'workspace-tab-notes', 'workspace-tab-review', 'workspace-tab-study', 'notes-pane', 'review-pane', 'study-pane',
         'session-list', 'review-session-list', 'add-existing-recordings', 'add-recordings-panel', 'loose-recording-options', 'attach-existing-status', 'attach-selected-recordings', 'review-empty', 'review-content', 'review-session-title', 'review-session-meta',
@@ -1213,7 +1215,7 @@
         const title = document.createElement('h4');
         title.textContent = recording.title;
         const copy = document.createElement('p');
-        copy.textContent = `Loose · ${formatDate(recording.created_at)} · Open to review the transcript or add it to a lecture note`;
+        copy.textContent = `Loose · ${formatDate(recording.created_at)} · Open to make a lecture page or add it to one`;
         const footer = document.createElement('span');
         footer.className = 'workspace-card-footer';
         footer.innerHTML = '<span>Open recording</span><span aria-hidden="true">↗</span>';
@@ -2099,6 +2101,17 @@
           await loadLibrary(recording.folder_id);
         } catch (error) { showToast(error.message); }
       }
+      async function createWorkspaceFromRecording() {
+        if (!activeRecording) return;
+        el['create-workspace-from-recording'].disabled = true;
+        try {
+          const workspace = await api(`/api/lectures/${activeRecording.id}/workspace`, { method: 'POST' });
+          showToast('Lecture page created. Keep building on it anytime.');
+          await refreshNavigation();
+          await loadWorkspace(workspace.id);
+        } catch (error) { el['save-status'].textContent = error.message; }
+        finally { el['create-workspace-from-recording'].disabled = false; }
+      }
 
       function openFolderForm() {
         el['folder-context'].textContent = `Creating inside ${locationName()}.`;
@@ -2234,16 +2247,16 @@
         setCaptureNotesOpen(true);
         el['recording-location'].textContent = workspace
           ? `●  Adding a session to ${workspace.title}`
-          : `●  Loose recording in ${recordingDestination?.name || 'Unfiled'}`;
+          : `●  Creating a lecture in ${recordingDestination?.name || 'Unfiled'}`;
         el['recording-helper'].textContent = workspace
           ? 'This recording will stay attached to these lecture notes. Keep notes beside it while you record.'
-          : 'This recording stays loose until you drag it onto a lecture note. Keep notes beside it while you record.';
+          : 'When you tap Done, this becomes a lecture page you can keep adding to. Keep notes beside it while you record.';
         el['capture-notes-context'].textContent = workspace
           ? `These notes will append to ${workspace.title} when you save.`
-          : 'These notes stay with this recording until you add it to a lecture note.';
+          : 'These notes will open with this new lecture page when you save.';
         el['capture-notes-footer'].textContent = workspace
           ? 'Saved with this recording. When you tap Done, these notes are added to the class note.'
-          : 'Saved with this recording. When you add it to a lecture note later, these notes are appended there.';
+          : 'Saved with this recording and its new lecture page. You can keep adding to both later.';
         resetCaptureControls();
         show('recording');
       }
@@ -2489,10 +2502,11 @@
         form.append('model', el.quality.value);
         form.append('capture_notes', el['capture-notes'].value);
         if (recordingWorkspace?.id) form.append('workspace_id', recordingWorkspace.id);
+        else form.append('create_workspace', 'true');
         if (recordingDestination?.id) form.append('folder_id', recordingDestination.id);
         try {
           const recording = await api('/api/lectures', { method: 'POST', body: form });
-          showToast(recording.workspace_id ? 'Recording added to this lecture.' : 'Loose recording saved. Drag it onto a lecture when you are ready.');
+          showToast(recording.workspace_id ? 'Lecture saved. You can keep adding to it.' : 'Recording saved.');
           if (recording.workspace_id) await loadWorkspace(recording.workspace_id);
           else await loadLibrary(recording.folder_id);
         } catch (error) {
@@ -2500,6 +2514,7 @@
         }
       }
       el['back-to-library'].addEventListener('click', () => loadLibrary(activeRecording?.folder_id));
+      el['create-workspace-from-recording'].addEventListener('click', createWorkspaceFromRecording);
       el['attach-recording'].addEventListener('click', () => {
         if (!activeRecording) return;
         const workspaceId = el['attach-target'].value;

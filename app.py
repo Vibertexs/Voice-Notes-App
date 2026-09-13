@@ -1796,6 +1796,7 @@ def create_lecture(
     audio: UploadFile = File(...),
     folder_id: str = Form(default=""),
     workspace_id: str = Form(default=""),
+    create_workspace: bool = Form(default=False),
     title: str = Form(default=""),
     capture_notes: str = Form(default=""),
     model: str = Form(default="base.en"),
@@ -1804,6 +1805,7 @@ def create_lecture(
         raise HTTPException(status_code=400, detail="Choose a supported transcription quality.")
     selected_workspace_id = workspace_id or None
     selected_workspace = get_workspace(selected_workspace_id) if selected_workspace_id else None
+    should_create_workspace = create_workspace and selected_workspace_id is None
     selected_folder_id = selected_workspace["folder_id"] if selected_workspace else folder_id or None
     selected_folder = get_folder(selected_folder_id) if selected_folder_id else None
     suffix = Path(audio.filename or "recording.webm").suffix.lower()
@@ -1840,11 +1842,26 @@ def create_lecture(
         shutil.copyfile(temporary_audio_path, saved_audio_path)
 
     note_body = capture_notes
-    is_standalone = selected_workspace is None
+    is_standalone = selected_workspace_id is None and not should_create_workspace
     course = selected_folder["name"] if selected_folder else "Unfiled recordings"
     try:
         with connect_database() as connection:
-            if selected_workspace and capture_notes:
+            if should_create_workspace:
+                selected_workspace_id = str(uuid4())
+                connection.execute(
+                    """
+                    INSERT INTO workspaces (id, folder_id, title, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?)
+                    """,
+                    (
+                        selected_workspace_id,
+                        selected_folder_id,
+                        clean_title,
+                        created_at_datetime.isoformat(),
+                        created_at_datetime.isoformat(),
+                    ),
+                )
+            if selected_workspace_id and capture_notes:
                 current_notes = connection.execute(
                     "SELECT note_body FROM workspace_notes WHERE workspace_id = ?",
                     (selected_workspace_id,),
@@ -1926,6 +1943,50 @@ def update_lecture(lecture_id: str, update: LectureUpdate) -> dict[str, object]:
     return serialize_lecture(get_lecture(lecture_id), include_content=True)
 
 
+def attach_recording_to_workspace_in_connection(
+    connection: sqlite3.Connection,
+    recording: sqlite3.Row,
+    workspace_id: str,
+    folder_id: str | None,
+    course: str,
+    attached_at: datetime,
+) -> None:
+    capture_notes = recording["note_body"].strip()
+    connection.execute(
+        """
+        UPDATE lectures
+        SET workspace_id = ?, is_standalone = 0, capture_notes_workspace_id = ?, folder_id = ?, course = ?
+        WHERE id = ?
+        """,
+        (workspace_id, workspace_id, folder_id, course, recording["id"]),
+    )
+    if capture_notes and recording["capture_notes_workspace_id"] != workspace_id:
+        current_notes = connection.execute(
+            "SELECT note_body FROM workspace_notes WHERE workspace_id = ?",
+            (workspace_id,),
+        ).fetchone()
+        merged_notes = append_capture_notes(
+            current_notes["note_body"] if current_notes else "",
+            capture_notes,
+            attached_at,
+            f"Notes from {recording['title']}",
+        )
+        connection.execute(
+            """
+            INSERT INTO workspace_notes (workspace_id, note_body, updated_at)
+            VALUES (?, ?, ?)
+            ON CONFLICT(workspace_id) DO UPDATE SET
+                note_body = excluded.note_body,
+                updated_at = excluded.updated_at
+            """,
+            (workspace_id, merged_notes, attached_at.isoformat()),
+        )
+    connection.execute(
+        "UPDATE workspaces SET updated_at = ? WHERE id = ?",
+        (attached_at.isoformat(), workspace_id),
+    )
+
+
 @app.post("/api/lectures/{lecture_id}/attach")
 def attach_recording_to_workspace(lecture_id: str, attach: RecordingAttach) -> dict[str, object]:
     recording = get_lecture(lecture_id)
@@ -1937,46 +1998,52 @@ def attach_recording_to_workspace(lecture_id: str, attach: RecordingAttach) -> d
             status_code=422,
             detail="This recording already belongs to a lecture. Detach it before moving it again.",
         )
-    folder_id = workspace["folder_id"]
-    folder = get_folder(folder_id) if folder_id else None
+    folder = get_folder(workspace["folder_id"]) if workspace["folder_id"] else None
     course = folder["name"] if folder else "Unfiled recordings"
-    attached_at = datetime.now(timezone.utc)
-    capture_notes = recording["note_body"].strip()
+    with connect_database() as connection:
+        attach_recording_to_workspace_in_connection(
+            connection,
+            recording,
+            workspace["id"],
+            workspace["folder_id"],
+            course,
+            datetime.now(timezone.utc),
+        )
+    return serialize_lecture(get_lecture(lecture_id), include_content=True)
+
+
+@app.post("/api/lectures/{lecture_id}/workspace", status_code=201)
+def create_workspace_from_recording(lecture_id: str) -> dict[str, object]:
+    recording = get_lecture(lecture_id)
+    if recording["workspace_id"]:
+        raise HTTPException(status_code=422, detail="This recording already has a lecture page.")
+    folder = get_folder(recording["folder_id"]) if recording["folder_id"] else None
+    course = folder["name"] if folder else "Unfiled recordings"
+    workspace_id = str(uuid4())
+    created_at = datetime.now(timezone.utc)
     with connect_database() as connection:
         connection.execute(
             """
-            UPDATE lectures
-            SET workspace_id = ?, is_standalone = 0, capture_notes_workspace_id = ?, folder_id = ?, course = ?
-            WHERE id = ?
+            INSERT INTO workspaces (id, folder_id, title, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?)
             """,
-            (workspace["id"], workspace["id"], folder_id, course, lecture_id),
+            (
+                workspace_id,
+                recording["folder_id"],
+                recording["title"],
+                created_at.isoformat(),
+                created_at.isoformat(),
+            ),
         )
-        if capture_notes and recording["capture_notes_workspace_id"] != workspace["id"]:
-            current_notes = connection.execute(
-                "SELECT note_body FROM workspace_notes WHERE workspace_id = ?",
-                (workspace["id"],),
-            ).fetchone()
-            merged_notes = append_capture_notes(
-                current_notes["note_body"] if current_notes else "",
-                capture_notes,
-                attached_at,
-                f"Notes from {recording['title']}",
-            )
-            connection.execute(
-                """
-                INSERT INTO workspace_notes (workspace_id, note_body, updated_at)
-                VALUES (?, ?, ?)
-                ON CONFLICT(workspace_id) DO UPDATE SET
-                    note_body = excluded.note_body,
-                    updated_at = excluded.updated_at
-                """,
-                (workspace["id"], merged_notes, attached_at.isoformat()),
-            )
-        connection.execute(
-            "UPDATE workspaces SET updated_at = ? WHERE id = ?",
-            (attached_at.isoformat(), workspace["id"]),
+        attach_recording_to_workspace_in_connection(
+            connection,
+            recording,
+            workspace_id,
+            recording["folder_id"],
+            course,
+            created_at,
         )
-    return serialize_lecture(get_lecture(lecture_id), include_content=True)
+    return serialize_workspace(get_workspace(workspace_id), include_sessions=True)
 
 
 @app.post("/api/lectures/{lecture_id}/detach")

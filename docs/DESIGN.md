@@ -30,24 +30,27 @@ Inside a folder, the action row is deliberately limited to **Record & note**,
 **Add file**, **Color**, and **Delete**. **Record & note** begins recording in
 the current folder immediately and opens the companion notes panel beside it;
 there is no up-front choice between audio and writing. The student can hide the
-notes panel if they need focus, but it is ready by default. Class AI is a
+notes panel if they need focus, but it is ready by default. On save, the capture
+becomes an editable lecture page with its first recording already attached, so
+the student can return to add notes or sessions without organizing first. Class AI is a
 dedicated section after the folder's imported files, where it is clearly a
 class-wide study tool rather than an action attached to one note or recording.
 
 The library has one **Lectures** collection rather than separate “lecture
 notes” and “loose recordings” sections. It is a single chronological card feed:
-dark cards are continuing lecture notes with their attached recordings, and
-light cards are recordings not yet attached to a lecture note. This preserves
-the useful distinction without making a student scan two empty states or guess
-where a lecture belongs.
+dark cards are editable lecture pages with their attached recordings, and light
+cards are older or detached recordings that have not yet been made into a
+lecture page. This preserves the useful distinction without making a student
+scan two empty states or guess where a lecture belongs.
 
 ## Capture before organization
 
-Every new recording inherits the folder from which the student starts capture.
-Starting from the Library root saves to **Unfiled**. This gives an in-context
-lecture a sensible home without adding an extra decision before class. The
-server assigns a readable date-and-time default name when the title is blank;
-the name and destination can both be changed afterward.
+Every new capture inherits the folder from which the student starts it.
+Starting from the Library root creates a lecture page in **Unfiled**. This gives
+an in-context lecture a sensible home without adding an extra decision before
+class. The server assigns a readable date-and-time default name when the title
+is blank; the title can be changed later from the lecture page. Cancelling a
+capture creates no empty lecture page.
 
 Folders are an organizational layer, not a prerequisite for capture. They can
 represent a course, a semester, or a topic and may be nested.
@@ -71,7 +74,9 @@ recording detail view offers an **Attach to lecture** selector as an accessible
 alternative. Folder placement is inherited from the place where capture began,
 so there is no second “save to folder” decision during review. The bottom
 **Done** button saves a name change only. Moving between folders remains an
-intentional drag action from the library.
+intentional drag action from the library. A loose recording can also become its
+own lecture page in one click, preserving its audio, transcript, and capture
+notes.
 
 A lecture note can hold any number of recording sessions. Besides recording a
 new session from the note itself or dragging one onto its card, the recording
