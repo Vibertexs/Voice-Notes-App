@@ -117,9 +117,10 @@ an existing class note's recording, the draft is appended under a timestamped
 note's initial content. Discarding or cancelling capture therefore creates no
 orphan note. The live waveform uses a small noise gate, eased level changes,
 neighbouring-bar averaging, and symmetric edge fading so it reads as stable
-audio feedback instead of jittering with every microphone sample. Live captions
-use a dedicated local `tiny.en` worker and one-second chunks; the complete saved
-audio is then transcribed from the beginning using the selected quality model.
+audio feedback instead of jittering with every microphone sample. The capture
+screen intentionally avoids imperfect draft captions: after the student taps
+**Done**, the complete saved audio is transcribed using the selected quality
+model and appears in the lecture review.
 
 Folders are portrait covers, deliberately unlike the wide recording rows. A
 textured color field sits above a large dark inlay, with a local sequence number,

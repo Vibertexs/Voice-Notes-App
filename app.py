@@ -10,8 +10,6 @@ import tempfile
 import zipfile
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
-from threading import Lock
-from time import sleep
 from time import monotonic
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -20,20 +18,19 @@ from uuid import uuid4
 
 import requests
 from docx import Document
-from fastapi import FastAPI, File, Form, HTTPException, Query, Request, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
 from pypdf import PdfReader
 from pydantic import BaseModel, Field
 from pptx import Presentation
 
-from transcription import load_model, transcribe_audio
+from transcription import transcribe_audio
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 # Overridable so a test run can point at a scratch library instead of the real one.
 DATA_DIR = Path(os.environ.get("VOICE_NOTES_DATA") or (PROJECT_ROOT / "data"))
 AUDIO_DIR = DATA_DIR / "audio"
 MATERIALS_DIR = DATA_DIR / "materials"
-CAPTURES_DIR = DATA_DIR / "captures"
 DATABASE_PATH = DATA_DIR / "voice_notes.db"
 MAX_UPLOAD_BYTES = 256 * 1024 * 1024
 MAX_MATERIAL_BYTES = 25 * 1024 * 1024
@@ -49,9 +46,6 @@ LOCAL_AI_HISTORY_LIMIT = 8
 ALLOWED_SUFFIXES = {".wav", ".mp3", ".m4a", ".ogg", ".webm", ".mp4"}
 ALLOWED_MATERIAL_SUFFIXES = {".pdf", ".txt", ".md", ".doc", ".docx", ".ppt", ".pptx"}
 TRANSCRIPTION_MODELS = {"tiny.en", "base.en", "small.en"}
-# Live captions deliberately stay on the smallest local model.  The chosen model
-# is reserved for the complete, higher-quality transcript after the recording is saved.
-LIVE_TRANSCRIPTION_MODEL = "tiny.en"
 FOLDER_COLORS = {"blue", "violet", "rose", "coral", "amber", "lime", "mint", "sky", "slate"}
 
 
@@ -120,7 +114,6 @@ def initialize_database() -> None:
     DATA_DIR.mkdir(exist_ok=True)
     AUDIO_DIR.mkdir(exist_ok=True)
     MATERIALS_DIR.mkdir(exist_ok=True)
-    CAPTURES_DIR.mkdir(exist_ok=True)
     with connect_database() as connection:
         connection.execute(
             """
@@ -173,19 +166,6 @@ def initialize_database() -> None:
                 workspace_id TEXT PRIMARY KEY,
                 note_body TEXT NOT NULL,
                 updated_at TEXT NOT NULL
-            )
-            """
-        )
-        connection.execute(
-            """
-            CREATE TABLE IF NOT EXISTS captures (
-                id TEXT PRIMARY KEY,
-                created_at TEXT NOT NULL,
-                model TEXT NOT NULL,
-                filename TEXT NOT NULL,
-                processed_seconds REAL NOT NULL DEFAULT 0,
-                segments_json TEXT NOT NULL DEFAULT '[]',
-                status TEXT NOT NULL DEFAULT 'live'
             )
             """
         )
@@ -463,9 +443,6 @@ def initialize_database() -> None:
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     initialize_database()
-    # Start warming the small caption model as soon as the local server is up.
-    # It runs on the caption executor, never ahead of a real caption request.
-    LIVE_TRANSCRIBER.submit(warm_live_caption_model)
     with connect_database() as connection:
         indexed = connection.execute("SELECT COUNT(*) AS total FROM search_index").fetchone()["total"]
         if not indexed:
@@ -489,10 +466,8 @@ async def lifespan(_: FastAPI):
                 )
     for lecture_id in unfinished:
         queue_transcription(lecture_id)
-    sweep_orphan_captures()
     yield
     TRANSCRIBER.shutdown(wait=False, cancel_futures=True)
-    LIVE_TRANSCRIBER.shutdown(wait=False, cancel_futures=True)
 
 
 app = FastAPI(title="Class Notes", lifespan=lifespan)
@@ -975,126 +950,11 @@ def serialize_material(row: sqlite3.Row) -> dict[str, object]:
 
 # Final transcription is CPU bound, so one job at a time beats thrashing.
 TRANSCRIBER = ThreadPoolExecutor(max_workers=1, thread_name_prefix="transcribe")
-# Captions never wait behind a long, high-accuracy final pass.  Keeping this
-# separate is what makes the in-class experience responsive.
-LIVE_TRANSCRIBER = ThreadPoolExecutor(max_workers=1, thread_name_prefix="live-caption")
 
 
 # Measured on a CPU-only laptop: how many seconds of audio each model chews
 # through per second of wall clock. Only used until real progress arrives.
 MODEL_REALTIME_FACTOR = {"tiny.en": 4.9, "base.en": 2.2, "small.en": 0.9}
-
-
-# Capture ids with a tail pass queued or running, so chunks cannot pile up jobs.
-LIVE_JOBS: set[str] = set()
-LIVE_DIRTY: set[str] = set()
-LIVE_JOBS_LOCK = Lock()
-
-
-def warm_live_caption_model() -> None:
-    """Best-effort warmup so the first class does not pay model-load latency."""
-    try:
-        load_model(LIVE_TRANSCRIPTION_MODEL, "cpu", "int8")
-    except Exception:
-        # Capturing still works if a first-run model download is unavailable.
-        pass
-
-
-def remove_capture_file(filename: str) -> bool:
-    """Delete a capture file, tolerating a live decode still holding it open."""
-    target = CAPTURES_DIR / filename
-    for attempt in range(4):
-        try:
-            target.unlink(missing_ok=True)
-            return True
-        except PermissionError:
-            sleep(0.25 * (attempt + 1))
-    return False
-
-
-def sweep_orphan_captures() -> int:
-    """Drop capture files with no row left, including any a lock stranded earlier."""
-    if not CAPTURES_DIR.exists():
-        return 0
-    with connect_database() as connection:
-        known = {row["filename"] for row in connection.execute("SELECT filename FROM captures")}
-    removed = 0
-    for leftover in CAPTURES_DIR.iterdir():
-        if leftover.is_file() and leftover.name not in known:
-            try:
-                leftover.unlink()
-                removed += 1
-            except OSError:
-                pass
-    return removed
-
-
-def read_capture(capture_id: str) -> sqlite3.Row:
-    with connect_database() as connection:
-        row = connection.execute("SELECT * FROM captures WHERE id = ?", (capture_id,)).fetchone()
-    if row is None:
-        raise HTTPException(status_code=404, detail="That recording session was not found.")
-    return row
-
-
-def transcribe_capture_tail(capture_id: str) -> None:
-    """Transcribe whatever new audio has arrived for a capture that is still running."""
-    try:
-        with connect_database() as connection:
-            row = connection.execute(
-                "SELECT * FROM captures WHERE id = ?", (capture_id,)
-            ).fetchone()
-        if row is None or row["status"] != "live":
-            return
-        capture_path = CAPTURES_DIR / row["filename"]
-        if not capture_path.exists() or capture_path.stat().st_size == 0:
-            return
-        processed = float(row["processed_seconds"] or 0.0)
-        result = transcribe_audio(
-            capture_path, model_name=row["model"], start_seconds=processed, live=True
-        )
-        # The seek rewinds by a margin, so drop anything already recorded.
-        fresh = [
-            segment for segment in (result.get("segments") or [])
-            if float(segment.get("start", 0.0)) >= processed - 0.05
-        ]
-        reached = float(result.get("duration_seconds") or processed)
-        if not fresh and reached <= processed:
-            return
-        with connect_database() as connection:
-            current = connection.execute(
-                "SELECT segments_json, processed_seconds, status FROM captures WHERE id = ?",
-                (capture_id,),
-            ).fetchone()
-            if current is None or current["status"] != "live":
-                return
-            merged = json.loads(current["segments_json"] or "[]")
-            merged.extend(fresh)
-            connection.execute(
-                "UPDATE captures SET segments_json = ?, processed_seconds = ? WHERE id = ?",
-                (json.dumps(merged), max(reached, float(current["processed_seconds"] or 0.0)), capture_id),
-            )
-    except Exception:
-        # A live pass is best effort; the final transcription still covers everything.
-        pass
-    finally:
-        with LIVE_JOBS_LOCK:
-            LIVE_JOBS.discard(capture_id)
-            needs_catch_up = capture_id in LIVE_DIRTY
-            LIVE_DIRTY.discard(capture_id)
-        # A chunk can arrive while the current tail is being decoded.  Run one
-        # immediate catch-up pass instead of making it wait for the next chunk.
-        if needs_catch_up:
-            queue_capture_tail(capture_id)
-
-
-def queue_capture_tail(capture_id: str) -> None:
-    with LIVE_JOBS_LOCK:
-        if capture_id in LIVE_JOBS:
-            LIVE_DIRTY.add(capture_id)
-            return
-        LIVE_JOBS.add(capture_id)
-    LIVE_TRANSCRIBER.submit(transcribe_capture_tail, capture_id)
 
 
 class TranscriptionCancelled(Exception):
@@ -2351,69 +2211,6 @@ def read_lecture_audio(lecture_id: str) -> FileResponse:
     return FileResponse(audio_path, media_type=media_type or "application/octet-stream")
 
 
-@app.post("/api/captures", status_code=201)
-def start_capture(model: str = Form(default="base.en")) -> dict[str, object]:
-    """Open a low-latency local caption stream for an in-progress recording."""
-    if model not in TRANSCRIPTION_MODELS:
-        raise HTTPException(status_code=400, detail="Choose a supported transcription quality.")
-    capture_id = str(uuid4())
-    filename = f"{capture_id}.webm"
-    (CAPTURES_DIR / filename).touch()
-    with connect_database() as connection:
-        connection.execute(
-            """
-            INSERT INTO captures (id, created_at, model, filename, processed_seconds, segments_json, status)
-            VALUES (?, ?, ?, ?, 0, '[]', 'live')
-            """,
-            (capture_id, datetime.now(timezone.utc).isoformat(), LIVE_TRANSCRIPTION_MODEL, filename),
-        )
-    return {
-        "capture_id": capture_id,
-        "live_model": LIVE_TRANSCRIPTION_MODEL,
-        "final_model": model,
-    }
-
-
-@app.post("/api/captures/{capture_id}/chunk")
-async def append_capture_chunk(capture_id: str, request: Request) -> dict[str, object]:
-    row = read_capture(capture_id)
-    if row["status"] != "live":
-        raise HTTPException(status_code=409, detail="That recording session is already finished.")
-    data = await request.body()
-    capture_path = CAPTURES_DIR / row["filename"]
-    if data:
-        if capture_path.stat().st_size + len(data) > MAX_UPLOAD_BYTES:
-            raise HTTPException(status_code=413, detail="This recording is too long to buffer.")
-        with capture_path.open("ab") as destination:
-            destination.write(data)
-    queue_capture_tail(capture_id)
-    return {"status": "stored", "bytes": capture_path.stat().st_size}
-
-
-@app.get("/api/captures/{capture_id}")
-def read_capture_progress(capture_id: str) -> dict[str, object]:
-    row = read_capture(capture_id)
-    return {
-        "capture_id": row["id"],
-        "status": row["status"],
-        "processed_seconds": row["processed_seconds"],
-        "segments": json.loads(row["segments_json"] or "[]"),
-    }
-
-
-@app.delete("/api/captures/{capture_id}")
-def discard_capture(capture_id: str) -> dict[str, str]:
-    row = read_capture(capture_id)
-    with connect_database() as connection:
-        # Mark it first so an in-flight live pass stops writing to it.
-        connection.execute("UPDATE captures SET status = 'discarded' WHERE id = ?", (capture_id,))
-        connection.execute("DELETE FROM captures WHERE id = ?", (capture_id,))
-    remove_capture_file(row["filename"])
-    with LIVE_JOBS_LOCK:
-        LIVE_DIRTY.discard(capture_id)
-    return {"status": "discarded"}
-
-
 @app.post("/api/lectures", status_code=201)
 def create_lecture(
     audio: UploadFile = File(...),
@@ -2423,7 +2220,6 @@ def create_lecture(
     title: str = Form(default=""),
     capture_notes: str = Form(default=""),
     model: str = Form(default="base.en"),
-    capture_id: str = Form(default=""),
 ) -> dict[str, object]:
     if model not in TRANSCRIPTION_MODELS:
         raise HTTPException(status_code=400, detail="Choose a supported transcription quality.")
@@ -2530,22 +2326,6 @@ def create_lecture(
     except Exception:
         saved_audio_path.unlink(missing_ok=True)
         raise
-    if capture_id:
-        try:
-            capture = read_capture(capture_id)
-        except HTTPException:
-            capture = None
-        if capture is not None:
-            # Live captions are intentionally fast drafts.  A saved lecture is
-            # transcribed from byte zero with the chosen quality model so the
-            # durable transcript is never a mixture of draft and final text.
-            with connect_database() as connection:
-                connection.execute(
-                    "UPDATE captures SET status = 'finished' WHERE id = ?", (capture_id,)
-                )
-            remove_capture_file(capture["filename"])
-            with connect_database() as connection:
-                connection.execute("DELETE FROM captures WHERE id = ?", (capture_id,))
     queue_transcription(lecture_id)
     return serialize_lecture(get_lecture(lecture_id), include_content=True)
 

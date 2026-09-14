@@ -65,11 +65,11 @@ and select **Stop & transcribe**. This development server is intentionally bound
 to your computer; do not expose it to the internet without authentication,
 HTTPS, and stronger upload controls.
 
-The UI uses `tiny.en` automatically for fast, local live captions while class
-is in progress. After you tap Done, it re-transcribes the complete recording
-with your selected Fast (`tiny.en`), Balanced (`base.en`), or High accuracy
-(`small.en`) model. That keeps captions responsive without compromising the
-saved transcript. Each model is downloaded only the first time it is used.
+After you tap Done, the app transcribes the complete saved recording with your
+selected Fast (`tiny.en`), Balanced (`base.en`), or High accuracy (`small.en`)
+model. The capture screen stays focused on recording and notes; the durable
+transcript appears on the lecture page after it is processed. Each model is
+downloaded only the first time it is used.
 
 Recordings receive a timestamped default title when no name is entered, and can
 be renamed later. Use **Delete recording** in the app to remove its transcript

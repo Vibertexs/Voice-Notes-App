@@ -30,9 +30,9 @@ def decode_audio_from(
 ) -> tuple[np.ndarray, float]:
     """Decode only the tail of a file.
 
-    Decoding a whole recording costs time proportional to its length, which is
-    why a live pass fell further behind the longer a lecture ran. Seeking first
-    makes each pass cost only the new audio.
+    Re-transcribing an interrupted lecture only needs the unfinished tail.
+    Seeking first keeps that recovery pass proportional to the remaining audio
+    instead of the full recording length.
 
     Returns the samples and the real start time they begin at.
     """
@@ -76,13 +76,13 @@ def decode_audio_from(
     return audio, float(actual_start if actual_start is not None else target)
 
 
-@lru_cache(maxsize=2)
+@lru_cache(maxsize=1)
 def load_model(
     model_name: str,
     device: str,
     compute_type: str,
 ) -> WhisperModel:
-    """Keep the live draft model and one selected final model warm locally."""
+    """Reuse the selected local model while keeping memory use predictable."""
     return WhisperModel(model_name, device=device, compute_type=compute_type)
 
 
@@ -96,7 +96,6 @@ def transcribe_audio(
     on_progress: Callable[[float, float], None] | None = None,
     start_seconds: float = 0.0,
     on_segment: Callable[[dict[str, object]], None] | None = None,
-    live: bool = False,
 ) -> dict[str, object]:
     """Transcribe one local audio file and return a JSON-serializable result.
 
@@ -117,10 +116,8 @@ def transcribe_audio(
 
     segments, info = model.transcribe(
         source,
-        # Captions are explicitly a short-lived draft, so favor a quick first
-        # hypothesis. The saved pass keeps the slower, higher-quality beam.
-        beam_size=1 if live else 5,
-        condition_on_previous_text=False if live else True,
+        beam_size=5,
+        condition_on_previous_text=True,
         language=language,
         vad_filter=True,
     )

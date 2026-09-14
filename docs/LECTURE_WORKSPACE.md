@@ -28,23 +28,16 @@ moves all of its sessions together.
 
 ## Capture and transcription
 
-**Record & note** immediately begins a new lecture in the current folder. The
-student can add capture notes and files while recording. Saving creates the
+**Record & note** opens a ready-to-record lecture in the current folder. The
+student deliberately starts microphone capture with the large record control,
+then can add capture notes and files while recording. Saving creates the
 lecture workspace, while cancelling creates nothing. **Continue recording**
 inside an existing workspace adds another dated session to that same topic.
 
-Live captions and final transcription have deliberately different jobs:
-
-1. During capture, the local `tiny.en` Whisper model handles one-second audio
-   chunks on a dedicated worker. It is a fast, best-effort draft intended to
-   keep up with the room.
-2. After **Done**, the server runs the student-selected Fast, Balanced, or High
-   accuracy model over the complete saved audio file from the beginning. This
-   replaces the temporary draft so the durable transcript has one consistent
-   quality level.
-
-The final pass is separate from the live-caption worker. A long final
-transcription therefore cannot delay captions for the next lecture.
+After **Done**, the server runs the student-selected Fast, Balanced, or High
+accuracy model over the complete saved audio file. The capture experience stays
+focused on the recording and its notes; the durable transcript appears in the
+lecture's review tab once processing is complete.
 
 ## Review and material handling
 

@@ -133,14 +133,6 @@
       .capture-marker-list { display: flex; flex-wrap: wrap; gap: .4rem; margin: -.4rem 0 1rem; }
       .capture-marker-chip { display: inline-flex; align-items: center; gap: .35rem; padding: .35rem .5rem; border: 1px solid rgba(255,255,255,.35); border-radius: .6rem; color: #e6efff; background: rgba(255,255,255,.1); font-size: .72rem; }
       .capture-marker-chip button { padding: 0; border: 0; color: inherit; background: transparent; font: inherit; font-size: 1rem; line-height: 1; }
-      .live-transcript { margin: -.2rem 0 1rem; padding: .65rem .75rem; border: 1px solid rgba(255,255,255,.28); border-radius: .85rem; background: rgba(255,255,255,.08); text-align: left; }
-      .live-transcript-head { display: flex; align-items: baseline; justify-content: space-between; gap: .5rem; color: rgba(235,239,255,.74); font-size: .66rem; font-weight: 780; letter-spacing: .06em; text-transform: uppercase; }
-      .live-transcript-meta { letter-spacing: 0; text-transform: none; font-variant-numeric: tabular-nums; }
-      .live-transcript-body { max-height: 7.5rem; margin-top: .4rem; overflow-y: auto; color: #e9efff; font-size: .82rem; line-height: 1.55; }
-      .live-transcript-line { display: block; opacity: .72; }
-      .live-transcript-line:last-child { opacity: 1; }
-      .live-transcript-line.is-new { animation: live-caption-in .22s ease-out both; }
-      @keyframes live-caption-in { from { opacity: 0; transform: translateY(.22rem); } to { opacity: 1; transform: none; } }
       .transport-controls { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; }
       .shutter { position: relative; grid-column: 2; width: 5.25rem; height: 5.25rem; display: grid; place-items: center; padding: 0; border-radius: 50%; background: transparent; -webkit-tap-highlight-color: transparent; }
       .shutter:disabled { opacity: 1; cursor: progress; }
@@ -951,10 +943,6 @@
                   <button id="capture-add-marker" type="button" class="button secondary">＋ Add marker</button>
                 </div>
                 <div id="capture-marker-list" class="capture-marker-list" aria-label="Markers added during recording"></div>
-                <div id="live-transcript" class="live-transcript" hidden aria-live="polite">
-                  <div class="live-transcript-head"><span>Live transcript</span><span id="live-transcript-meta" class="live-transcript-meta"></span></div>
-                  <div id="live-transcript-body" class="live-transcript-body"></div>
-                </div>
                 <div class="transport-controls">
                   <button id="record" class="shutter" aria-label="Start recording"><span class="shutter-glyph" aria-hidden="true"></span></button>
                   <div id="finish-group" class="finish-group" inert>
@@ -1183,7 +1171,7 @@
         'folder-context', 'folder-form', 'folder-name', 'new-folder-colors', 'cancel-folder', 'folder-status',
         'recording-view', 'capture-layout', 'recording-title', 'quality', 'record', 'recording-location', 'recording-helper', 'recording-timer', 'transport', 'phase-label', 'waveform', 'capture-session-strip', 'capture-strip-state', 'capture-strip-clock',
         'capture-marker-panel', 'capture-marker-label', 'capture-add-marker', 'capture-marker-list',
-        'live-transcript', 'live-transcript-meta', 'live-transcript-body', 'finish-group', 'finish-recording', 'discard-reveal', 'discard-slider', 'discard-thumb',
+        'finish-group', 'finish-recording', 'discard-reveal', 'discard-slider', 'discard-thumb',
         'cancel-recording', 'recording-status', 'capture-notes-toggle', 'capture-notes-panel', 'capture-notes-close', 'capture-notes-context', 'capture-notes', 'capture-notes-footer', 'capture-add-material', 'capture-material-upload', 'capture-material-status', 'capture-material-list', 'workspace-view', 'workspace-back', 'workspace-location',
         'workspace-title', 'workspace-notes', 'workspace-notes-status', 'workspace-add-material', 'workspace-material-upload', 'workspace-material-status', 'workspace-material-list', 'workspace-no-materials', 'record-from-workspace', 'delete-workspace',
         'workspace-tab-notes', 'workspace-tab-review', 'workspace-tab-study', 'notes-pane', 'review-pane', 'study-pane',
@@ -1231,12 +1219,6 @@
       let recordingDestination = null;
       let recordingWorkspace = null;
       let stopIntent = null;
-      let captureId = null;
-      let capturePollTimer = 0;
-      let liveSegments = [];
-      let liveCaptionSignature = '';
-      let pendingLiveChunks = [];
-      let chunkQueue = Promise.resolve();
       let captureInterrupted = false;
       let wakeLock = null;
       let hiddenSince = 0;
@@ -1264,9 +1246,8 @@
         saving: { label: 'Saving', hint: 'Saving and transcribing…', action: 'Saving recording' },
         discarding: { label: 'Discarding', hint: 'Discarding recording…', action: 'Discarding recording' },
       };
-      // One-second chunks plus the tiny local model keeps captions close to the room.
-      const CAPTURE_CHUNK_MS = 1000;
-      const LIVE_POLL_MS = 350;
+      // Short chunks make a saved recording resilient if the browser interrupts capture.
+      const RECORDING_CHUNK_MS = 1000;
       const WORKSPACE_DRAG_TYPE = 'application/x-class-notes-workspace';
       const PLAYBACK_SPEEDS = [1, 1.25, 1.5, 1.75, 2];
       const BAR_WIDTH = 3;
@@ -2976,7 +2957,6 @@
         waveformLevel = 0;
         lastSampleAt = 0;
         clearCaptureMarkers();
-        closeCaptureSession(true);
         chunks = [];
         stopIntent = null;
         captureInterrupted = false;
@@ -3029,7 +3009,6 @@
       }
       function startQuickRecording(workspace = null) {
         openRecording(workspace);
-        startRecording();
       }
       el['mobile-library'].addEventListener('click', () => loadLibrary(activeFolder?.id ?? null));
       el['mobile-search'].addEventListener('click', openSearch);
@@ -3218,97 +3197,6 @@
         audioContext?.close();
         audioContext = null;
       }
-      async function openCaptureSession() {
-        captureId = null;
-        liveSegments = [];
-        liveCaptionSignature = '';
-        pendingLiveChunks = [];
-        renderLiveTranscript();
-        try {
-          const form = new FormData();
-          form.append('model', el.quality.value);
-          const session = await api('/api/captures', { method: 'POST', body: form });
-          captureId = session.capture_id;
-          el['live-transcript'].hidden = false;
-          el['live-transcript-meta'].textContent = 'fast local captions';
-          el['recording-status'].textContent = `Fast local captions are on. The ${el.quality.options[el.quality.selectedIndex].text.toLowerCase()} transcript is created after Done.`;
-          const queued = pendingLiveChunks;
-          pendingLiveChunks = [];
-          queued.forEach(sendCaptureChunk);
-          pollCaptureTranscript();
-        } catch {
-          // Live transcription is a bonus; recording must work without it.
-          captureId = null;
-          el['live-transcript'].hidden = true;
-        }
-      }
-      function sendCaptureChunk(blob) {
-        if (!blob?.size) return;
-        if (!captureId) {
-          pendingLiveChunks.push(blob);
-          return;
-        }
-        const sessionId = captureId;
-        // Chained so chunks always land in the order they were recorded.
-        chunkQueue = chunkQueue
-          .then(() => fetch(`/api/captures/${sessionId}/chunk`, { method: 'POST', body: blob }))
-          .catch(() => {});
-      }
-      function renderLiveTranscript() {
-        const body = el['live-transcript-body'];
-        if (!liveSegments.length) {
-          body.replaceChildren(Object.assign(document.createElement('span'), {
-            className: 'live-transcript-line',
-            textContent: 'Captions will begin in about a second.'
-          }));
-          return;
-        }
-        body.replaceChildren(...liveSegments.slice(-40).map((segment, index, visible) => {
-          const line = document.createElement('span');
-          line.className = `live-transcript-line${index === visible.length - 1 ? ' is-new' : ''}`;
-          line.textContent = segment.text;
-          return line;
-        }));
-        body.scrollTop = body.scrollHeight;
-      }
-      async function pollCaptureTranscript() {
-        clearTimeout(capturePollTimer);
-        if (!captureId) return;
-        const sessionId = captureId;
-        try {
-          const progress = await api(`/api/captures/${sessionId}`);
-          if (captureId !== sessionId) return;
-          const nextSegments = progress.segments || [];
-          const last = nextSegments.at(-1);
-          const signature = `${nextSegments.length}:${last?.end ?? ''}:${last?.text ?? ''}`;
-          if (signature !== liveCaptionSignature) {
-            liveCaptionSignature = signature;
-            liveSegments = nextSegments;
-            renderLiveTranscript();
-          }
-          const done = Math.floor(Number(progress.processed_seconds) || 0);
-          el['live-transcript-meta'].textContent = done
-            ? `${liveSegments.length} line${liveSegments.length === 1 ? '' : 's'} · ${formatPlaybackTime(done)} transcribed`
-            : 'listening…';
-        } catch { /* keep trying while the recorder runs */ }
-        if (captureId === sessionId) capturePollTimer = setTimeout(pollCaptureTranscript, LIVE_POLL_MS);
-      }
-      function closeCaptureSession(discard) {
-        clearTimeout(capturePollTimer);
-        const sessionId = captureId;
-        captureId = null;
-        liveSegments = [];
-        liveCaptionSignature = '';
-        pendingLiveChunks = [];
-        el['live-transcript'].hidden = true;
-        el['live-transcript-meta'].textContent = '';
-        renderLiveTranscript();
-        if (discard && sessionId) {
-          api(`/api/captures/${sessionId}`, { method: 'DELETE' }).catch(() => {});
-          return null;
-        }
-        return sessionId;
-      }
       async function startRecording() {
         el.record.disabled = true;
         // Created inside the tap so the browser lets it run; the mic prompt below can outlast that window.
@@ -3334,7 +3222,6 @@
         recorder.addEventListener('dataavailable', event => {
           if (!event.data?.size) return;
           chunks.push(event.data);
-          sendCaptureChunk(event.data);
         });
         recorder.addEventListener('error', () => handleCaptureInterruption('The recorder stopped unexpectedly.'));
         stream.getTracks().forEach(track => {
@@ -3342,7 +3229,6 @@
         });
         recorder.addEventListener('stop', () => {
           if (stopIntent === 'discard') {
-            closeCaptureSession(true);
             resetCaptureControls();
             showToast('Recording discarded');
             returnFromCapture();
@@ -3356,9 +3242,8 @@
         }, { once: true });
         // A timeslice flushes audio into `chunks` as it is captured, so an interruption
         // costs the last few seconds instead of the whole lecture.
-        recorder.start(CAPTURE_CHUNK_MS);
+        recorder.start(RECORDING_CHUNK_MS);
         acquireWakeLock();
-        openCaptureSession();
         elapsedMs = 0;
         levels = [];
         waveformTarget = 0;
@@ -3514,8 +3399,6 @@
         form.append('title', el['recording-title'].value);
         form.append('model', el.quality.value);
         form.append('capture_notes', el['capture-notes'].value);
-        const finishedCapture = closeCaptureSession(false);
-        if (finishedCapture) form.append('capture_id', finishedCapture);
         if (recordingWorkspace?.id) form.append('workspace_id', recordingWorkspace.id);
         else form.append('create_workspace', 'true');
         if (recordingDestination?.id) form.append('folder_id', recordingDestination.id);
