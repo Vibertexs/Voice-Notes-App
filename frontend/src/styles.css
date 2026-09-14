@@ -105,71 +105,154 @@ h3 { margin-bottom: .3rem; font-size: 1rem; letter-spacing: -.02em; }
 .assistant-ask textarea:focus { border-color: #2869de; }
 .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
-/* ---- Classes, drawn as folders ------------------------------------------ */
-.class-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(13.5rem, 1fr)); gap: 1.1rem; }
+/* ---- The way back out of a class ---------------------------------------- */
+.parent-target {
+  display: grid; grid-template-columns: 2.6rem minmax(0, 1fr) auto;
+  align-items: center; gap: .9rem; width: 100%;
+  margin: 0 0 1.5rem; padding: .95rem 1.1rem;
+  border: 2px solid rgba(17, 24, 43, .1); border-radius: 1rem;
+  background: rgba(255, 255, 255, .82); color: #16203a; text-align: left;
+  box-shadow: 0 .5rem 1.2rem rgba(23, 42, 84, .08);
+  transition: border-color .15s ease, background .15s ease, transform .15s ease;
+}
+.parent-target:hover { border-color: #2869de; background: #fff; transform: translateY(-1px); }
+.parent-icon {
+  display: grid; place-items: center; width: 2.6rem; height: 2.6rem;
+  border-radius: .7rem; background: #e4edfd; color: #2869de; font-size: 1.15rem;
+}
+.parent-copy { display: grid; gap: .1rem; min-width: 0; }
+.parent-copy strong { font-size: .98rem; font-weight: 760; }
+.parent-copy small { color: #7d8ca6; font-size: .78rem; }
+.parent-arrow { color: #97a4bb; font-size: 1.3rem; }
+.parent-target.drop-active { border-color: #2869de; border-style: dashed; background: #f2f7ff; }
+.parent-target.drop-active .parent-copy small { color: #2869de; font-weight: 640; }
 
-.class-card { position: relative; }
+/* ---- A class, drawn as a folder ----------------------------------------- */
+.class-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(15.5rem, 1fr)); gap: 1.35rem; }
+
+.class-card {
+  --tone: #2869de; --wash: #eef4ff; --deep: #17408f;
+  position: relative; padding-top: 1.1rem;
+}
+.class-card.violet { --tone: #7c4ddb; --wash: #f1ecff; --deep: #4a2795; }
+.class-card.rose   { --tone: #d6488a; --wash: #ffeef5; --deep: #8e2456; }
+.class-card.coral  { --tone: #e2603f; --wash: #ffeee8; --deep: #93341c; }
+.class-card.amber  { --tone: #cc8b12; --wash: #fff6e2; --deep: #79510a; }
+.class-card.lime   { --tone: #6aa02f; --wash: #f0fae4; --deep: #3d611a; }
+.class-card.mint   { --tone: #2aa793; --wash: #e6faf5; --deep: #146154; }
+.class-card.sky    { --tone: #2c9ad6; --wash: #e8f6fd; --deep: #145a83; }
+.class-card.slate  { --tone: #6b7a96; --wash: #eef1f6; --deep: #3a4560; }
+
+/* sheets peeking over the top of the folder */
+.class-sheets { position: absolute; inset: 0 1.15rem auto; height: 1.5rem; pointer-events: none; }
+.class-sheets i {
+  position: absolute; top: .55rem; height: 1.6rem;
+  border-radius: .3rem .3rem 0 0; background: #fff;
+  box-shadow: 0 -.12rem .4rem rgba(23, 42, 84, .1);
+  transition: transform .18s ease;
+}
+.class-sheets i:nth-child(1) { left: 6%; width: 42%; transform: rotate(-1.4deg); }
+.class-sheets i:nth-child(2) { right: 8%; width: 38%; transform: rotate(1.6deg); }
+.class-sheets i:nth-child(3) { left: 26%; width: 46%; top: .25rem; background: #fbfcfe; }
+.class-card:hover .class-sheets i:nth-child(1) { transform: rotate(-3deg) translateY(-.16rem); }
+.class-card:hover .class-sheets i:nth-child(2) { transform: rotate(3.2deg) translateY(-.16rem); }
+.class-card:hover .class-sheets i:nth-child(3) { transform: translateY(-.22rem); }
+
 .class-card-open {
-  --tone: #2869de; --tone-soft: #dbe8ff; --tone-deep: #17408f;
   position: relative; display: block; width: 100%; padding: 0;
   border: 0; background: transparent; text-align: left;
   transition: transform .16s ease;
 }
-.class-card-open:hover { transform: translateY(-3px); }
-.class-card-open:active { transform: translateY(-1px); }
+.class-card:hover .class-card-open { transform: translateY(-3px); }
 
-/* the tab sits behind the face and peeks out on the left */
+/* the tab, then the face it sits on */
 .class-tab {
-  display: block; width: 46%; height: .85rem; margin-left: .1rem;
-  border-radius: .55rem .75rem 0 0;
-  background: var(--tone); opacity: .9;
-  box-shadow: inset 0 1px rgba(255, 255, 255, .45);
+  display: block; width: 44%; height: .8rem; margin-left: .05rem;
+  border-radius: .6rem .8rem 0 0;
+  background: linear-gradient(180deg, #fff, var(--wash));
+  box-shadow: 0 -.1rem .35rem rgba(23, 42, 84, .07);
 }
 .class-face {
-  position: relative; display: grid; gap: .25rem; min-height: 6.4rem;
-  padding: .95rem 1rem 1rem;
-  border-radius: 0 .95rem .95rem .95rem;
-  background: linear-gradient(160deg, #fff, var(--tone-soft));
-  box-shadow: 0 .55rem 1.3rem rgba(23, 42, 84, .13), inset 0 1px rgba(255, 255, 255, .8);
+  position: relative; display: grid; gap: .75rem;
+  padding: 1rem 1.05rem 1.15rem;
+  border-radius: 0 1rem 1rem 1rem;
+  background: linear-gradient(170deg, #fff 38%, var(--wash));
+  box-shadow: 0 .6rem 1.5rem rgba(23, 42, 84, .12), inset 0 1px rgba(255, 255, 255, .9);
 }
-.class-face::after {
-  content: ''; position: absolute; inset: auto 1rem 1rem auto;
-  width: 1.4rem; height: .18rem; border-radius: .1rem;
-  background: var(--tone); opacity: .32;
-}
-.class-name { color: #16203a; font-size: 1.02rem; font-weight: 760; letter-spacing: -.01em; }
-.class-meta { color: var(--tone-deep); font-size: .76rem; font-weight: 620; opacity: .78; }
 
-.class-card.drop-active .class-face { box-shadow: 0 0 0 3px var(--tone), 0 .55rem 1.3rem rgba(23, 42, 84, .16); }
-.class-card.drop-active .class-meta { opacity: 1; }
+.class-title { display: flex; align-items: center; gap: .5rem; min-width: 0; }
+.class-glyph { color: var(--tone); font-size: 1.05rem; }
+.class-name {
+  overflow: hidden; color: #16203a; font-size: 1.04rem; font-weight: 760;
+  letter-spacing: -.012em; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* the detail rows, with a leader line between label and value */
+.class-rows { display: grid; gap: .38rem; }
+.class-row { display: flex; align-items: baseline; gap: .5rem; font-size: .79rem; }
+.class-row > span { color: #7d8ca6; }
+.class-row::after {
+  content: ''; flex: 1 1 auto; height: 1px; margin-bottom: .18rem;
+  background: repeating-linear-gradient(90deg, rgba(23,42,84,.16) 0 2px, transparent 2px 5px);
+  order: 1;
+}
+.class-row > b { order: 2; color: #24324d; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.class-drop-hint {
+  position: absolute; inset: auto 1.05rem 1.15rem; padding: .3rem .5rem;
+  border-radius: .5rem; background: var(--tone); color: #fff;
+  font-size: .72rem; font-weight: 700; text-align: center;
+}
+.class-card.drop-active .class-face {
+  box-shadow: 0 0 0 3px var(--tone), 0 .6rem 1.5rem rgba(23, 42, 84, .14);
+}
+
+/* corner dial: the class colour lives here */
+.class-color {
+  position: absolute; right: .85rem; bottom: .9rem;
+  width: 2.5rem; height: 2.5rem; display: grid; place-items: center;
+  border: 0; border-radius: 50%;
+  background: var(--tone);
+  box-shadow: 0 .35rem .8rem color-mix(in srgb, var(--tone) 45%, transparent),
+              inset 0 1px rgba(255, 255, 255, .45);
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.class-color:hover { transform: scale(1.06); }
+.class-color span {
+  width: .95rem; height: .95rem; border-radius: 50%;
+  background: radial-gradient(circle at 32% 28%, rgba(255,255,255,.95), rgba(255,255,255,.35) 45%, transparent 62%);
+}
+
+.class-swatches {
+  position: absolute; right: .7rem; bottom: 3.6rem; z-index: 5;
+  display: grid; grid-template-columns: repeat(3, 1.55rem); gap: .4rem;
+  padding: .55rem; border-radius: .8rem;
+  background: rgba(255, 255, 255, .97);
+  box-shadow: 0 .7rem 1.6rem rgba(23, 42, 84, .2);
+}
+.class-swatch { width: 1.55rem; height: 1.55rem; border: 2px solid transparent; border-radius: 50%; }
+.class-swatch.current { border-color: #16203a; }
+.class-swatch.blue { background: #2869de; } .class-swatch.violet { background: #7c4ddb; }
+.class-swatch.rose { background: #d6488a; } .class-swatch.coral { background: #e2603f; }
+.class-swatch.amber { background: #cc8b12; } .class-swatch.lime { background: #6aa02f; }
+.class-swatch.mint { background: #2aa793; } .class-swatch.sky { background: #2c9ad6; }
+.class-swatch.slate { background: #6b7a96; }
 
 .class-archive {
-  position: absolute; top: 1.15rem; right: .55rem;
+  position: absolute; top: 1.55rem; right: .6rem; z-index: 2;
   width: 1.9rem; height: 1.9rem; display: grid; place-items: center;
   border: 0; border-radius: .55rem;
-  background: rgba(255, 255, 255, .72); color: #4a5b7a;
+  background: rgba(255, 255, 255, .75); color: #4a5b7a;
   font-size: .9rem; line-height: 1; opacity: 0;
   transition: opacity .14s ease, background .14s ease;
 }
 .class-card:hover .class-archive, .class-archive:focus-visible { opacity: 1; }
-.class-archive:hover { background: #fff; color: #17408f; }
+.class-archive:hover { background: #fff; color: var(--deep); }
 
-/* per-class colour, applied to the tab, wash and label together */
-.class-card.blue   .class-card-open { --tone: #2869de; --tone-soft: #dde9ff; --tone-deep: #17408f; }
-.class-card.violet .class-card-open { --tone: #7c4ddb; --tone-soft: #e8e0ff; --tone-deep: #4a2795; }
-.class-card.rose   .class-card-open { --tone: #d6488a; --tone-soft: #ffe1ee; --tone-deep: #8e2456; }
-.class-card.coral  .class-card-open { --tone: #e2603f; --tone-soft: #ffe3da; --tone-deep: #93341c; }
-.class-card.amber  .class-card-open { --tone: #cc8b12; --tone-soft: #ffeecb; --tone-deep: #79510a; }
-.class-card.lime   .class-card-open { --tone: #6aa02f; --tone-soft: #e6f6d2; --tone-deep: #3d611a; }
-.class-card.mint   .class-card-open { --tone: #2aa793; --tone-soft: #d5f5ee; --tone-deep: #146154; }
-.class-card.sky    .class-card-open { --tone: #2c9ad6; --tone-soft: #d8eefc; --tone-deep: #145a83; }
-.class-card.slate  .class-card-open { --tone: #6b7a96; --tone-soft: #e6eaf2; --tone-deep: #3a4560; }
-
-/* the "add a class" tile matches the folder silhouette */
 .add-card {
   display: grid; align-content: center; justify-items: center; gap: .3rem;
-  min-height: 7.25rem; padding: 1rem;
-  border: 2px dashed rgba(23, 42, 84, .22); border-radius: .95rem;
+  min-height: 11rem; margin-top: 1.1rem; padding: 1rem;
+  border: 2px dashed rgba(23, 42, 84, .22); border-radius: 1rem;
   background: rgba(255, 255, 255, .5); color: #4a5b7a;
   transition: border-color .15s ease, background .15s ease;
 }
@@ -177,3 +260,7 @@ h3 { margin-bottom: .3rem; font-size: 1rem; letter-spacing: -.02em; }
 .add-card span { font-size: 1.3rem; }
 .add-card strong { font-size: .95rem; }
 .add-card small { color: #8090a8; }
+
+@media (prefers-reduced-motion: reduce) {
+  .class-card-open, .class-sheets i, .class-color, .parent-target { transition: none; }
+}

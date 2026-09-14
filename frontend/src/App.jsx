@@ -85,6 +85,10 @@ export default function App() {
       notify(archived ? 'Class archived.' : 'Class is back in your library.');
     } catch (caught) { notify(caught.message, 'error'); }
   }
+  async function recolorFolder(folderId, color) {
+    try { await libraryApi.updateFolder(folderId, { color }); await openLibrary(null); }
+    catch (caught) { notify(caught.message, 'error'); }
+  }
   async function moveWorkspace(workspaceId, folderId) {
     try { await libraryApi.updateWorkspace(workspaceId, { folder_id: folderId }); await openLibrary(screen.folderId); notify(folderId ? 'Lecture moved to the folder.' : 'Lecture moved back to Library.'); } catch (caught) { notify(caught.message, 'error'); }
   }
@@ -114,7 +118,7 @@ export default function App() {
   return <div className="app-shell">
     <header className="topbar"><button className="brand" onClick={() => openLibrary(null)}><span>C</span><b>Class Notes</b></button><div className="topbar-copy"><span>Private, local lecture library</span><button onClick={() => setScreen({ name: 'search' })}>Search</button><button onClick={() => openLibrary(null)}>Library</button></div></header>
     {error && <div className="inline-error"><span>{error}</span><button onClick={() => setError('')}>×</button></div>}
-    {screen.name === 'library' && library && <LibraryView data={library} allFolders={allFolders} onOpenFolder={openLibrary} onOpenWorkspace={openWorkspace} onNewFolder={() => setFolderDialog(true)} onRecord={() => startCapture()} onUpload={uploadFiles} onDeleteMaterial={deleteMaterial} onMoveWorkspace={moveWorkspace} showArchived={showArchived} onToggleArchived={(next) => openLibrary(null, { archived: next })} onArchiveFolder={setFolderArchived} />}
+    {screen.name === 'library' && library && <LibraryView data={library} allFolders={allFolders} onOpenFolder={openLibrary} onOpenWorkspace={openWorkspace} onNewFolder={() => setFolderDialog(true)} onRecord={() => startCapture()} onUpload={uploadFiles} onDeleteMaterial={deleteMaterial} onMoveWorkspace={moveWorkspace} showArchived={showArchived} onToggleArchived={(next) => openLibrary(null, { archived: next })} onArchiveFolder={setFolderArchived} onRecolorFolder={recolorFolder} />}
     {screen.name === 'workspace' && (workspace ? <WorkspaceView workspace={workspace} onBack={() => openLibrary(workspace.folder_id)} onContinue={() => startCapture(workspace)} onReload={refreshWorkspace} onDelete={() => openLibrary(workspace.folder_id)} notify={notify} pendingSeek={pendingSeek} onSeekHandled={() => setPendingSeek(null)} /> : <Loading />)}
     {screen.name === 'search' && <SearchView onOpenResult={openSearchResult} onBack={() => openLibrary(screen.folderId ?? null)} />}
     {screen.name === 'capture' && <CaptureView context={captureContext ?? {}} onSaved={captureSaved} onCancel={cancelCapture} notify={notify} />}

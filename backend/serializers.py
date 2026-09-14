@@ -26,6 +26,11 @@ def serialize_folder(row: sqlite3.Row) -> dict[str, object]:
         "color": row["color"],
         "created_at": row["created_at"],
         "archived": bool(row["archived_at"]) if "archived_at" in row.keys() else False,
+        # Present only when the query asked for them (the library grid does).
+        "lecture_count": row["lecture_count"] if "lecture_count" in row.keys() else None,
+        "recording_count": row["recording_count"] if "recording_count" in row.keys() else None,
+        "file_count": row["file_count"] if "file_count" in row.keys() else None,
+        "updated_at": row["updated_at"] if "updated_at" in row.keys() else None,
     }
 
 

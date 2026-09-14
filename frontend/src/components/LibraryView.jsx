@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import ClassCard from './ClassCard';
 
 const readableDate = (date) =>
   new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(new Date(date));
@@ -19,36 +20,10 @@ function MaterialList({ materials, onDelete }) {
   </ul>;
 }
 
-/** One class, drawn as an actual folder: a tab, a face, and a lift on hover. */
-function ClassCard({ folder, onOpen, onArchive, onDropWorkspace }) {
-  const [over, setOver] = useState(false);
-  return <div className={`class-card ${folder.color} ${over ? 'drop-active' : ''}`}>
-    <button
-      className="class-card-open"
-      onClick={() => onOpen(folder.id)}
-      onDragOver={(event) => { event.preventDefault(); setOver(true); }}
-      onDragLeave={() => setOver(false)}
-      onDrop={(event) => { event.preventDefault(); setOver(false); onDropWorkspace(event, folder.id); }}
-      aria-label={`Open ${folder.name}`}
-    >
-      <span className="class-tab" aria-hidden="true" />
-      <span className="class-face">
-        <span className="class-name">{folder.name}</span>
-        <span className="class-meta">{over ? 'Drop to file here' : 'Open class'}</span>
-      </span>
-    </button>
-    <button
-      className="class-archive"
-      onClick={() => onArchive(folder.id, !folder.archived)}
-      aria-label={folder.archived ? `Restore ${folder.name}` : `Archive ${folder.name}`}
-      title={folder.archived ? 'Restore this class' : 'Archive this class'}
-    >{folder.archived ? '↩' : '⤓'}</button>
-  </div>;
-}
-
 export default function LibraryView({
   data, allFolders, onOpenFolder, onOpenWorkspace, onNewFolder, onRecord, onUpload,
   onDeleteMaterial, onMoveWorkspace, showArchived, onToggleArchived, onArchiveFolder,
+  onRecolorFolder,
 }) {
   const inputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
@@ -84,9 +59,20 @@ export default function LibraryView({
       </div>
     </header>
 
-    {folder && <nav className="breadcrumbs" aria-label="Location">
-      <button onClick={() => onOpenFolder(null)}>‹ All classes</button>
-    </nav>}
+    {folder && <button
+      className={`parent-target ${dropping ? 'drop-active' : ''}`}
+      onClick={() => onOpenFolder(null)}
+      onDragOver={(event) => { event.preventDefault(); setDropping(true); }}
+      onDragLeave={() => setDropping(false)}
+      onDrop={(event) => { event.preventDefault(); setDropping(false); receiveWorkspace(event, null); }}
+    >
+      <span className="parent-icon" aria-hidden="true">↰</span>
+      <span className="parent-copy">
+        <strong>All classes</strong>
+        <small>{dropping ? 'Drop to take this lecture out of the class' : 'Tap to go back · drag a lecture here to take it out'}</small>
+      </span>
+      <span className="parent-arrow" aria-hidden="true">›</span>
+    </button>}
 
     {!folder && <section className="library-section">
       <div className="section-heading">
@@ -101,6 +87,7 @@ export default function LibraryView({
           folder={{ ...child, archived: showArchived || child.archived }}
           onOpen={onOpenFolder}
           onArchive={onArchiveFolder}
+          onRecolor={onRecolorFolder}
           onDropWorkspace={receiveWorkspace}
         />)}
         {!data.folders.length && (showArchived
@@ -117,12 +104,7 @@ export default function LibraryView({
           <p className="eyebrow">Lecture notes</p>
           <h2>{data.workspaces.length ? `${data.workspaces.length} lecture${data.workspaces.length === 1 ? '' : 's'}` : 'Start your first lecture'}</h2>
         </div>
-        {folder && <button
-          className={`unfiled-target ${dropping ? 'drop-active' : ''}`}
-          onDragOver={(event) => { event.preventDefault(); setDropping(true); }}
-          onDragLeave={() => setDropping(false)}
-          onDrop={(event) => { event.preventDefault(); setDropping(false); receiveWorkspace(event, null); }}
-        >Move out of this class</button>}
+
       </div>
       <div className="workspace-grid">
         {data.workspaces.map((workspace) => <button

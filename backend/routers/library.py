@@ -44,8 +44,20 @@ def list_library(
             ).fetchall()
         else:
             folders = connection.execute(
-                "SELECT * FROM folders WHERE archived_at IS %s NULL"
-                " ORDER BY name COLLATE NOCASE" % ("NOT" if archived else "")
+                """
+                SELECT folders.*,
+                       COUNT(DISTINCT workspaces.id) AS lecture_count,
+                       COUNT(lectures.id) AS recording_count,
+                       (SELECT COUNT(*) FROM materials
+                         WHERE materials.folder_id = folders.id) AS file_count,
+                       MAX(workspaces.updated_at) AS updated_at
+                FROM folders
+                LEFT JOIN workspaces ON workspaces.folder_id = folders.id
+                LEFT JOIN lectures ON lectures.workspace_id = workspaces.id
+                WHERE folders.archived_at IS {state} NULL
+                GROUP BY folders.id
+                ORDER BY folders.name COLLATE NOCASE
+                """.format(state="NOT" if archived else "")
             ).fetchall()
             workspaces = connection.execute(
                 """
