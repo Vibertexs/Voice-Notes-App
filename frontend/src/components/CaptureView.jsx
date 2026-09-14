@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { libraryApi, uploadRecording } from '../lib/api';
+import DiscardSlider from './DiscardSlider';
 import Waveform from './Waveform';
 
 function elapsedLabel(milliseconds) {
@@ -114,20 +115,27 @@ export default function CaptureView({ context, onSaved, onCancel, notify }) {
           <div className="recording-timer">{elapsedLabel(elapsed)}</div>
           <Waveform stream={liveStream} phase={phase} />
         </div>
-        <div className="wave-bars" aria-hidden="true">{Array.from({ length: 36 }, (_, index) => <i key={index} style={{ '--delay': `${index * -0.04}s`, '--height': `${22 + ((index * 13) % 56)}%` }} />)}</div>
         {isRecording && <div className="marker-control"><input value={markerLabel} maxLength="120" onChange={(event) => setMarkerLabel(event.target.value)} onKeyDown={(event) => event.key === 'Enter' && addMarker()} placeholder="What should you revisit?" /><button className="button ghost" onClick={addMarker}>＋ Marker</button></div>}
         {markers.length > 0 && <div className="marker-pills">{markers.map((marker, index) => <span key={`${marker.label}-${index}`}>● {elapsedLabel(marker.time_seconds * 1000)} · {marker.label}<button onClick={() => setMarkers((current) => current.filter((_, position) => position !== index))} aria-label={`Remove ${marker.label}`}>×</button></span>)}</div>}
         <div className="capture-controls">
-          <button
-            className="shutter"
-            data-phase={phase}
-            onClick={phase === 'ready' ? start : pauseOrResume}
-            disabled={phase === 'saving'}
-            aria-label={phase === 'ready' ? 'Start recording' : isPaused ? 'Resume recording' : 'Pause recording'}
-          ><span className="shutter-glyph" aria-hidden="true" /></button>
-          <p>{phase === 'ready' ? 'Tap to record' : isRecording ? 'Tap to pause' : isPaused ? 'Tap to resume' : 'Saving…'}</p>
+          <div className="transport-controls">
+            <button
+              className="shutter"
+              data-phase={phase}
+              onClick={phase === 'ready' ? start : pauseOrResume}
+              disabled={phase === 'saving'}
+              aria-label={phase === 'ready' ? 'Start recording' : isPaused ? 'Resume recording' : 'Pause recording'}
+            ><span className="shutter-glyph" aria-hidden="true" /></button>
+            <div className={`finish-group ${isPaused ? 'shown' : ''}`} inert={!isPaused}>
+              <button className="finish-button" onClick={done} aria-label="Done — save and transcribe">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+              </button>
+              <span className="finish-caption" aria-hidden="true">Done</span>
+            </div>
+          </div>
+          <p className="transport-hint">{phase === 'ready' ? 'Tap to record' : isRecording ? 'Tap to pause' : isPaused ? 'Tap to resume, or slide to discard' : 'Saving…'}</p>
+          <DiscardSlider open={isPaused} onDiscard={discard} />
         </div>
-        {isPaused && <div className="finish-row"><button className="button ghost danger" onClick={discard}>Discard</button><button className="button primary" onClick={done}>Done — save lecture</button></div>}
         {phase === 'ready' && <button className="text-button cancel-capture" onClick={onCancel}>Cancel</button>}
         {error && <p className="form-error" role="alert">{error}</p>}
       </section>
