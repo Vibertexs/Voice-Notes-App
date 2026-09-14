@@ -43,6 +43,7 @@ export default function ClassCard({ index, folder, onOpen, onArchive, onRecolor,
     >
       <span className="class-cover" aria-hidden="true" />
       <span className="class-sleeve">
+        <span className="class-tab" aria-hidden="true" />
         <span className="class-body">
           <span className="class-top">
             <span className="class-index" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>

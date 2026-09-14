@@ -519,118 +519,121 @@ h3 { margin-bottom: .3rem; font-size: 1rem; letter-spacing: -.02em; }
 .study-ask select { padding: .4rem .55rem; border: 1px solid var(--line); border-radius: .5rem; background: #fff; color: var(--ink-soft); font-size: .8rem; }
 
 /* ---- A class, as a folder ------------------------------------------------
-   A coloured cover with a dark sleeve over it. Hover slides the sleeve down,
-   the way a folder opens when you thumb it. The notch is what makes the
-   silhouette read as a folder rather than a rectangle. */
+   Built from two plain boxes: a tab sitting above the body, with an angled
+   shoulder joining them. A mask was cutting visible holes at the junction,
+   and clip-path cannot take percentages, so neither is used here. */
 .class-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(15.5rem, 1fr)); gap: 1.5rem; }
 
 .class-card {
-  --tone-a: #6b46f5; --tone-b: #2a1d8f; --sleeve: #141a3a;
+  --tone-a: #6b46f5; --tone-b: #2a1d8f;
+  --sleeve: #151c3d; --sleeve-edge: #0b1027;
   position: relative;
 }
 .class-card.violet { --tone-a: #a855f7; --tone-b: #4c1d95; }
 .class-card.rose   { --tone-a: #fb5c9b; --tone-b: #831843; }
 .class-card.coral  { --tone-a: #fb7a4a; --tone-b: #7c2d12; }
-.class-card.amber  { --tone-a: #fbbf24; --tone-b: #78350f; }
-.class-card.lime   { --tone-a: #a3e635; --tone-b: #365314; }
-.class-card.mint   { --tone-a: #34d3b5; --tone-b: #134e4a; }
-.class-card.sky    { --tone-a: #38bdf8; --tone-b: #0c4a6e; }
-.class-card.slate  { --tone-a: #94a3b8; --tone-b: #1e293b; }
+.class-card.amber  { --tone-a: #fbbf24; --tone-b: #7c4a08; }
+.class-card.lime   { --tone-a: #a3e635; --tone-b: #3f6212; }
+.class-card.mint   { --tone-a: #34d3b5; --tone-b: #115e59; }
+.class-card.sky    { --tone-a: #38bdf8; --tone-b: #075985; }
+.class-card.slate  { --tone-a: #94a3b8; --tone-b: #334155; }
 
 .class-card-open {
   position: relative; display: block; width: 100%; aspect-ratio: 5 / 6;
-  padding: 0; overflow: hidden;
-  border: 0; border-radius: 1.35rem; background: var(--sleeve);
-  box-shadow: 0 2px 6px rgba(13, 20, 44, .16), 0 14px 34px rgba(13, 20, 44, .2);
-  text-align: left; isolation: isolate;
+  padding: 0; overflow: hidden; text-align: left; isolation: isolate;
+  border: 1px solid var(--sleeve-edge); border-radius: 1.4rem;
+  background: var(--sleeve);
+  box-shadow: 0 1px 2px rgba(11, 16, 39, .22), 0 14px 34px rgba(11, 16, 39, .26);
   transition: transform .4s var(--ease-out), box-shadow .4s var(--ease-out);
 }
-.class-card:hover .class-card-open { transform: translateY(-4px); box-shadow: 0 6px 14px rgba(13, 20, 44, .2), 0 26px 56px rgba(13, 20, 44, .28); }
+.class-card:hover .class-card-open {
+  transform: translateY(-4px);
+  box-shadow: 0 6px 14px rgba(11, 16, 39, .26), 0 28px 58px rgba(11, 16, 39, .34);
+}
 .class-card-open:focus-visible { outline: 2px solid var(--tone-a); outline-offset: 3px; }
 
-/* the cover: a colour field the sleeve slides down to reveal */
+/* the cover the sleeve slides down to reveal */
 .class-cover {
-  position: absolute; inset: 0; border-radius: inherit;
+  position: absolute; inset: 0;
   background:
-    radial-gradient(120% 80% at 18% 0%, color-mix(in srgb, var(--tone-a) 85%, white 15%), transparent 58%),
-    linear-gradient(160deg, var(--tone-a), var(--tone-b) 78%);
+    radial-gradient(125% 85% at 16% -5%, color-mix(in srgb, var(--tone-a) 82%, #fff 18%), transparent 62%),
+    linear-gradient(158deg, var(--tone-a), var(--tone-b) 82%);
 }
-/* a little grain so the gradient does not band */
+/* real grain, not a dot grid */
 .class-cover::after {
-  content: ''; position: absolute; inset: 0; border-radius: inherit; opacity: .16;
-  background-image: radial-gradient(rgba(255, 255, 255, .5) .5px, transparent .5px);
-  background-size: 3px 3px;
+  content: ''; position: absolute; inset: 0; opacity: .3; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23g)' opacity='.55'/%3E%3C/svg%3E");
 }
 
-/* the sleeve, with the folder notch cut into its top edge */
+/* the sleeve: body plus a tab, all one colour, no holes */
 .class-sleeve {
-  position: absolute; inset: 30% 0 -18%; display: block;
-  transition: transform .42s var(--ease-spring);
-  will-change: transform;
+  position: absolute; inset: 31% 0 -20%; display: block;
+  transition: transform .42s var(--ease-spring); will-change: transform;
+  filter: drop-shadow(0 -2px 6px rgba(11, 16, 39, .45));
 }
 .class-card:hover .class-sleeve, .class-card.menu-open .class-sleeve,
-.class-card-open:focus-visible .class-sleeve { transform: translateY(16%); }
+.class-card-open:focus-visible .class-sleeve { transform: translateY(15%); }
 
-/* Built from boxes instead: a tab block on the left of the sleeve's top edge. */
-.class-sleeve::before {
-  content: ''; position: absolute; left: 0; bottom: 100%;
-  width: 46%; height: 1.45rem;
-  border-radius: .95rem .95rem 0 0;
-  background: var(--sleeve);
+.class-tab {
+  position: absolute; left: 0; bottom: 100%;
+  width: 44%; height: 1.5rem;
+  border-radius: .85rem .5rem 0 0; background: var(--sleeve);
 }
-.class-sleeve::after {
-  content: ''; position: absolute; left: 46%; bottom: 100%;
-  width: 1.6rem; height: 1.45rem; background: var(--sleeve);
-  -webkit-mask-image: radial-gradient(circle at 100% 0, transparent 1.6rem, #000 1.6rem);
-  mask-image: radial-gradient(circle at 100% 0, transparent 1.6rem, #000 1.6rem);
+/* the angled shoulder from the tab down onto the body */
+.class-tab::after {
+  content: ''; position: absolute; left: 100%; bottom: 0;
+  width: 1.15rem; height: 100%; background: var(--sleeve);
+  clip-path: polygon(0 0, 100% 100%, 0 100%);
 }
 
 .class-body {
-  position: absolute; inset: 0; display: flex; flex-direction: column;
-  gap: .75rem; padding: 1.05rem 1.15rem 1.3rem;
-  border-radius: 1.2rem 1.2rem 0 0; background: var(--sleeve);
+  position: absolute; inset: 0; display: flex; flex-direction: column; gap: .75rem;
+  padding: 1.1rem 1.2rem 1.35rem;
+  border-radius: 0 .85rem 0 0; background: var(--sleeve);
 }
 .class-top { display: flex; align-items: flex-start; justify-content: space-between; gap: .75rem; }
 .class-index {
-  color: #fff; font-size: 2.35rem; font-weight: 700; line-height: .95;
-  letter-spacing: -.045em; font-variant-numeric: tabular-nums;
+  color: #fff; font-size: 2.4rem; font-weight: 700; line-height: .95;
+  letter-spacing: -.05em; font-variant-numeric: tabular-nums;
 }
 .class-arrow {
-  color: rgba(255, 255, 255, .82); font-size: 1.1rem; line-height: 1;
-  transition: transform .34s var(--ease-spring);
+  color: rgba(255, 255, 255, .7); font-size: 1.05rem; line-height: 1;
+  transition: transform .34s var(--ease-spring), color .2s var(--ease-out);
 }
-.class-card:hover .class-arrow { transform: translate(.2rem, -.2rem); }
+.class-card:hover .class-arrow { color: #fff; transform: translate(.22rem, -.22rem); }
 
-.class-text { display: grid; gap: .18rem; margin-top: auto; }
+.class-text { display: grid; gap: .2rem; margin-top: auto; }
 .class-name {
-  overflow: hidden; color: #fff; font-size: 1rem; font-weight: 640;
+  overflow: hidden; color: #fff; font-size: 1.02rem; font-weight: 640;
   letter-spacing: -.015em; text-overflow: ellipsis; white-space: nowrap;
 }
-.class-meta { color: rgba(226, 232, 245, .62); font-size: .8rem; }
+.class-meta { color: rgba(206, 216, 240, .6); font-size: .79rem; }
 
-.class-card.drop-active .class-card-open { box-shadow: 0 0 0 2px var(--tone-a), 0 20px 44px rgba(13, 20, 44, .3); }
+.class-card.drop-active .class-card-open {
+  border-color: var(--tone-a); box-shadow: 0 0 0 2px var(--tone-a), 0 22px 48px rgba(11, 16, 39, .36);
+}
 .class-card.drop-active .class-meta { color: #fff; font-weight: 600; }
 
-/* the dial sits over the sleeve, clear of the text */
 .class-dial {
-  position: absolute; right: .8rem; bottom: .8rem; z-index: 3;
+  position: absolute; right: .85rem; bottom: .85rem; z-index: 3;
   width: 2rem; height: 2rem; display: grid; place-items: center;
-  border: 0; border-radius: 50%;
-  background: rgba(255, 255, 255, .16); backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, .18); border-radius: 50%;
+  background: rgba(255, 255, 255, .1);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
   opacity: 0; transform: scale(.85);
-  transition: opacity .24s var(--ease-out), transform .28s var(--ease-spring), background .2s var(--ease-out);
+  transition: opacity .24s var(--ease-out), transform .28s var(--ease-spring),
+              background .2s var(--ease-out);
 }
 .class-card:hover .class-dial, .class-card.menu-open .class-dial,
 .class-dial:focus-visible { opacity: 1; transform: scale(1); }
-.class-dial:hover { background: rgba(255, 255, 255, .3); }
+.class-dial:hover { background: rgba(255, 255, 255, .22); }
 .class-dial > span {
-  width: .85rem; height: .85rem; border-radius: 50%;
-  background: radial-gradient(circle at 34% 30%, #fff, rgba(255, 255, 255, .55) 50%, rgba(255, 255, 255, .25) 70%);
+  width: .8rem; height: .8rem; border-radius: 50%;
+  background: linear-gradient(145deg, #fff, rgba(255, 255, 255, .55));
 }
 
 .class-menu {
-  position: absolute; right: .6rem; bottom: 3.1rem; z-index: 6; width: 11.5rem;
+  position: absolute; right: .65rem; bottom: 3.2rem; z-index: 6; width: 11.5rem;
   padding: .5rem; border: 1px solid var(--line); border-radius: .8rem;
   background: rgba(255, 255, 255, .98); box-shadow: var(--lift-3);
   animation: menu-in .18s var(--ease-out);
@@ -660,7 +663,7 @@ h3 { margin-bottom: .3rem; font-size: 1rem; letter-spacing: -.02em; }
 .add-card {
   display: grid; align-content: center; justify-items: center; gap: .35rem;
   aspect-ratio: 5 / 6; padding: 1rem;
-  border: 2px dashed rgba(23, 42, 84, .2); border-radius: 1.35rem;
+  border: 2px dashed rgba(23, 42, 84, .2); border-radius: 1.4rem;
   background: rgba(255, 255, 255, .5); color: var(--ink-soft);
   transition: border-color .2s var(--ease-out), background .2s var(--ease-out), transform .2s var(--ease-out);
 }
@@ -669,8 +672,56 @@ h3 { margin-bottom: .3rem; font-size: 1rem; letter-spacing: -.02em; }
 .add-card strong { font-size: .95rem; }
 .add-card small { color: var(--ink-faint); text-align: center; }
 
+/* ---- Recorder: one focal point, nothing shouting ------------------------
+   The blue spotlight and a white input pill were fighting the shutter for
+   attention. The panel is flat now; the controls carry the emphasis. */
+.capture-station {
+  position: relative; padding: 1.75rem 1.25rem 1.6rem;
+  border: 1px solid rgba(120, 150, 210, .16); border-radius: 1.4rem;
+  color: #e9effb; text-align: center;
+  background:
+    radial-gradient(130% 90% at 50% -20%, rgba(58, 96, 190, .28), transparent 62%),
+    linear-gradient(180deg, #111a3c, #0a0f28);
+  box-shadow: inset 0 1px rgba(255, 255, 255, .06), 0 18px 44px rgba(7, 12, 33, .3);
+}
+.capture-station::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  opacity: .22; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E");
+}
+.capture-station > * { position: relative; z-index: 1; }
+
+/* the marker field belongs to the dark panel, not to a form */
+.marker-control {
+  display: flex; align-items: center; gap: .45rem;
+  max-width: 27rem; margin: 1rem auto .25rem;
+  padding: .3rem .3rem .3rem .25rem;
+  border: 1px solid rgba(255, 255, 255, .14); border-radius: .75rem;
+  background: rgba(255, 255, 255, .06);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  transition: border-color .2s var(--ease-out), background .2s var(--ease-out);
+}
+.marker-control:focus-within { border-color: rgba(120, 160, 255, .5); background: rgba(255, 255, 255, .09); }
+.marker-control input {
+  flex: 1 1 auto; min-width: 0; margin: 0; padding: .5rem .6rem;
+  border: 0; border-radius: .55rem; background: transparent;
+  color: #eaf0ff; font-size: .87rem;
+}
+.marker-control input::placeholder { color: rgba(197, 211, 240, .5); }
+.marker-control input:focus { outline: none; }
+.marker-control .button {
+  min-height: 2.1rem; padding: .4rem .7rem; border-color: transparent;
+  background: rgba(255, 255, 255, .12); color: #dce6fb; box-shadow: none;
+}
+.marker-control .button:hover:not(:disabled) { background: rgba(255, 255, 255, .2); color: #fff; transform: none; }
+
+.marker-pills > span {
+  border-color: rgba(255, 255, 255, .16); background: rgba(255, 255, 255, .08); color: #dfe8fb;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .class-card-open, .class-sleeve, .class-arrow, .class-dial, .class-swatch, .add-card { transition: none; }
+  .class-card-open, .class-sleeve, .class-arrow, .class-dial, .class-swatch,
+  .add-card, .marker-control { transition: none; }
   .class-menu { animation: none; }
 }
 
