@@ -1,8 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import { libraryApi } from '../lib/api';
+import AssistantPanel from './AssistantPanel';
 import { MaterialList } from './LibraryView';
 
 const formatTime = (seconds = 0) => `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
+const formatRemaining = (seconds) => {
+  if (seconds == null) return 'working out how long this will take…';
+  const total = Math.max(0, Math.round(seconds));
+  if (total < 60) return `about ${Math.max(10, Math.ceil(total / 10) * 10)} seconds left`;
+  const minutes = Math.round(total / 60);
+  return `about ${minutes} minute${minutes === 1 ? '' : 's'} left`;
+};
 const formatDate = (date) => new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(date));
 
 const PLAYBACK_SPEEDS = [1, 1.25, 1.5, 1.75, 2];
@@ -11,6 +19,7 @@ function RecordingReview({ session, onUpdate, notify, seekTo, onSeekHandled }) {
   const audioRef = useRef(null);
   const [retranscribing, setRetranscribing] = useState(false);
   const [speedIndex, setSpeedIndex] = useState(0);
+  const [markerLabel, setMarkerLabel] = useState('');
 
   useEffect(() => {
     if (audioRef.current) audioRef.current.playbackRate = PLAYBACK_SPEEDS[speedIndex];
@@ -32,6 +41,26 @@ function RecordingReview({ session, onUpdate, notify, seekTo, onSeekHandled }) {
     audioRef.current.play().catch(() => {});
   }
 
+  async function addMarker(event) {
+    event.preventDefault();
+    const label = markerLabel.trim();
+    if (!label) return;
+    try {
+      await libraryApi.addMarker(session.id, {
+        label,
+        time_seconds: audioRef.current?.currentTime ?? 0,
+      });
+      setMarkerLabel('');
+      notify('Marker added.');
+      onUpdate();
+    } catch (caught) { notify(caught.message, 'error'); }
+  }
+
+  async function removeMarker(marker) {
+    try { await libraryApi.deleteMarker(session.id, marker.id); onUpdate(); }
+    catch (caught) { notify(caught.message, 'error'); }
+  }
+
   async function retranscribe() {
     setRetranscribing(true);
     try { await libraryApi.retranscribe(session.id); notify('High-accuracy transcription restarted.'); onUpdate(); }
@@ -48,9 +77,28 @@ function RecordingReview({ session, onUpdate, notify, seekTo, onSeekHandled }) {
         aria-label={`Playback speed ${PLAYBACK_SPEEDS[speedIndex]} times`}
       >{PLAYBACK_SPEEDS[speedIndex]}×</button>
     </div>
-    {session.transcription_status !== 'ready' && <div className="progress-message"><span className="progress-track"><i style={{ width: `${Math.round((session.transcription_progress ?? 0) * 100)}%` }} /></span><p>{session.transcription_status === 'failed' ? 'The final transcription did not finish.' : 'The complete recording is being processed with the high-accuracy model.'}</p>{session.transcription_status === 'failed' && <button className="text-button" onClick={retranscribe} disabled={retranscribing}>{retranscribing ? 'Starting…' : 'Try again'}</button>}</div>}
+    {session.transcription_status !== 'ready' && <div className="progress-message"><span className="progress-track"><i style={{ width: `${Math.round((session.transcription_progress ?? 0) * 100)}%` }} /></span><p>{session.transcription_status === 'failed'
+        ? 'The final transcription did not finish.'
+        : `${Math.round((session.transcription_progress ?? 0) * 100)}% · ${formatRemaining(session.transcription_eta_seconds)}`}</p>{session.transcription_status === 'failed' && <button className="text-button" onClick={retranscribe} disabled={retranscribing}>{retranscribing ? 'Starting…' : 'Try again'}</button>}</div>}
     <div className="transcript"><div className="section-heading"><div><p className="eyebrow">Transcript</p><h3>{session.transcription_status === 'ready' ? 'Tap any line to replay it' : 'Transcript will appear here'}</h3></div></div>{session.segments?.length ? <ol>{session.segments.map((segment, index) => <li key={`${segment.start_seconds}-${index}`}><button onClick={() => seek(segment.start_seconds)}><time>{formatTime(segment.start_seconds)}</time><span>{segment.text}</span></button></li>)}</ol> : <p className="empty-copy">{session.transcription_status === 'ready' ? 'No speech was detected in this recording.' : 'You can keep working on notes while this finishes.'}</p>}</div>
-    {session.markers?.length > 0 && <div className="saved-markers"><p className="eyebrow">Markers</p>{session.markers.map((marker) => <button key={marker.id} onClick={() => seek(marker.time_seconds)}>● {formatTime(marker.time_seconds)} · {marker.label}</button>)}</div>}
+    <div className="saved-markers">
+      <p className="eyebrow">Markers</p>
+      {session.markers?.length
+        ? session.markers.map((marker) => <span key={marker.id} className="marker-chip">
+            <button onClick={() => seek(marker.time_seconds)}>● {formatTime(marker.time_seconds)} · {marker.label}</button>
+            <button className="marker-remove" onClick={() => removeMarker(marker)} aria-label={`Remove marker ${marker.label}`}>×</button>
+          </span>)
+        : <p className="empty-copy">No markers yet. Mark a moment while you listen back.</p>}
+      <form className="marker-form" onSubmit={addMarker}>
+        <input
+          value={markerLabel}
+          maxLength="120"
+          placeholder="Mark this moment…"
+          onChange={(event) => setMarkerLabel(event.target.value)}
+        />
+        <button className="button ghost" type="submit" disabled={!markerLabel.trim()}>Add marker</button>
+      </form>
+    </div>
   </section>;
 }
 
@@ -111,9 +159,10 @@ export default function WorkspaceView({ workspace, onBack, onContinue, onReload,
 
   return <main className="page workspace-page">
     <header className="workspace-header"><div><button className="back-link" onClick={onBack}>‹ Back to library</button><p className="eyebrow">Lecture workspace</p><input className="title-input" aria-label="Lecture title" value={title} maxLength="180" onChange={(event) => setTitle(event.target.value)} onBlur={saveTitle} /></div><div className="header-actions"><button className="button ghost" onClick={() => materialInputRef.current?.click()}>{filesBusy ? 'Adding…' : '＋ Add file'}</button><button className="button primary" onClick={onContinue}>● Continue recording</button><button className="icon-button danger" onClick={removeWorkspace} aria-label="Delete lecture">⌫</button><input ref={materialInputRef} hidden type="file" multiple accept=".pdf,.txt,.md,.doc,.docx,.ppt,.pptx" onChange={(event) => uploadFiles(event.target.files)} /></div></header>
-    <nav className="tab-list" aria-label="Lecture sections">{[['notes', 'Notes'], ['review', `Recordings (${workspace.sessions.length})`], ['study', 'Study']].map(([id, label]) => <button key={id} className={tab === id ? 'active' : ''} onClick={() => setTab(id)}>{label}</button>)}</nav>
+    <nav className="tab-list" aria-label="Lecture sections">{[['notes', 'Notes'], ['review', `Recordings (${workspace.sessions.length})`], ['study', 'Study'], ['assistant', 'Assistant']].map(([id, label]) => <button key={id} className={tab === id ? 'active' : ''} onClick={() => setTab(id)}>{label}</button>)}</nav>
     {tab === 'notes' && <section className="notes-layout"><article className="note-editor"><div className="section-heading"><div><p className="eyebrow">Your notes</p><h2>Write what matters</h2></div><button className="button ghost" onClick={saveNotes} disabled={saving}>{saving ? 'Saving…' : 'Save notes'}</button></div><textarea value={notes} onChange={(event) => setNotes(event.target.value)} maxLength="100000" placeholder="Start with the big idea, then add details from class…" /></article><aside className="workspace-aside"><section><p className="eyebrow">Keep it together</p><h3>{workspace.sessions.length} recording{workspace.sessions.length === 1 ? '' : 's'} in this lecture</h3><p>Continue recording whenever the topic comes back. Every session stays paired with these notes.</p><button className="button primary full" onClick={onContinue}>Continue recording</button></section><section><p className="eyebrow">Attachments</p><MaterialList materials={workspace.materials} onDelete={deleteMaterial} /></section></aside></section>}
     {tab === 'review' && <section className="review-layout"><aside className="session-list"><p className="eyebrow">Recordings</p>{workspace.sessions.map((session, index) => <button key={session.id} className={session.id === selected?.id ? 'selected' : ''} onClick={() => setSelectedId(session.id)}><span>SESSION {String(index + 1).padStart(2, '0')}</span><strong>{session.title}</strong><small>{formatDate(session.created_at)}</small></button>)}</aside>{selected ? <RecordingReview session={selected} onUpdate={onReload} notify={notify} seekTo={pendingSeek?.lectureId === selected.id ? pendingSeek.seconds : null} onSeekHandled={onSeekHandled} /> : <div className="empty-state"><h3>No recordings yet</h3><button className="button primary" onClick={onContinue}>Continue recording</button></div>}</section>}
+    {tab === 'assistant' && <AssistantPanel workspace={workspace} onReload={onReload} notify={notify} />}
     {tab === 'study' && <section className="study-layout"><div className="section-heading"><div><p className="eyebrow">Review in less time</p><h2>Study guide</h2></div><div><button className="button ghost" onClick={saveStudy}>Save</button><button className="button primary" onClick={generateStudy} disabled={generating}>{generating ? 'Drafting…' : 'Generate draft'}</button></div></div><p className="muted">This local draft uses your own notes and completed transcripts. Edit it freely.</p><textarea value={study} onChange={(event) => setStudy(event.target.value)} maxLength="100000" placeholder="Generate a first study guide or write your own…" /></section>}
   </main>;
 }

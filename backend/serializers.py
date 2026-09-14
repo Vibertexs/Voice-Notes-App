@@ -125,3 +125,20 @@ def serialize_workspace(row: sqlite3.Row, *, include_sessions: bool = False) -> 
         result["ai_notes_updated_at"] = ai_notes["updated_at"] if ai_notes else None
         result["materials"] = [serialize_material(material) for material in materials]
     return result
+
+
+def get_folder_path(folder: sqlite3.Row | None) -> list[dict[str, object]]:
+    if folder is None:
+        return []
+    path = [serialize_folder(folder)]
+    parent_id = folder["parent_id"]
+    with connect_database() as connection:
+        while parent_id:
+            parent = connection.execute(
+                "SELECT * FROM folders WHERE id = ?", (parent_id,)
+            ).fetchone()
+            if parent is None:
+                break
+            path.append(serialize_folder(parent))
+            parent_id = parent["parent_id"]
+    return list(reversed(path))

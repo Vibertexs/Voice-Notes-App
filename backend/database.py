@@ -5,6 +5,7 @@ import os
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
+from uuid import uuid4
 
 from fastapi import HTTPException
 
@@ -362,23 +363,6 @@ def get_folder(folder_id: str) -> sqlite3.Row:
     if row is None:
         raise HTTPException(status_code=404, detail="Folder not found.")
     return row
-
-
-def get_folder_path(folder: sqlite3.Row | None) -> list[dict[str, object]]:
-    if folder is None:
-        return []
-    path = [serialize_folder(folder)]
-    parent_id = folder["parent_id"]
-    with connect_database() as connection:
-        while parent_id:
-            parent = connection.execute(
-                "SELECT * FROM folders WHERE id = ?", (parent_id,)
-            ).fetchone()
-            if parent is None:
-                break
-            path.append(serialize_folder(parent))
-            parent_id = parent["parent_id"]
-    return list(reversed(path))
 
 
 def get_lecture(lecture_id: str) -> sqlite3.Row:

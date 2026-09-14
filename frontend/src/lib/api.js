@@ -51,6 +51,9 @@ export const libraryApi = {
   askQuestion: (workspaceId, model, question) => api(`/api/workspaces/${workspaceId}/ai/questions`, { method: 'POST', body: { model, question } }),
   aiStatus: () => api('/api/ai/status'),
   search: (query) => api(`/api/search?q=${encodeURIComponent(query)}`),
+  aiMessages: (workspaceId) => api(`/api/workspaces/${workspaceId}/ai/messages`),
+  clearAiMessages: (workspaceId) => api(`/api/workspaces/${workspaceId}/ai/messages`, { method: 'DELETE' }),
+  saveAiNotes: (workspaceId, model, noteBody) => api(`/api/workspaces/${workspaceId}/ai/notes`, { method: 'PUT', body: { model, note_body: noteBody } }),
 };
 
 export async function uploadRecording({ blob, title, captureNotes, folderId, workspaceId }) {

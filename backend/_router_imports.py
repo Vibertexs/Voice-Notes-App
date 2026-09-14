@@ -30,13 +30,13 @@ from backend.config import (
 from backend.database import (
     connect_database,
     get_folder,
-    get_folder_path,
     get_lecture,
     get_material,
     get_workspace,
 )
 from backend.schemas import *  # noqa: F401,F403  (request models)
 from backend.serializers import (
+    get_folder_path,
     serialize_ai_message,
     serialize_folder,
     serialize_lecture,
