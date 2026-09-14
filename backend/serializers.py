@@ -25,6 +25,7 @@ def serialize_folder(row: sqlite3.Row) -> dict[str, object]:
         "parent_id": row["parent_id"],
         "color": row["color"],
         "created_at": row["created_at"],
+        "archived": bool(row["archived_at"]) if "archived_at" in row.keys() else False,
     }
 
 

@@ -198,6 +198,11 @@ def initialize_database() -> None:
             "CREATE INDEX IF NOT EXISTS idx_folder_ai_messages_created "
             "ON folder_ai_messages (folder_id, created_at)"
         )
+        folder_columns = {row["name"] for row in connection.execute("PRAGMA table_info(folders)")}
+        if "archived_at" not in folder_columns:
+            connection.execute("ALTER TABLE folders ADD COLUMN archived_at TEXT")
+        # A folder is a class, and classes do not live inside other classes.
+        connection.execute("UPDATE folders SET parent_id = NULL WHERE parent_id IS NOT NULL")
         columns = {row["name"] for row in connection.execute("PRAGMA table_info(lectures)")}
         if "folder_id" not in columns:
             connection.execute("ALTER TABLE lectures ADD COLUMN folder_id TEXT")

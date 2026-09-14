@@ -24,10 +24,16 @@ export async function api(path, options = {}) {
 }
 
 export const libraryApi = {
-  library: (folderId) => api(`/api/library${folderId ? `?folder_id=${encodeURIComponent(folderId)}` : ''}`),
+  library: (folderId, { archived = false } = {}) => {
+    const params = new URLSearchParams();
+    if (folderId) params.set('folder_id', folderId);
+    if (archived) params.set('archived', 'true');
+    return api(`/api/library${params.size ? `?${params}` : ''}`);
+  },
   allFolders: () => api('/api/folders'),
   createFolder: (folder) => api('/api/folders', { method: 'POST', body: folder }),
   updateFolder: (id, update) => api(`/api/folders/${id}`, { method: 'PATCH', body: update }),
+  archiveFolder: (id, archived) => api(`/api/folders/${id}`, { method: 'PATCH', body: { archived } }),
   deleteFolder: (id) => api(`/api/folders/${id}`, { method: 'DELETE' }),
   workspace: (id) => api(`/api/workspaces/${id}`),
   updateWorkspace: (id, update) => api(`/api/workspaces/${id}`, { method: 'PATCH', body: update }),

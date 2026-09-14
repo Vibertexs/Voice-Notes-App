@@ -9,12 +9,15 @@ from pydantic import BaseModel, Field
 
 class FolderCreate(BaseModel):
     name: str = Field(min_length=1, max_length=120)
-    parent_id: str | None = None
     color: str = "blue"
 
 
 class FolderUpdate(BaseModel):
-    color: str = Field(min_length=1, max_length=20)
+    """A class can be renamed, recoloured, or put away at the end of term."""
+
+    name: str | None = Field(default=None, min_length=1, max_length=120)
+    color: str | None = Field(default=None, min_length=1, max_length=20)
+    archived: bool | None = None
 
 
 class LectureUpdate(BaseModel):

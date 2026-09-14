@@ -20,13 +20,14 @@ def health() -> dict[str, str]:
 
 
 @router.get("/api/library")
-def list_library(folder_id: str | None = Query(default=None)) -> dict[str, object]:
+def list_library(
+    folder_id: str | None = Query(default=None),
+    archived: bool = Query(default=False),
+) -> dict[str, object]:
     current_folder = get_folder(folder_id) if folder_id else None
     with connect_database() as connection:
         if folder_id:
-            folders = connection.execute(
-                "SELECT * FROM folders WHERE parent_id = ? ORDER BY name COLLATE NOCASE", (folder_id,)
-            ).fetchall()
+            folders = []
             workspaces = connection.execute(
                 """
                 SELECT workspaces.*, COUNT(lectures.id) AS session_count
@@ -43,7 +44,8 @@ def list_library(folder_id: str | None = Query(default=None)) -> dict[str, objec
             ).fetchall()
         else:
             folders = connection.execute(
-                "SELECT * FROM folders WHERE parent_id IS NULL ORDER BY name COLLATE NOCASE"
+                "SELECT * FROM folders WHERE archived_at IS %s NULL"
+                " ORDER BY name COLLATE NOCASE" % ("NOT" if archived else "")
             ).fetchall()
             workspaces = connection.execute(
                 """
