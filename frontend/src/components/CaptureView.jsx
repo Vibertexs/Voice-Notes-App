@@ -110,6 +110,13 @@ export default function CaptureView({ context, onSaved, onCancel, notify }) {
     <header className="capture-heading"><button className="back-link" onClick={onCancel}>‹ Back</button><p className="eyebrow">{context.workspace ? 'Continuing lecture' : 'New lecture'}</p><h1>{context.workspace ? context.workspace.title : 'Capture a lecture'}</h1><p className="muted">Saves to <strong>{location}</strong></p>{!context.workspace && <label className="capture-title-field">Recording name <small>optional</small><input value={title} maxLength="180" onChange={(event) => setTitle(event.target.value)} placeholder="A timestamped lecture name is used if you leave this blank" /></label>}</header>
     <div className="capture-grid">
       <section className={`capture-station ${phase}`}>
+        {phase === 'saving' && <div className="save-veil" role="status" aria-live="polite">
+          <span className="save-check" aria-hidden="true">
+            <svg viewBox="0 0 52 52"><circle cx="26" cy="26" r="24" /><path d="M14 27l8 8 16-16" /></svg>
+          </span>
+          <strong>Recording saved</strong>
+          <span>Transcribing with the high-accuracy model…</span>
+        </div>}
         <div className="transport" data-phase={phase}>
           <div className="phase-label">{phase === 'ready' ? 'Ready' : phase === 'recording' ? 'Recording' : phase === 'paused' ? 'Paused' : 'Saving'}</div>
           <div className="recording-timer">{elapsedLabel(elapsed)}</div>

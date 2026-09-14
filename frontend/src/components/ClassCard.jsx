@@ -2,39 +2,34 @@ import { useEffect, useRef, useState } from 'react';
 
 const COLORS = ['blue', 'violet', 'rose', 'coral', 'amber', 'lime', 'mint', 'sky', 'slate'];
 
-const relativeDate = (value) => {
-  if (!value) return 'No lectures yet';
-  const days = Math.floor((Date.now() - new Date(value).getTime()) / 86_400_000);
-  if (days <= 0) return 'Today';
-  if (days === 1) return 'Yesterday';
-  if (days < 30) return `${days} days ago`;
-  const months = Math.round(days / 30);
-  return `${months} month${months === 1 ? '' : 's'} ago`;
-};
-
 /**
- * A class drawn as a folder: a tab, sheets peeking over the top, and the
- * details a student actually wants at a glance. The corner button sets colour.
+ * A class, drawn as a folder. The name carries the meaning, so the card shows
+ * one quiet line and nothing else. Everything you can do to the class lives
+ * behind the corner dial, which only opens when you choose it.
  */
 export default function ClassCard({ folder, onOpen, onArchive, onRecolor, onDelete, onDropWorkspace }) {
   const [over, setOver] = useState(false);
-  const [picking, setPicking] = useState(false);
+  const [menu, setMenu] = useState(false);
   const cardRef = useRef(null);
 
   useEffect(() => {
-    if (!picking) return undefined;
+    if (!menu) return undefined;
     const close = (event) => {
-      if (!cardRef.current?.contains(event.target)) setPicking(false);
+      if (!cardRef.current?.contains(event.target)) setMenu(false);
     };
+    const escape = (event) => { if (event.key === 'Escape') setMenu(false); };
     document.addEventListener('pointerdown', close);
-    return () => document.removeEventListener('pointerdown', close);
-  }, [picking]);
+    document.addEventListener('keydown', escape);
+    return () => {
+      document.removeEventListener('pointerdown', close);
+      document.removeEventListener('keydown', escape);
+    };
+  }, [menu]);
 
   const lectures = folder.lecture_count ?? 0;
-  const recordings = folder.recording_count ?? 0;
-  const files = folder.file_count ?? 0;
+  const summary = lectures === 0 ? 'Empty' : `${lectures} lecture${lectures === 1 ? '' : 's'}`;
 
-  return <div className={`class-card ${folder.color} ${over ? 'drop-active' : ''}`} ref={cardRef}>
+  return <div className={`class-card ${folder.color} ${over ? 'drop-active' : ''} ${menu ? 'menu-open' : ''}`} ref={cardRef}>
     <span className="class-sheets" aria-hidden="true"><i /><i /><i /></span>
 
     <button
@@ -47,52 +42,35 @@ export default function ClassCard({ folder, onOpen, onArchive, onRecolor, onDele
     >
       <span className="class-tab" aria-hidden="true" />
       <span className="class-face">
-        <span className="class-title">
-          <span className="class-glyph" aria-hidden="true">🗀</span>
-          <span className="class-name">{folder.name}</span>
-        </span>
-
-        <span className="class-rows">
-          <span className="class-row"><span>Lectures</span><b>{lectures}</b></span>
-          <span className="class-row"><span>Recordings</span><b>{recordings}</b></span>
-          <span className="class-row"><span>Files</span><b>{files}</b></span>
-          <span className="class-row"><span>Last updated</span><b>{relativeDate(folder.updated_at)}</b></span>
-        </span>
-
-        {over && <span className="class-drop-hint">Drop to file here</span>}
+        <span className="class-name">{folder.name}</span>
+        <span className="class-meta">{over ? 'Drop to file here' : summary}</span>
       </span>
     </button>
 
     <button
-      className="class-archive"
-      onClick={() => onArchive(folder.id, !folder.archived)}
-      aria-label={folder.archived ? `Restore ${folder.name}` : `Archive ${folder.name}`}
-      title={folder.archived ? 'Restore this class' : 'Archive this class'}
-    >{folder.archived ? '↩' : '⤓'}</button>
-
-    <button
-      className="class-delete"
-      onClick={() => onDelete(folder)}
-      aria-label={`Delete ${folder.name}`}
-      title="Delete this class"
-    >×</button>
-
-    <button
-      className="class-color"
-      onClick={() => setPicking((open) => !open)}
-      aria-label={`Change the colour of ${folder.name}`}
-      aria-expanded={picking}
-      title="Class colour"
+      className="class-dial"
+      onClick={() => setMenu((open) => !open)}
+      aria-label={`Options for ${folder.name}`}
+      aria-expanded={menu}
+      aria-haspopup="menu"
     ><span aria-hidden="true" /></button>
 
-    {picking && <div className="class-swatches" role="menu" aria-label={`Colour for ${folder.name}`}>
-      {COLORS.map((color) => <button
-        key={color}
-        className={`class-swatch ${color} ${color === folder.color ? 'current' : ''}`}
-        role="menuitem"
-        aria-label={color}
-        onClick={() => { onRecolor(folder.id, color); setPicking(false); }}
-      />)}
+    {menu && <div className="class-menu" role="menu" aria-label={`${folder.name} options`}>
+      <div className="class-menu-swatches">
+        {COLORS.map((color) => <button
+          key={color}
+          className={`class-swatch ${color} ${color === folder.color ? 'current' : ''}`}
+          role="menuitem"
+          aria-label={`Colour ${color}`}
+          onClick={() => { onRecolor(folder.id, color); setMenu(false); }}
+        />)}
+      </div>
+      <button className="class-menu-item" role="menuitem" onClick={() => { onArchive(folder.id, !folder.archived); setMenu(false); }}>
+        {folder.archived ? 'Restore class' : 'Archive class'}
+      </button>
+      <button className="class-menu-item danger" role="menuitem" onClick={() => { onDelete(folder); setMenu(false); }}>
+        Delete class
+      </button>
     </div>}
   </div>;
 }
