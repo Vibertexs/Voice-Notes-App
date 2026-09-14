@@ -1,12 +1,18 @@
 from __future__ import annotations
 
+import json
 import mimetypes
+import os
 import re
 import shutil
 import sqlite3
 import tempfile
 import zipfile
 from collections import Counter
+from concurrent.futures import ThreadPoolExecutor
+from threading import Lock
+from time import sleep
+from time import monotonic
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -14,7 +20,7 @@ from uuid import uuid4
 
 import requests
 from docx import Document
-from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse
 from pypdf import PdfReader
 from pydantic import BaseModel, Field
@@ -23,11 +29,13 @@ from pptx import Presentation
 from transcription import transcribe_audio
 
 PROJECT_ROOT = Path(__file__).resolve().parent
-DATA_DIR = PROJECT_ROOT / "data"
+# Overridable so a test run can point at a scratch library instead of the real one.
+DATA_DIR = Path(os.environ.get("VOICE_NOTES_DATA") or (PROJECT_ROOT / "data"))
 AUDIO_DIR = DATA_DIR / "audio"
 MATERIALS_DIR = DATA_DIR / "materials"
+CAPTURES_DIR = DATA_DIR / "captures"
 DATABASE_PATH = DATA_DIR / "voice_notes.db"
-MAX_UPLOAD_BYTES = 25 * 1024 * 1024
+MAX_UPLOAD_BYTES = 256 * 1024 * 1024
 MAX_MATERIAL_BYTES = 25 * 1024 * 1024
 MAX_MATERIALS_PER_WORKSPACE = 30
 MAX_MATERIAL_EXTRACTED_CHARS = 100_000
@@ -104,8 +112,12 @@ class LocalAINotesUpdate(LocalAIRequest):
 
 
 def connect_database() -> sqlite3.Connection:
-    connection = sqlite3.connect(DATABASE_PATH)
+    # WAL plus a busy timeout so the transcription worker and the web request
+    # can touch the database at the same time without "database is locked".
+    connection = sqlite3.connect(DATABASE_PATH, timeout=30)
     connection.row_factory = sqlite3.Row
+    connection.execute("PRAGMA journal_mode = WAL")
+    connection.execute("PRAGMA busy_timeout = 30000")
     return connection
 
 
@@ -113,6 +125,7 @@ def initialize_database() -> None:
     DATA_DIR.mkdir(exist_ok=True)
     AUDIO_DIR.mkdir(exist_ok=True)
     MATERIALS_DIR.mkdir(exist_ok=True)
+    CAPTURES_DIR.mkdir(exist_ok=True)
     with connect_database() as connection:
         connection.execute(
             """
@@ -165,6 +178,42 @@ def initialize_database() -> None:
                 workspace_id TEXT PRIMARY KEY,
                 note_body TEXT NOT NULL,
                 updated_at TEXT NOT NULL
+            )
+            """
+        )
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS captures (
+                id TEXT PRIMARY KEY,
+                created_at TEXT NOT NULL,
+                model TEXT NOT NULL,
+                filename TEXT NOT NULL,
+                processed_seconds REAL NOT NULL DEFAULT 0,
+                segments_json TEXT NOT NULL DEFAULT '[]',
+                status TEXT NOT NULL DEFAULT 'live'
+            )
+            """
+        )
+        connection.execute(
+            """
+            CREATE VIRTUAL TABLE IF NOT EXISTS search_index USING fts5(
+                body,
+                kind UNINDEXED,
+                ref_id UNINDEXED,
+                start_seconds UNINDEXED,
+                tokenize = 'porter unicode61'
+            )
+            """
+        )
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS transcript_segments (
+                id TEXT PRIMARY KEY,
+                lecture_id TEXT NOT NULL,
+                position INTEGER NOT NULL,
+                start_seconds REAL NOT NULL,
+                end_seconds REAL NOT NULL,
+                text TEXT NOT NULL
             )
             """
         )
@@ -246,6 +295,10 @@ def initialize_database() -> None:
             "ON session_markers (lecture_id, time_seconds)"
         )
         connection.execute(
+            "CREATE INDEX IF NOT EXISTS idx_transcript_segments_lecture_position "
+            "ON transcript_segments (lecture_id, position)"
+        )
+        connection.execute(
             "CREATE INDEX IF NOT EXISTS idx_workspace_ai_messages_created "
             "ON workspace_ai_messages (workspace_id, created_at)"
         )
@@ -264,6 +317,23 @@ def initialize_database() -> None:
             )
         if "capture_notes_workspace_id" not in columns:
             connection.execute("ALTER TABLE lectures ADD COLUMN capture_notes_workspace_id TEXT")
+        if "transcription_status" not in columns:
+            # Recordings that already exist finished transcribing long ago.
+            connection.execute(
+                "ALTER TABLE lectures ADD COLUMN transcription_status TEXT NOT NULL DEFAULT 'ready'"
+            )
+        if "transcription_progress" not in columns:
+            connection.execute(
+                "ALTER TABLE lectures ADD COLUMN transcription_progress REAL NOT NULL DEFAULT 1"
+            )
+        if "duration_seconds" not in columns:
+            connection.execute("ALTER TABLE lectures ADD COLUMN duration_seconds REAL")
+        if "transcription_eta_seconds" not in columns:
+            connection.execute("ALTER TABLE lectures ADD COLUMN transcription_eta_seconds REAL")
+        if "transcription_resume_from" not in columns:
+            connection.execute(
+                "ALTER TABLE lectures ADD COLUMN transcription_resume_from REAL NOT NULL DEFAULT 0"
+            )
         material_columns = {row["name"] for row in connection.execute("PRAGMA table_info(materials)")}
         if "extracted_text" not in material_columns:
             connection.execute("ALTER TABLE materials ADD COLUMN extracted_text TEXT NOT NULL DEFAULT ''")
@@ -391,7 +461,32 @@ def initialize_database() -> None:
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     initialize_database()
+    with connect_database() as connection:
+        indexed = connection.execute("SELECT COUNT(*) AS total FROM search_index").fetchone()["total"]
+        if not indexed:
+            rebuild_search_index(connection)
+        unfinished = [
+            row["id"]
+            for row in connection.execute(
+                "SELECT id FROM lectures WHERE transcription_status IN ('pending', 'running')"
+            ).fetchall()
+        ]
+        # Pick each one back up where its last committed line ended.
+        for lecture_id in unfinished:
+            reached = connection.execute(
+                "SELECT COALESCE(MAX(end_seconds), 0) AS reached FROM transcript_segments WHERE lecture_id = ?",
+                (lecture_id,),
+            ).fetchone()["reached"]
+            if reached:
+                connection.execute(
+                    "UPDATE lectures SET transcription_resume_from = ? WHERE id = ?",
+                    (reached, lecture_id),
+                )
+    for lecture_id in unfinished:
+        queue_transcription(lecture_id)
+    sweep_orphan_captures()
     yield
+    TRANSCRIBER.shutdown(wait=False, cancel_futures=True)
 
 
 app = FastAPI(title="Class Notes", lifespan=lifespan)
@@ -894,6 +989,429 @@ def serialize_material(row: sqlite3.Row) -> dict[str, object]:
     }
 
 
+# One at a time: transcription is CPU bound, so a queue beats thrashing.
+TRANSCRIBER = ThreadPoolExecutor(max_workers=1, thread_name_prefix="transcribe")
+
+
+# Measured on a CPU-only laptop: how many seconds of audio each model chews
+# through per second of wall clock. Only used until real progress arrives.
+MODEL_REALTIME_FACTOR = {"tiny.en": 4.9, "base.en": 2.2, "small.en": 0.9}
+
+
+# Capture ids with a tail pass queued or running, so chunks cannot pile up jobs.
+LIVE_JOBS: set[str] = set()
+LIVE_JOBS_LOCK = Lock()
+
+
+def remove_capture_file(filename: str) -> bool:
+    """Delete a capture file, tolerating a live decode still holding it open."""
+    target = CAPTURES_DIR / filename
+    for attempt in range(4):
+        try:
+            target.unlink(missing_ok=True)
+            return True
+        except PermissionError:
+            sleep(0.25 * (attempt + 1))
+    return False
+
+
+def sweep_orphan_captures() -> int:
+    """Drop capture files with no row left, including any a lock stranded earlier."""
+    if not CAPTURES_DIR.exists():
+        return 0
+    with connect_database() as connection:
+        known = {row["filename"] for row in connection.execute("SELECT filename FROM captures")}
+    removed = 0
+    for leftover in CAPTURES_DIR.iterdir():
+        if leftover.is_file() and leftover.name not in known:
+            try:
+                leftover.unlink()
+                removed += 1
+            except OSError:
+                pass
+    return removed
+
+
+def read_capture(capture_id: str) -> sqlite3.Row:
+    with connect_database() as connection:
+        row = connection.execute("SELECT * FROM captures WHERE id = ?", (capture_id,)).fetchone()
+    if row is None:
+        raise HTTPException(status_code=404, detail="That recording session was not found.")
+    return row
+
+
+def transcribe_capture_tail(capture_id: str) -> None:
+    """Transcribe whatever new audio has arrived for a capture that is still running."""
+    try:
+        with connect_database() as connection:
+            row = connection.execute(
+                "SELECT * FROM captures WHERE id = ?", (capture_id,)
+            ).fetchone()
+        if row is None or row["status"] != "live":
+            return
+        capture_path = CAPTURES_DIR / row["filename"]
+        if not capture_path.exists() or capture_path.stat().st_size == 0:
+            return
+        processed = float(row["processed_seconds"] or 0.0)
+        result = transcribe_audio(
+            capture_path, model_name=row["model"], start_seconds=processed
+        )
+        fresh = result.get("segments") or []
+        reached = float(result.get("duration_seconds") or processed)
+        if not fresh and reached <= processed:
+            return
+        with connect_database() as connection:
+            current = connection.execute(
+                "SELECT segments_json, processed_seconds, status FROM captures WHERE id = ?",
+                (capture_id,),
+            ).fetchone()
+            if current is None or current["status"] != "live":
+                return
+            merged = json.loads(current["segments_json"] or "[]")
+            merged.extend(fresh)
+            connection.execute(
+                "UPDATE captures SET segments_json = ?, processed_seconds = ? WHERE id = ?",
+                (json.dumps(merged), max(reached, float(current["processed_seconds"] or 0.0)), capture_id),
+            )
+    except Exception:
+        # A live pass is best effort; the final transcription still covers everything.
+        pass
+    finally:
+        with LIVE_JOBS_LOCK:
+            LIVE_JOBS.discard(capture_id)
+
+
+def queue_capture_tail(capture_id: str) -> None:
+    with LIVE_JOBS_LOCK:
+        if capture_id in LIVE_JOBS:
+            return
+        LIVE_JOBS.add(capture_id)
+    TRANSCRIBER.submit(transcribe_capture_tail, capture_id)
+
+
+class TranscriptionCancelled(Exception):
+    """Raised inside the worker when its lecture disappears mid-run."""
+
+
+def flush_progress_segments(
+    lecture_id: str,
+    pending: list[dict[str, object]],
+    checkpoint: list[float],
+    reached: float,
+) -> None:
+    """Persist finished lines mid-run so a restart resumes instead of starting over."""
+    if not pending:
+        return
+    ready = [item for item in pending if float(item.get("end", 0.0)) <= reached]
+    if not ready:
+        return
+    del pending[: len(ready)]
+    with connect_database() as connection:
+        alive = connection.execute(
+            "SELECT 1 FROM lectures WHERE id = ?", (lecture_id,)
+        ).fetchone()
+        if alive is None:
+            raise TranscriptionCancelled()
+        start_position = connection.execute(
+            "SELECT COALESCE(MAX(position), -1) + 1 AS next FROM transcript_segments WHERE lecture_id = ?",
+            (lecture_id,),
+        ).fetchone()["next"]
+        rows = []
+        for item in ready:
+            text = str(item.get("text", "")).strip()
+            if not text:
+                continue
+            begin = max(0.0, float(item.get("start", 0.0)))
+            finish = max(begin, float(item.get("end", begin)))
+            rows.append((str(uuid4()), lecture_id, start_position + len(rows), begin, finish, text))
+        if rows:
+            connection.executemany(
+                """
+                INSERT INTO transcript_segments (
+                    id, lecture_id, position, start_seconds, end_seconds, text
+                ) VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                rows,
+            )
+            checkpoint[0] = max(checkpoint[0], float(ready[-1]["end"]))
+            connection.execute(
+                "UPDATE lectures SET transcription_resume_from = ? WHERE id = ?",
+                (checkpoint[0], lecture_id),
+            )
+
+
+def set_transcription_status(lecture_id: str, status: str) -> None:
+    with connect_database() as connection:
+        connection.execute(
+            "UPDATE lectures SET transcription_status = ? WHERE id = ?", (status, lecture_id)
+        )
+
+
+def transcribe_lecture_now(lecture_id: str) -> None:
+    """Transcribe one saved recording in the background and store what it finds."""
+    try:
+        with connect_database() as connection:
+            row = connection.execute(
+                "SELECT audio_filename, model, transcription_resume_from FROM lectures WHERE id = ?",
+                (lecture_id,),
+            ).fetchone()
+        if row is None:
+            return
+        audio_path = AUDIO_DIR / row["audio_filename"]
+        if not audio_path.exists():
+            set_transcription_status(lecture_id, "failed")
+            return
+        set_transcription_status(lecture_id, "running")
+        started = monotonic()
+        last_write = [0.0]
+        anchor: list[tuple[float, float] | None] = [None]
+
+        def report(done_seconds: float, total_seconds: float) -> None:
+            if total_seconds <= 0:
+                return
+            now = monotonic()
+            finished = done_seconds >= total_seconds
+            # Throttle: a 50 minute lecture yields hundreds of segments.
+            if not finished and now - last_write[0] < 2.0:
+                return
+            last_write[0] = now
+            progress = max(0.0, min(1.0, done_seconds / total_seconds))
+            flush_progress_segments(lecture_id, transcript_so_far, checkpoint, done_seconds)
+
+            # Default to the model's measured pace. Extrapolating from wall-clock
+            # elapsed is wrong early on, because loading the model is a fixed cost
+            # that does not scale with progress.
+            pace = MODEL_REALTIME_FACTOR.get(row["model"], 2.0)
+            eta = max(0.0, (total_seconds / pace) - (now - started))
+
+            if progress > 0:
+                if anchor[0] is None:
+                    anchor[0] = (now, progress)
+                else:
+                    anchor_time, anchor_progress = anchor[0]
+                    moved = progress - anchor_progress
+                    span = now - anchor_time
+                    # Measuring between two progress points is immune to the
+                    # model-load cost, so a small delta is already trustworthy.
+                    if moved >= 0.05 and span >= 2.0:
+                        eta = (1 - progress) * span / moved
+            with connect_database() as connection:
+                touched = connection.execute(
+                    """
+                    UPDATE lectures
+                    SET transcription_progress = ?, duration_seconds = ?,
+                        transcription_eta_seconds = ?
+                    WHERE id = ?
+                    """,
+                    (progress, total_seconds, None if finished else round(eta, 1), lecture_id),
+                ).rowcount
+            if not touched:
+                raise TranscriptionCancelled()
+
+        resume_from = float(row["transcription_resume_from"] or 0.0)
+        transcript_so_far: list[dict[str, object]] = []
+        checkpoint = [resume_from]
+        transcription = transcribe_audio(
+            audio_path,
+            model_name=row["model"],
+            on_progress=report,
+            start_seconds=resume_from,
+            on_segment=transcript_so_far.append,
+        )
+        with connect_database() as connection:
+            still_there = connection.execute(
+                "SELECT id FROM lectures WHERE id = ?", (lecture_id,)
+            ).fetchone()
+            if still_there is None:
+                return
+            written_to = checkpoint[0]
+            if written_to > 0:
+                # Keep everything already committed; only the unflushed tail is new.
+                connection.execute(
+                    "DELETE FROM transcript_segments WHERE lecture_id = ? AND start_seconds >= ?",
+                    (lecture_id, max(0.0, written_to - 0.01)),
+                )
+                start_position = connection.execute(
+                    "SELECT COALESCE(MAX(position), -1) + 1 AS next FROM transcript_segments WHERE lecture_id = ?",
+                    (lecture_id,),
+                ).fetchone()["next"]
+                rows = []
+                for segment in transcription.get("segments") or []:
+                    text = str(segment.get("text", "")).strip()
+                    if not text:
+                        continue
+                    begin = max(0.0, float(segment.get("start", 0.0)))
+                    if begin < written_to - 0.01:
+                        continue
+                    finish = max(begin, float(segment.get("end", begin)))
+                    rows.append(
+                        (str(uuid4()), lecture_id, start_position + len(rows), begin, finish, text)
+                    )
+                if rows:
+                    connection.executemany(
+                        """
+                        INSERT INTO transcript_segments (
+                            id, lecture_id, position, start_seconds, end_seconds, text
+                        ) VALUES (?, ?, ?, ?, ?, ?)
+                        """,
+                        rows,
+                    )
+            else:
+                replace_transcript_segments(connection, lecture_id, transcription.get("segments"))
+            stored = read_transcript_segments(connection, lecture_id)
+            full_text = " ".join(item["text"] for item in stored).strip() or transcription["text"]
+            connection.execute(
+                """
+                UPDATE lectures
+                SET transcript = ?, transcription_status = 'ready',
+                    transcription_progress = 1, transcription_eta_seconds = NULL,
+                    transcription_resume_from = 0,
+                    duration_seconds = COALESCE(?, duration_seconds)
+                WHERE id = ?
+                """,
+                (full_text, transcription.get("duration_seconds"), lecture_id),
+            )
+            index_lecture_transcript(connection, lecture_id)
+    except TranscriptionCancelled:
+        # The recording was deleted while it was being transcribed; nothing to record.
+        with connect_database() as connection:
+            connection.execute(
+                "DELETE FROM transcript_segments WHERE lecture_id = ?", (lecture_id,)
+            )
+            drop_from_search_index(connection, "transcript", lecture_id)
+    except Exception:
+        set_transcription_status(lecture_id, "failed")
+
+
+def queue_transcription(lecture_id: str) -> None:
+    with connect_database() as connection:
+        connection.execute(
+            """
+            UPDATE lectures
+            SET transcription_status = 'pending', transcription_progress = 0,
+                transcription_eta_seconds = NULL
+            WHERE id = ?
+            """,
+            (lecture_id,),
+        )
+    TRANSCRIBER.submit(transcribe_lecture_now, lecture_id)
+
+
+def index_lecture_transcript(connection: sqlite3.Connection, lecture_id: str) -> None:
+    """Mirror one recording's timed lines into the search index."""
+    connection.execute(
+        "DELETE FROM search_index WHERE kind = 'transcript' AND ref_id = ?", (lecture_id,)
+    )
+    rows = connection.execute(
+        "SELECT start_seconds, text FROM transcript_segments WHERE lecture_id = ? ORDER BY position",
+        (lecture_id,),
+    ).fetchall()
+    if rows:
+        connection.executemany(
+            "INSERT INTO search_index (body, kind, ref_id, start_seconds) VALUES (?, 'transcript', ?, ?)",
+            [(row["text"], lecture_id, row["start_seconds"]) for row in rows],
+        )
+        return
+    # Recordings captured before timed lines existed are still worth finding.
+    flat = connection.execute(
+        "SELECT transcript FROM lectures WHERE id = ?", (lecture_id,)
+    ).fetchone()
+    if flat and flat["transcript"].strip():
+        connection.execute(
+            "INSERT INTO search_index (body, kind, ref_id, start_seconds) VALUES (?, 'transcript', ?, NULL)",
+            (flat["transcript"], lecture_id),
+        )
+
+
+def index_workspace_note(connection: sqlite3.Connection, workspace_id: str) -> None:
+    connection.execute("DELETE FROM search_index WHERE kind = 'note' AND ref_id = ?", (workspace_id,))
+    row = connection.execute(
+        "SELECT note_body FROM workspace_notes WHERE workspace_id = ?", (workspace_id,)
+    ).fetchone()
+    if row and row["note_body"].strip():
+        connection.execute(
+            "INSERT INTO search_index (body, kind, ref_id, start_seconds) VALUES (?, 'note', ?, NULL)",
+            (row["note_body"], workspace_id),
+        )
+
+
+def index_material(connection: sqlite3.Connection, material_id: str) -> None:
+    connection.execute(
+        "DELETE FROM search_index WHERE kind = 'material' AND ref_id = ?", (material_id,)
+    )
+    row = connection.execute(
+        "SELECT original_filename, extracted_text FROM materials WHERE id = ?", (material_id,)
+    ).fetchone()
+    if row and (row["extracted_text"].strip() or row["original_filename"].strip()):
+        body = f"{row['original_filename']}\n{row['extracted_text']}".strip()
+        connection.execute(
+            "INSERT INTO search_index (body, kind, ref_id, start_seconds) VALUES (?, 'material', ?, NULL)",
+            (body, material_id),
+        )
+
+
+def drop_from_search_index(connection: sqlite3.Connection, kind: str, ref_id: str) -> None:
+    connection.execute("DELETE FROM search_index WHERE kind = ? AND ref_id = ?", (kind, ref_id))
+
+
+def rebuild_search_index(connection: sqlite3.Connection) -> int:
+    """Rebuild every row from the source tables, so the index can never drift for long."""
+    connection.execute("DELETE FROM search_index")
+    for row in connection.execute("SELECT id FROM lectures").fetchall():
+        index_lecture_transcript(connection, row["id"])
+    for row in connection.execute("SELECT workspace_id FROM workspace_notes").fetchall():
+        index_workspace_note(connection, row["workspace_id"])
+    for row in connection.execute("SELECT id FROM materials").fetchall():
+        index_material(connection, row["id"])
+    return connection.execute("SELECT COUNT(*) AS total FROM search_index").fetchone()["total"]
+
+
+def replace_transcript_segments(
+    connection: sqlite3.Connection,
+    lecture_id: str,
+    segments: list[dict[str, object]] | None,
+) -> int:
+    """Store the timed lines Whisper produced so the transcript can seek the audio."""
+    connection.execute("DELETE FROM transcript_segments WHERE lecture_id = ?", (lecture_id,))
+    rows: list[tuple[object, ...]] = []
+    for segment in segments or []:
+        text = str(segment.get("text", "")).strip()
+        if not text:
+            continue
+        try:
+            start = max(0.0, float(segment.get("start", 0.0)))
+            end = float(segment.get("end", start))
+        except (TypeError, ValueError):
+            continue
+        rows.append((str(uuid4()), lecture_id, len(rows), start, max(start, end), text))
+    if rows:
+        connection.executemany(
+            """
+            INSERT INTO transcript_segments (
+                id, lecture_id, position, start_seconds, end_seconds, text
+            ) VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            rows,
+        )
+    index_lecture_transcript(connection, lecture_id)
+    return len(rows)
+
+
+def read_transcript_segments(
+    connection: sqlite3.Connection, lecture_id: str
+) -> list[dict[str, object]]:
+    rows = connection.execute(
+        """
+        SELECT start_seconds, end_seconds, text
+        FROM transcript_segments
+        WHERE lecture_id = ?
+        ORDER BY position ASC
+        """,
+        (lecture_id,),
+    ).fetchall()
+    return [dict(row) for row in rows]
+
+
 def serialize_lecture(row: sqlite3.Row, *, include_content: bool) -> dict[str, object]:
     result: dict[str, object] = {
         "id": row["id"],
@@ -905,6 +1423,18 @@ def serialize_lecture(row: sqlite3.Row, *, include_content: bool) -> dict[str, o
         "created_at": row["created_at"],
         "model": row["model"],
         "audio_url": f"/api/lectures/{row['id']}/audio",
+        "transcription_status": (
+            row["transcription_status"] if "transcription_status" in row.keys() else "ready"
+        ),
+        "transcription_progress": (
+            row["transcription_progress"] if "transcription_progress" in row.keys() else 1
+        ),
+        "transcription_eta_seconds": (
+            row["transcription_eta_seconds"] if "transcription_eta_seconds" in row.keys() else None
+        ),
+        "duration_seconds": (
+            row["duration_seconds"] if "duration_seconds" in row.keys() else None
+        ),
     }
     if include_content:
         result["transcript"] = row["transcript"]
@@ -919,6 +1449,7 @@ def serialize_lecture(row: sqlite3.Row, *, include_content: bool) -> dict[str, o
                 """,
                 (row["id"],),
             ).fetchall()
+            result["segments"] = read_transcript_segments(connection, row["id"])
         result["markers"] = [dict(marker) for marker in markers]
     return result
 
@@ -1219,24 +1750,32 @@ def update_workspace(workspace_id: str, update: WorkspaceUpdate) -> dict[str, ob
 
 @app.delete("/api/workspaces/{workspace_id}")
 def delete_workspace(workspace_id: str) -> dict[str, object]:
-    """Delete a lecture note while preserving its sibling recordings and files."""
+    """Delete a lecture note together with every recording saved inside it."""
     get_workspace(workspace_id)
     with connect_database() as connection:
-        released_recording_count = connection.execute(
-            """
-            UPDATE lectures
-            SET workspace_id = NULL, is_standalone = 1, capture_notes_workspace_id = NULL
-            WHERE workspace_id = ?
-            """,
-            (workspace_id,),
-        ).rowcount
+        recordings = connection.execute(
+            "SELECT id, audio_filename FROM lectures WHERE workspace_id = ?", (workspace_id,)
+        ).fetchall()
+        for recording in recordings:
+            connection.execute(
+                "DELETE FROM session_markers WHERE lecture_id = ?", (recording["id"],)
+            )
+            connection.execute(
+                "DELETE FROM transcript_segments WHERE lecture_id = ?", (recording["id"],)
+            )
+            drop_from_search_index(connection, "transcript", recording["id"])
+        connection.execute("DELETE FROM lectures WHERE workspace_id = ?", (workspace_id,))
         connection.execute("DELETE FROM workspace_notes WHERE workspace_id = ?", (workspace_id,))
+        drop_from_search_index(connection, "note", workspace_id)
         connection.execute("DELETE FROM workspace_study_notes WHERE workspace_id = ?", (workspace_id,))
         connection.execute("DELETE FROM workspace_ai_notes WHERE workspace_id = ?", (workspace_id,))
         connection.execute("DELETE FROM workspace_ai_messages WHERE workspace_id = ?", (workspace_id,))
         connection.execute("UPDATE materials SET workspace_id = NULL WHERE workspace_id = ?", (workspace_id,))
         connection.execute("DELETE FROM workspaces WHERE id = ?", (workspace_id,))
-    return {"status": "deleted", "released_recording_count": released_recording_count}
+    # Audio is removed only once the rows pointing at it are gone.
+    for recording in recordings:
+        (AUDIO_DIR / recording["audio_filename"]).unlink(missing_ok=True)
+    return {"status": "deleted", "deleted_recording_count": len(recordings)}
 
 
 @app.put("/api/workspaces/{workspace_id}/notes")
@@ -1254,6 +1793,7 @@ def save_workspace_notes(workspace_id: str, update: WorkspaceNotesUpdate) -> dic
             """,
             (workspace_id, update.note_body, saved_at),
         )
+        index_workspace_note(connection, workspace_id)
         connection.execute(
             "UPDATE workspaces SET updated_at = ? WHERE id = ?", (saved_at, workspace_id)
         )
@@ -1355,6 +1895,8 @@ def upload_material(
     except Exception:
         saved_path.unlink(missing_ok=True)
         raise
+    with connect_database() as connection:
+        index_material(connection, material_id)
     return serialize_material(get_material(material_id))
 
 
@@ -1384,6 +1926,7 @@ def extract_folder_material(material_id: str) -> dict[str, object]:
                 material_id,
             ),
         )
+        index_material(connection, material_id)
     return serialize_material(get_material(material_id))
 
 
@@ -1405,6 +1948,7 @@ def delete_folder_material(material_id: str) -> dict[str, str]:
     material = get_material(material_id)
     with connect_database() as connection:
         connection.execute("DELETE FROM materials WHERE id = ?", (material_id,))
+        drop_from_search_index(connection, "material", material_id)
     (MATERIALS_DIR / material["stored_filename"]).unlink(missing_ok=True)
     return {"status": "deleted"}
 
@@ -1815,6 +2359,63 @@ def read_lecture_audio(lecture_id: str) -> FileResponse:
     return FileResponse(audio_path, media_type=media_type or "application/octet-stream")
 
 
+@app.post("/api/captures", status_code=201)
+def start_capture(model: str = Form(default="base.en")) -> dict[str, object]:
+    """Open a live capture so audio can be transcribed while the class is still running."""
+    if model not in TRANSCRIPTION_MODELS:
+        raise HTTPException(status_code=400, detail="Choose a supported transcription quality.")
+    capture_id = str(uuid4())
+    filename = f"{capture_id}.webm"
+    (CAPTURES_DIR / filename).touch()
+    with connect_database() as connection:
+        connection.execute(
+            """
+            INSERT INTO captures (id, created_at, model, filename, processed_seconds, segments_json, status)
+            VALUES (?, ?, ?, ?, 0, '[]', 'live')
+            """,
+            (capture_id, datetime.now(timezone.utc).isoformat(), model, filename),
+        )
+    return {"capture_id": capture_id, "model": model}
+
+
+@app.post("/api/captures/{capture_id}/chunk")
+async def append_capture_chunk(capture_id: str, request: Request) -> dict[str, object]:
+    row = read_capture(capture_id)
+    if row["status"] != "live":
+        raise HTTPException(status_code=409, detail="That recording session is already finished.")
+    data = await request.body()
+    capture_path = CAPTURES_DIR / row["filename"]
+    if data:
+        if capture_path.stat().st_size + len(data) > MAX_UPLOAD_BYTES:
+            raise HTTPException(status_code=413, detail="This recording is too long to buffer.")
+        with capture_path.open("ab") as destination:
+            destination.write(data)
+    queue_capture_tail(capture_id)
+    return {"status": "stored", "bytes": capture_path.stat().st_size}
+
+
+@app.get("/api/captures/{capture_id}")
+def read_capture_progress(capture_id: str) -> dict[str, object]:
+    row = read_capture(capture_id)
+    return {
+        "capture_id": row["id"],
+        "status": row["status"],
+        "processed_seconds": row["processed_seconds"],
+        "segments": json.loads(row["segments_json"] or "[]"),
+    }
+
+
+@app.delete("/api/captures/{capture_id}")
+def discard_capture(capture_id: str) -> dict[str, str]:
+    row = read_capture(capture_id)
+    with connect_database() as connection:
+        # Mark it first so an in-flight live pass stops writing to it.
+        connection.execute("UPDATE captures SET status = 'discarded' WHERE id = ?", (capture_id,))
+        connection.execute("DELETE FROM captures WHERE id = ?", (capture_id,))
+    remove_capture_file(row["filename"])
+    return {"status": "discarded"}
+
+
 @app.post("/api/lectures", status_code=201)
 def create_lecture(
     audio: UploadFile = File(...),
@@ -1824,6 +2425,7 @@ def create_lecture(
     title: str = Form(default=""),
     capture_notes: str = Form(default=""),
     model: str = Form(default="base.en"),
+    capture_id: str = Form(default=""),
 ) -> dict[str, object]:
     if model not in TRANSCRIPTION_MODELS:
         raise HTTPException(status_code=400, detail="Choose a supported transcription quality.")
@@ -1855,13 +2457,6 @@ def create_lecture(
                 destination.write(chunk)
         if total_bytes == 0:
             raise HTTPException(status_code=400, detail="The recording was empty.")
-        try:
-            transcription = transcribe_audio(temporary_audio_path, model_name=model)
-        except Exception as error:
-            raise HTTPException(
-                status_code=422,
-                detail="The recording could not be transcribed. Try a different audio format.",
-            ) from error
         saved_audio_path = AUDIO_DIR / audio_filename
         shutil.copyfile(temporary_audio_path, saved_audio_path)
 
@@ -1926,13 +2521,41 @@ def create_lecture(
                     created_at_datetime.isoformat(),
                     audio_filename,
                     model,
-                    transcription["text"],
+                    "",
                     note_body,
                 ),
+            )
+            connection.execute(
+                "UPDATE lectures SET transcription_status = 'pending' WHERE id = ?", (lecture_id,)
             )
     except Exception:
         saved_audio_path.unlink(missing_ok=True)
         raise
+    # Anything the live pass already transcribed is kept, so the final run only
+    # has to cover the tail.
+    resume_from = 0.0
+    if capture_id:
+        try:
+            capture = read_capture(capture_id)
+        except HTTPException:
+            capture = None
+        if capture is not None:
+            seeded = json.loads(capture["segments_json"] or "[]")
+            resume_from = float(capture["processed_seconds"] or 0.0)
+            with connect_database() as connection:
+                if seeded:
+                    replace_transcript_segments(connection, lecture_id, seeded)
+                connection.execute(
+                    "UPDATE lectures SET transcription_resume_from = ? WHERE id = ?",
+                    (resume_from, lecture_id),
+                )
+                connection.execute(
+                    "UPDATE captures SET status = 'finished' WHERE id = ?", (capture_id,)
+                )
+            remove_capture_file(capture["filename"])
+            with connect_database() as connection:
+                connection.execute("DELETE FROM captures WHERE id = ?", (capture_id,))
+    queue_transcription(lecture_id)
     return serialize_lecture(get_lecture(lecture_id), include_content=True)
 
 
@@ -2116,11 +2739,124 @@ def move_lecture(lecture_id: str, move: RecordingMove) -> dict[str, object]:
     return serialize_lecture(get_lecture(lecture_id), include_content=True)
 
 
+SEARCH_KIND_LABELS = {"transcript": "Recording", "note": "Notes", "material": "Attachment"}
+
+
+def build_match_query(raw: str) -> str:
+    """Turn typed words into FTS5 syntax the user cannot accidentally break."""
+    words = re.findall(r"[\w']+", raw.lower())[:8]
+    if not words:
+        return ""
+    terms = [f'"{word}"' for word in words[:-1]]
+    terms.append(f'"{words[-1]}"*')
+    return " AND ".join(terms)
+
+
+@app.get("/api/search")
+def search_everything(
+    q: str = Query(default=""), limit: int = Query(default=40, ge=1, le=100)
+) -> dict[str, object]:
+    """Search transcripts, notes and attachment text across every lecture."""
+    match = build_match_query(q)
+    if not match:
+        return {"query": q, "results": [], "total": 0}
+    with connect_database() as connection:
+        try:
+            rows = connection.execute(
+                """
+                SELECT kind, ref_id, start_seconds,
+                       snippet(search_index, 0, '\u2039', '\u203a', '…', 14) AS excerpt,
+                       bm25(search_index) AS score
+                FROM search_index
+                WHERE search_index MATCH ?
+                ORDER BY score
+                LIMIT ?
+                """,
+                (match, limit),
+            ).fetchall()
+        except sqlite3.OperationalError:
+            return {"query": q, "results": [], "total": 0}
+        lectures = {
+            row["id"]: row
+            for row in connection.execute(
+                "SELECT id, title, workspace_id, course, created_at FROM lectures"
+            ).fetchall()
+        }
+        workspaces = {
+            row["id"]: row
+            for row in connection.execute("SELECT id, title FROM workspaces").fetchall()
+        }
+        materials = {
+            row["id"]: row
+            for row in connection.execute(
+                "SELECT id, original_filename, workspace_id FROM materials"
+            ).fetchall()
+        }
+    results: list[dict[str, object]] = []
+    for row in rows:
+        kind = row["kind"]
+        entry: dict[str, object] = {
+            "kind": kind,
+            "kind_label": SEARCH_KIND_LABELS.get(kind, kind),
+            "excerpt": row["excerpt"],
+            "start_seconds": row["start_seconds"],
+            "lecture_id": None,
+            "workspace_id": None,
+            "title": "",
+            "context": "",
+        }
+        if kind == "transcript":
+            lecture = lectures.get(row["ref_id"])
+            if lecture is None:
+                continue
+            entry["lecture_id"] = lecture["id"]
+            entry["workspace_id"] = lecture["workspace_id"]
+            entry["title"] = lecture["title"]
+            entry["context"] = lecture["course"] or "Unfiled"
+            entry["created_at"] = lecture["created_at"]
+        elif kind == "note":
+            workspace = workspaces.get(row["ref_id"])
+            if workspace is None:
+                continue
+            entry["workspace_id"] = workspace["id"]
+            entry["title"] = workspace["title"]
+            entry["context"] = "Lecture notes"
+        else:
+            material = materials.get(row["ref_id"])
+            if material is None:
+                continue
+            entry["workspace_id"] = material["workspace_id"]
+            entry["title"] = material["original_filename"]
+            entry["context"] = "Attached file"
+        results.append(entry)
+    return {"query": q, "results": results, "total": len(results)}
+
+
+@app.post("/api/search/reindex")
+def reindex_search() -> dict[str, object]:
+    with connect_database() as connection:
+        total = rebuild_search_index(connection)
+    return {"status": "rebuilt", "indexed": total}
+
+
+@app.post("/api/lectures/{lecture_id}/retranscribe")
+def retranscribe_lecture(lecture_id: str) -> dict[str, object]:
+    """Re-read saved audio so an older recording gains timed transcript lines."""
+    row = get_lecture(lecture_id)
+    audio_path = AUDIO_DIR / row["audio_filename"]
+    if not audio_path.exists():
+        raise HTTPException(status_code=404, detail="The audio for this recording is missing.")
+    queue_transcription(lecture_id)
+    return serialize_lecture(get_lecture(lecture_id), include_content=True)
+
+
 @app.delete("/api/lectures/{lecture_id}")
 def delete_lecture(lecture_id: str) -> dict[str, str]:
     row = get_lecture(lecture_id)
     with connect_database() as connection:
         connection.execute("DELETE FROM session_markers WHERE lecture_id = ?", (lecture_id,))
+        connection.execute("DELETE FROM transcript_segments WHERE lecture_id = ?", (lecture_id,))
+        drop_from_search_index(connection, "transcript", lecture_id)
         connection.execute("DELETE FROM lectures WHERE id = ?", (lecture_id,))
     (AUDIO_DIR / row["audio_filename"]).unlink(missing_ok=True)
     return {"status": "deleted"}
