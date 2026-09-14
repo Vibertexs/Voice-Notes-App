@@ -1056,7 +1056,11 @@ def transcribe_capture_tail(capture_id: str) -> None:
         result = transcribe_audio(
             capture_path, model_name=row["model"], start_seconds=processed
         )
-        fresh = result.get("segments") or []
+        # The seek rewinds by a margin, so drop anything already recorded.
+        fresh = [
+            segment for segment in (result.get("segments") or [])
+            if float(segment.get("start", 0.0)) >= processed - 0.05
+        ]
         reached = float(result.get("duration_seconds") or processed)
         if not fresh and reached <= processed:
             return

@@ -1306,7 +1306,7 @@
         saving: { label: 'Saving', hint: 'Saving and transcribing…', action: 'Saving recording' },
         discarding: { label: 'Discarding', hint: 'Discarding recording…', action: 'Discarding recording' },
       };
-      const CAPTURE_CHUNK_MS = 5000;
+      const CAPTURE_CHUNK_MS = 3000;
       const PLAYBACK_SPEEDS = [1, 1.25, 1.5, 1.75, 2];
       const BAR_WIDTH = 3;
       const BAR_GAP = 2;
@@ -3421,7 +3421,7 @@
             ? `${liveSegments.length} line${liveSegments.length === 1 ? '' : 's'} · ${formatPlaybackTime(done)} transcribed`
             : 'listening…';
         } catch { /* keep trying while the recorder runs */ }
-        if (captureId === sessionId) capturePollTimer = setTimeout(pollCaptureTranscript, 4000);
+        if (captureId === sessionId) capturePollTimer = setTimeout(pollCaptureTranscript, 1500);
       }
       function closeCaptureSession(discard) {
         clearTimeout(capturePollTimer);
