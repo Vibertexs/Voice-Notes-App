@@ -82,8 +82,9 @@ export default function LibraryView({
         </button>
       </div>
       <div className="class-grid">
-        {data.folders.map((child) => <ClassCard
+        {data.folders.map((child, position) => <ClassCard
           key={child.id}
+          index={position}
           folder={{ ...child, archived: showArchived || child.archived }}
           onOpen={onOpenFolder}
           onArchive={onArchiveFolder}

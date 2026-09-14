@@ -3,11 +3,11 @@ import { useEffect, useRef, useState } from 'react';
 const COLORS = ['blue', 'violet', 'rose', 'coral', 'amber', 'lime', 'mint', 'sky', 'slate'];
 
 /**
- * A class, drawn as a folder. The name carries the meaning, so the card shows
- * one quiet line and nothing else. Everything you can do to the class lives
- * behind the corner dial, which only opens when you choose it.
+ * A class as a folder: a coloured cover with a dark sleeve sitting over it.
+ * Hovering slides the sleeve down, the way a folder opens when you thumb it.
+ * Everything you can do to the class lives behind the corner dial.
  */
-export default function ClassCard({ folder, onOpen, onArchive, onRecolor, onDelete, onDropWorkspace }) {
+export default function ClassCard({ index, folder, onOpen, onArchive, onRecolor, onDelete, onDropWorkspace }) {
   const [over, setOver] = useState(false);
   const [menu, setMenu] = useState(false);
   const cardRef = useRef(null);
@@ -27,11 +27,12 @@ export default function ClassCard({ folder, onOpen, onArchive, onRecolor, onDele
   }, [menu]);
 
   const lectures = folder.lecture_count ?? 0;
-  const summary = lectures === 0 ? 'Empty' : `${lectures} lecture${lectures === 1 ? '' : 's'}`;
+  const summary = lectures === 0 ? 'Nothing recorded yet' : `${lectures} lecture${lectures === 1 ? '' : 's'}`;
 
-  return <div className={`class-card ${folder.color} ${over ? 'drop-active' : ''} ${menu ? 'menu-open' : ''}`} ref={cardRef}>
-    <span className="class-sheets" aria-hidden="true"><i /><i /><i /></span>
-
+  return <div
+    className={`class-card ${folder.color} ${over ? 'drop-active' : ''} ${menu ? 'menu-open' : ''}`}
+    ref={cardRef}
+  >
     <button
       className="class-card-open"
       onClick={() => onOpen(folder.id)}
@@ -40,10 +41,18 @@ export default function ClassCard({ folder, onOpen, onArchive, onRecolor, onDele
       onDrop={(event) => { event.preventDefault(); setOver(false); onDropWorkspace(event, folder.id); }}
       aria-label={`Open ${folder.name}`}
     >
-      <span className="class-tab" aria-hidden="true" />
-      <span className="class-face">
-        <span className="class-name">{folder.name}</span>
-        <span className="class-meta">{over ? 'Drop to file here' : summary}</span>
+      <span className="class-cover" aria-hidden="true" />
+      <span className="class-sleeve">
+        <span className="class-body">
+          <span className="class-top">
+            <span className="class-index" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
+            <span className="class-arrow" aria-hidden="true">↗</span>
+          </span>
+          <span className="class-text">
+            <span className="class-name">{folder.name}</span>
+            <span className="class-meta">{over ? 'Drop to file here' : summary}</span>
+          </span>
+        </span>
       </span>
     </button>
 
