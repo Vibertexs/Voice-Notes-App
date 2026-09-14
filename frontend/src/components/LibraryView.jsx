@@ -23,7 +23,7 @@ function MaterialList({ materials, onDelete }) {
 export default function LibraryView({
   data, allFolders, onOpenFolder, onOpenWorkspace, onNewFolder, onRecord, onUpload,
   onDeleteMaterial, onMoveWorkspace, showArchived, onToggleArchived, onArchiveFolder,
-  onRecolorFolder,
+  onRecolorFolder, onDeleteFolder,
 }) {
   const inputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
@@ -88,6 +88,7 @@ export default function LibraryView({
           onOpen={onOpenFolder}
           onArchive={onArchiveFolder}
           onRecolor={onRecolorFolder}
+          onDelete={onDeleteFolder}
           onDropWorkspace={receiveWorkspace}
         />)}
         {!data.folders.length && (showArchived
@@ -98,7 +99,7 @@ export default function LibraryView({
       </div>
     </section>}
 
-    <section className="library-section">
+    {!showArchived && <section className="library-section">
       <div className="section-heading">
         <div>
           <p className="eyebrow">Lecture notes</p>
@@ -128,9 +129,9 @@ export default function LibraryView({
         <p>Record once, then keep adding to the same lecture whenever class picks back up.</p>
         <button className="button primary" onClick={onRecord}>Record &amp; note</button>
       </div>}
-    </section>
+    </section>}
 
-    <section className="library-section files-section">
+    {!showArchived && <section className="library-section files-section">
       <div className="section-heading"><div><p className="eyebrow">Materials</p><h2>Imported files</h2></div></div>
       <button
         className="drop-zone"
@@ -143,7 +144,7 @@ export default function LibraryView({
       </button>
       <input ref={inputRef} hidden type="file" accept=".pdf,.txt,.md,.doc,.docx,.ppt,.pptx" multiple onChange={(event) => chooseFiles(event.target.files)} />
       <MaterialList materials={data.materials} onDelete={onDeleteMaterial} />
-    </section>
+    </section>}
 
     {allFolders.length > 0 && !folder && <p className="library-footnote">
       Drag a lecture onto a class to file it. Archive a class when the term ends — nothing is deleted.

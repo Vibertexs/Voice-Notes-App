@@ -16,7 +16,7 @@ const relativeDate = (value) => {
  * A class drawn as a folder: a tab, sheets peeking over the top, and the
  * details a student actually wants at a glance. The corner button sets colour.
  */
-export default function ClassCard({ folder, onOpen, onArchive, onRecolor, onDropWorkspace }) {
+export default function ClassCard({ folder, onOpen, onArchive, onRecolor, onDelete, onDropWorkspace }) {
   const [over, setOver] = useState(false);
   const [picking, setPicking] = useState(false);
   const cardRef = useRef(null);
@@ -69,6 +69,13 @@ export default function ClassCard({ folder, onOpen, onArchive, onRecolor, onDrop
       aria-label={folder.archived ? `Restore ${folder.name}` : `Archive ${folder.name}`}
       title={folder.archived ? 'Restore this class' : 'Archive this class'}
     >{folder.archived ? '↩' : '⤓'}</button>
+
+    <button
+      className="class-delete"
+      onClick={() => onDelete(folder)}
+      aria-label={`Delete ${folder.name}`}
+      title="Delete this class"
+    >×</button>
 
     <button
       className="class-color"

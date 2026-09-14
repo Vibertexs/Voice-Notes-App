@@ -264,3 +264,136 @@ h3 { margin-bottom: .3rem; font-size: 1rem; letter-spacing: -.02em; }
 @media (prefers-reduced-motion: reduce) {
   .class-card-open, .class-sheets i, .class-color, .parent-target { transition: none; }
 }
+
+/* ---- Glass, applied to the surfaces that hold your things ---------------- */
+.glass-card, .library-section.files-section, .material-list, .workspace-aside > section,
+.review-card, .session-list, .study-panel, .drop-zone {
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+}
+
+.library-section.files-section {
+  padding: 1.25rem; border: 1px solid rgba(255, 255, 255, .7); border-radius: 1.1rem;
+  background: rgba(255, 255, 255, .45);
+  box-shadow: inset 0 1px rgba(255, 255, 255, .8), 0 .7rem 1.8rem rgba(57, 96, 154, .1);
+}
+.material-list { display: grid; gap: .5rem; margin: .9rem 0 0; padding: 0; list-style: none; }
+.material-item {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: .6rem;
+  padding: .55rem .6rem; border: 1px solid rgba(255, 255, 255, .72); border-radius: .8rem;
+  background: rgba(255, 255, 255, .55);
+  box-shadow: inset 0 1px rgba(255, 255, 255, .75);
+  transition: background .15s ease, border-color .15s ease, transform .15s ease;
+}
+.material-item:hover { border-color: rgba(40, 105, 222, .45); background: rgba(255, 255, 255, .82); transform: translateY(-1px); }
+.material-item > a { display: flex; align-items: center; gap: .65rem; min-width: 0; text-decoration: none; color: inherit; }
+.material-item strong { display: block; overflow: hidden; font-size: .86rem; text-overflow: ellipsis; white-space: nowrap; }
+.material-item small { display: block; margin-top: .1rem; color: #7d8ca6; font-size: .72rem; }
+.file-icon {
+  display: grid; place-items: center; flex: 0 0 auto; width: 2.4rem; height: 2.4rem;
+  border-radius: .6rem; background: linear-gradient(160deg, #eaf1ff, #d6e4fb);
+  color: #2b4f92; font-size: .6rem; font-weight: 800; letter-spacing: .03em;
+}
+.drop-zone {
+  display: grid; gap: .25rem; justify-items: center; width: 100%; padding: 1.4rem 1rem;
+  border: 2px dashed rgba(40, 105, 222, .3); border-radius: 1rem;
+  background: rgba(255, 255, 255, .42); color: #3d4d6b;
+  transition: border-color .15s ease, background .15s ease;
+}
+.drop-zone:hover { border-color: #2869de; background: rgba(255, 255, 255, .7); }
+.drop-zone strong { font-size: .95rem; }
+.drop-zone span { color: #8090a8; font-size: .8rem; }
+
+/* deleting a file should be findable, not hidden until you guess */
+.icon-button.subtle {
+  width: 2.1rem; height: 2.1rem; display: grid; place-items: center;
+  border: 1px solid rgba(23, 42, 84, .12); border-radius: .55rem;
+  background: rgba(255, 255, 255, .7); color: #7a8aa3;
+  font-size: 1.05rem; line-height: 1;
+  transition: background .14s ease, color .14s ease, border-color .14s ease;
+}
+.icon-button.subtle:hover { border-color: #d77; background: #fff1f1; color: #b02525; }
+
+/* ---- The recorder, as it was -------------------------------------------- */
+.transport {
+  --rec: #ff3b30; --wave-idle: #a9b5c6;
+  margin-top: 1.25rem; padding: 1.35rem 1.25rem 1.1rem;
+  border: 1px solid rgba(255, 255, 255, .78); border-radius: 1.2rem;
+  background: rgba(255, 255, 255, .5);
+  box-shadow: inset 0 1px rgba(255, 255, 255, .7), 0 1rem 2.2rem rgba(57, 96, 154, .12);
+  text-align: center;
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+}
+.phase-label { color: #647084; font-size: .8rem; font-weight: 650; letter-spacing: .02em; transition: color .25s ease; }
+.phase-label::before {
+  content: ""; display: none; width: .45rem; height: .45rem; margin-right: .4rem;
+  vertical-align: .08rem; border-radius: 50%; background: currentColor;
+  animation: blink 1.2s ease-in-out infinite;
+}
+.transport[data-phase="recording"] .phase-label { color: var(--rec); }
+.transport[data-phase="recording"] .phase-label::before { display: inline-block; }
+.recording-timer {
+  margin-top: .15rem; color: #11182b; font-size: clamp(2.6rem, 8vw, 3.3rem);
+  font-weight: 300; letter-spacing: -.02em; line-height: 1.1; font-variant-numeric: tabular-nums;
+}
+.transport[data-phase="paused"] .recording-timer { animation: blink 1.6s ease-in-out infinite; }
+.waveform {
+  display: block; width: 100%; height: 3.6rem; margin: 1rem 0 .25rem;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 15%, #000 85%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 15%, #000 85%, transparent);
+}
+
+/* the shutter: a red disc that morphs into a pause bar pair, then a square */
+.shutter {
+  position: relative; width: 5.25rem; height: 5.25rem; display: grid; place-items: center;
+  padding: 0; border: 0; border-radius: 50%; background: transparent;
+  -webkit-tap-highlight-color: transparent;
+}
+.shutter:disabled { opacity: 1; cursor: progress; }
+.shutter::before {
+  content: ""; position: absolute; inset: 0;
+  border: 4px solid rgba(23, 32, 45, .14); border-radius: 50%;
+  transition: border-color .3s ease;
+}
+.shutter[data-phase="recording"]::before { border-color: rgba(255, 59, 48, .45); }
+.shutter-glyph {
+  position: relative; width: 4.1rem; height: 4.1rem; border-radius: 50%;
+  background-color: var(--rec, #ff3b30);
+  box-shadow: 0 .4rem 1rem rgba(255, 59, 48, .32);
+  transition: width .32s cubic-bezier(.3, .7, .2, 1.15),
+              height .32s cubic-bezier(.3, .7, .2, 1.15),
+              border-radius .32s cubic-bezier(.3, .7, .2, 1.15),
+              background-color .3s ease, transform .18s ease, box-shadow .3s ease;
+}
+.shutter-glyph::before, .shutter-glyph::after {
+  content: ""; position: absolute; top: 0; bottom: 0; width: .56rem;
+  border-radius: .2rem; background: var(--rec, #ff3b30);
+  opacity: 0; transition: opacity .22s ease;
+}
+.shutter-glyph::before { left: 0; }
+.shutter-glyph::after { right: 0; }
+.shutter:active:not(:disabled) .shutter-glyph { transform: scale(.9); }
+.shutter[data-phase="recording"] .shutter-glyph {
+  width: 1.75rem; height: 1.9rem; border-radius: .25rem;
+  background-color: transparent; box-shadow: none;
+}
+.shutter[data-phase="recording"] .shutter-glyph::before,
+.shutter[data-phase="recording"] .shutter-glyph::after { opacity: 1; }
+.shutter[data-phase="paused"] .shutter-glyph { width: 3.4rem; height: 3.4rem; border-radius: 50%; }
+
+@keyframes blink { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) {
+  .phase-label::before, .transport[data-phase="paused"] .recording-timer { animation: none; }
+  .shutter-glyph, .material-item, .drop-zone { transition: none; }
+}
+
+.class-delete {
+  position: absolute; top: 1.55rem; right: 2.6rem; z-index: 2;
+  width: 1.9rem; height: 1.9rem; display: grid; place-items: center;
+  border: 0; border-radius: .55rem;
+  background: rgba(255, 255, 255, .75); color: #8a94a8;
+  font-size: 1.1rem; line-height: 1; opacity: 0;
+  transition: opacity .14s ease, background .14s ease, color .14s ease;
+}
+.class-card:hover .class-delete, .class-delete:focus-visible { opacity: 1; }
+.class-delete:hover { background: #fff1f1; color: #b02525; }

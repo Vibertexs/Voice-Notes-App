@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { libraryApi, uploadRecording } from '../lib/api';
+import Waveform from './Waveform';
 
 function elapsedLabel(milliseconds) {
   const tenths = Math.floor(milliseconds / 100);
@@ -16,6 +17,7 @@ export default function CaptureView({ context, onSaved, onCancel, notify }) {
   const [markerLabel, setMarkerLabel] = useState('');
   const [files, setFiles] = useState([]);
   const [error, setError] = useState('');
+  const [liveStream, setLiveStream] = useState(null);
   const recorderRef = useRef(null);
   const streamRef = useRef(null);
   const chunksRef = useRef([]);
@@ -42,6 +44,7 @@ export default function CaptureView({ context, onSaved, onCancel, notify }) {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const recorder = new MediaRecorder(stream);
       streamRef.current = stream;
+      setLiveStream(stream);
       recorderRef.current = recorder;
       chunksRef.current = [];
       recorder.addEventListener('dataavailable', (event) => { if (event.data.size) chunksRef.current.push(event.data); });
@@ -79,6 +82,7 @@ export default function CaptureView({ context, onSaved, onCancel, notify }) {
       recorder.stop();
     });
     streamRef.current?.getTracks().forEach((track) => track.stop());
+    setLiveStream(null);
     try {
       const recording = await uploadRecording({ blob, title, captureNotes: notes, folderId: context.workspace ? undefined : context.folder?.id, workspaceId: context.workspace?.id });
       await Promise.all(markers.map((marker) => libraryApi.addMarker(recording.id, marker)));
@@ -95,6 +99,7 @@ export default function CaptureView({ context, onSaved, onCancel, notify }) {
     window.clearInterval(timerRef.current);
     recorderRef.current?.state !== 'inactive' && recorderRef.current?.stop();
     streamRef.current?.getTracks().forEach((track) => track.stop());
+    setLiveStream(null);
     onCancel();
   }
 
@@ -104,14 +109,22 @@ export default function CaptureView({ context, onSaved, onCancel, notify }) {
     <header className="capture-heading"><button className="back-link" onClick={onCancel}>‹ Back</button><p className="eyebrow">{context.workspace ? 'Continuing lecture' : 'New lecture'}</p><h1>{context.workspace ? context.workspace.title : 'Capture a lecture'}</h1><p className="muted">Recording saves to <strong>{location}</strong>. Start only when you are ready.</p>{!context.workspace && <label className="capture-title-field">Recording name <small>optional</small><input value={title} maxLength="180" onChange={(event) => setTitle(event.target.value)} placeholder="A timestamped lecture name is used if you leave this blank" /></label>}</header>
     <div className="capture-grid">
       <section className={`capture-station ${phase}`}>
-        <div className="station-status"><span className={`status-dot ${isRecording ? 'recording' : ''}`} />{phase === 'ready' ? 'Ready to record' : phase === 'recording' ? 'Recording' : phase === 'paused' ? 'Paused' : 'Saving your lecture'}</div>
-        <div className="capture-clock">{elapsedLabel(elapsed)}</div>
+        <div className="transport" data-phase={phase}>
+          <div className="phase-label">{phase === 'ready' ? 'Ready' : phase === 'recording' ? 'Recording' : phase === 'paused' ? 'Paused' : 'Saving'}</div>
+          <div className="recording-timer">{elapsedLabel(elapsed)}</div>
+          <Waveform stream={liveStream} phase={phase} />
+        </div>
         <div className="wave-bars" aria-hidden="true">{Array.from({ length: 36 }, (_, index) => <i key={index} style={{ '--delay': `${index * -0.04}s`, '--height': `${22 + ((index * 13) % 56)}%` }} />)}</div>
         {isRecording && <div className="marker-control"><input value={markerLabel} maxLength="120" onChange={(event) => setMarkerLabel(event.target.value)} onKeyDown={(event) => event.key === 'Enter' && addMarker()} placeholder="What should you revisit?" /><button className="button ghost" onClick={addMarker}>＋ Marker</button></div>}
         {markers.length > 0 && <div className="marker-pills">{markers.map((marker, index) => <span key={`${marker.label}-${index}`}>● {elapsedLabel(marker.time_seconds * 1000)} · {marker.label}<button onClick={() => setMarkers((current) => current.filter((_, position) => position !== index))} aria-label={`Remove ${marker.label}`}>×</button></span>)}</div>}
         <div className="capture-controls">
-          {phase === 'ready' && <button className="record-button" onClick={start} aria-label="Start recording"><span /></button>}
-          {(isRecording || isPaused) && <button className={`record-button ${isPaused ? 'resume' : 'pause'}`} onClick={pauseOrResume} aria-label={isPaused ? 'Resume recording' : 'Pause recording'}><span /></button>}
+          <button
+            className="shutter"
+            data-phase={phase}
+            onClick={phase === 'ready' ? start : pauseOrResume}
+            disabled={phase === 'saving'}
+            aria-label={phase === 'ready' ? 'Start recording' : isPaused ? 'Resume recording' : 'Pause recording'}
+          ><span className="shutter-glyph" aria-hidden="true" /></button>
           <p>{phase === 'ready' ? 'Tap to record' : isRecording ? 'Tap to pause' : isPaused ? 'Tap to resume' : 'Saving…'}</p>
         </div>
         {isPaused && <div className="finish-row"><button className="button ghost danger" onClick={discard}>Discard</button><button className="button primary" onClick={done}>Done — save lecture</button></div>}

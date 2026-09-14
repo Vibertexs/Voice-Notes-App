@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { libraryApi } from '../lib/api';
-import AssistantPanel from './AssistantPanel';
+import StudyPanel from './StudyPanel';
 import { MaterialList } from './LibraryView';
 
 const formatTime = (seconds = 0) => `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
@@ -106,7 +106,6 @@ export default function WorkspaceView({ workspace, onBack, onContinue, onReload,
   const [tab, setTab] = useState('notes');
   const [title, setTitle] = useState(workspace.title);
   const [notes, setNotes] = useState(workspace.note_body ?? '');
-  const [study, setStudy] = useState(workspace.study_notes ?? '');
   const [selectedId, setSelectedId] = useState(workspace.sessions[0]?.id ?? null);
   // Arriving from a search result: open that recording on the Recordings tab.
   useEffect(() => {
@@ -116,11 +115,10 @@ export default function WorkspaceView({ workspace, onBack, onContinue, onReload,
     setTab('review');
   }, [pendingSeek, workspace.sessions]);
   const [saving, setSaving] = useState(false);
-  const [generating, setGenerating] = useState(false);
   const [filesBusy, setFilesBusy] = useState(false);
   const materialInputRef = useRef(null);
 
-  useEffect(() => { setTitle(workspace.title); setNotes(workspace.note_body ?? ''); setStudy(workspace.study_notes ?? ''); setSelectedId((current) => workspace.sessions.some((session) => session.id === current) ? current : workspace.sessions[0]?.id ?? null); }, [workspace]);
+  useEffect(() => { setTitle(workspace.title); setNotes(workspace.note_body ?? ''); setSelectedId((current) => workspace.sessions.some((session) => session.id === current) ? current : workspace.sessions[0]?.id ?? null); }, [workspace]);
   useEffect(() => {
     if (!workspace.sessions.some((session) => ['pending', 'running'].includes(session.transcription_status))) return undefined;
     const timer = window.setInterval(onReload, 3000);
@@ -134,13 +132,6 @@ export default function WorkspaceView({ workspace, onBack, onContinue, onReload,
   async function saveNotes() {
     setSaving(true);
     try { await libraryApi.saveNotes(workspace.id, notes); notify('Notes saved.'); onReload(); } catch (caught) { notify(caught.message, 'error'); } finally { setSaving(false); }
-  }
-  async function saveStudy() {
-    try { await libraryApi.saveStudyNotes(workspace.id, study); notify('Study guide saved.'); onReload(); } catch (caught) { notify(caught.message, 'error'); }
-  }
-  async function generateStudy() {
-    setGenerating(true);
-    try { const result = await libraryApi.generateStudyNotes(workspace.id); setStudy(result.note_body); notify('Study guide drafted from your notes and recordings.'); onReload(); } catch (caught) { notify(caught.message, 'error'); } finally { setGenerating(false); }
   }
   async function uploadFiles(files) {
     if (!files?.length) return;
@@ -159,10 +150,9 @@ export default function WorkspaceView({ workspace, onBack, onContinue, onReload,
 
   return <main className="page workspace-page">
     <header className="workspace-header"><div><button className="back-link" onClick={onBack}>‹ Back to library</button><p className="eyebrow">Lecture workspace</p><input className="title-input" aria-label="Lecture title" value={title} maxLength="180" onChange={(event) => setTitle(event.target.value)} onBlur={saveTitle} /></div><div className="header-actions"><button className="button ghost" onClick={() => materialInputRef.current?.click()}>{filesBusy ? 'Adding…' : '＋ Add file'}</button><button className="button primary" onClick={onContinue}>● Continue recording</button><button className="icon-button danger" onClick={removeWorkspace} aria-label="Delete lecture">⌫</button><input ref={materialInputRef} hidden type="file" multiple accept=".pdf,.txt,.md,.doc,.docx,.ppt,.pptx" onChange={(event) => uploadFiles(event.target.files)} /></div></header>
-    <nav className="tab-list" aria-label="Lecture sections">{[['notes', 'Notes'], ['review', `Recordings (${workspace.sessions.length})`], ['study', 'Study'], ['assistant', 'Assistant']].map(([id, label]) => <button key={id} className={tab === id ? 'active' : ''} onClick={() => setTab(id)}>{label}</button>)}</nav>
+    <nav className="tab-list" aria-label="Lecture sections">{[['notes', 'Notes'], ['review', `Recordings (${workspace.sessions.length})`], ['study', 'Study']].map(([id, label]) => <button key={id} className={tab === id ? 'active' : ''} onClick={() => setTab(id)}>{label}</button>)}</nav>
     {tab === 'notes' && <section className="notes-layout"><article className="note-editor"><div className="section-heading"><div><p className="eyebrow">Your notes</p><h2>Write what matters</h2></div><button className="button ghost" onClick={saveNotes} disabled={saving}>{saving ? 'Saving…' : 'Save notes'}</button></div><textarea value={notes} onChange={(event) => setNotes(event.target.value)} maxLength="100000" placeholder="Start with the big idea, then add details from class…" /></article><aside className="workspace-aside"><section><p className="eyebrow">Keep it together</p><h3>{workspace.sessions.length} recording{workspace.sessions.length === 1 ? '' : 's'} in this lecture</h3><p>Continue recording whenever the topic comes back. Every session stays paired with these notes.</p><button className="button primary full" onClick={onContinue}>Continue recording</button></section><section><p className="eyebrow">Attachments</p><MaterialList materials={workspace.materials} onDelete={deleteMaterial} /></section></aside></section>}
     {tab === 'review' && <section className="review-layout"><aside className="session-list"><p className="eyebrow">Recordings</p>{workspace.sessions.map((session, index) => <button key={session.id} className={session.id === selected?.id ? 'selected' : ''} onClick={() => setSelectedId(session.id)}><span>SESSION {String(index + 1).padStart(2, '0')}</span><strong>{session.title}</strong><small>{formatDate(session.created_at)}</small></button>)}</aside>{selected ? <RecordingReview session={selected} onUpdate={onReload} notify={notify} seekTo={pendingSeek?.lectureId === selected.id ? pendingSeek.seconds : null} onSeekHandled={onSeekHandled} /> : <div className="empty-state"><h3>No recordings yet</h3><button className="button primary" onClick={onContinue}>Continue recording</button></div>}</section>}
-    {tab === 'assistant' && <AssistantPanel workspace={workspace} onReload={onReload} notify={notify} />}
-    {tab === 'study' && <section className="study-layout"><div className="section-heading"><div><p className="eyebrow">Review in less time</p><h2>Study guide</h2></div><div><button className="button ghost" onClick={saveStudy}>Save</button><button className="button primary" onClick={generateStudy} disabled={generating}>{generating ? 'Drafting…' : 'Generate draft'}</button></div></div><p className="muted">This local draft uses your own notes and completed transcripts. Edit it freely.</p><textarea value={study} onChange={(event) => setStudy(event.target.value)} maxLength="100000" placeholder="Generate a first study guide or write your own…" /></section>}
+    {tab === 'study' && <StudyPanel workspace={workspace} onReload={onReload} notify={notify} />}
   </main>;
 }
