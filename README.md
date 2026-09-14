@@ -42,10 +42,11 @@ Once this works, the next step is wrapping this script in a tiny API that the Ex
 
 The local browser UI is a student lecture library. **Record & note** starts
 immediately from the Library or a folder; when saved, it becomes an editable
-lecture page with that recording attached. Reopen the page to keep writing,
-record another session, or attach several earlier loose recordings at once.
-Older loose recordings can also be turned into their own lecture page in one
-click.
+lecture page with that recording attached. Reopen the page to keep writing or
+record another session on the same topic. Every recording has a lecture page;
+historical loose recordings are migrated safely into one-session pages on
+startup. Drag a lecture card onto a folder to organize it, or onto the visible
+parent target to move it out one level.
 **Imported files** can be kept class-wide in a folder or attached directly to
 one lecture page. Use a lecture's **Attach file** action for a GoodNotes export,
 slides, a handout, or a reading that belongs with that session; export GoodNotes
@@ -64,10 +65,11 @@ and select **Stop & transcribe**. This development server is intentionally bound
 to your computer; do not expose it to the internet without authentication,
 HTTPS, and stronger upload controls.
 
-The UI offers three locally-run English models: `tiny.en` for speed, `base.en`
-as the default balance, and `small.en` for higher accuracy. Each model is
-downloaded only the first time you select it. Start with the same recording in
-each mode and compare the transcript and elapsed time before choosing a default.
+The UI uses `tiny.en` automatically for fast, local live captions while class
+is in progress. After you tap Done, it re-transcribes the complete recording
+with your selected Fast (`tiny.en`), Balanced (`base.en`), or High accuracy
+(`small.en`) model. That keeps captions responsive without compromising the
+saved transcript. Each model is downloaded only the first time it is used.
 
 Recordings receive a timestamped default title when no name is entered, and can
 be renamed later. Use **Delete recording** in the app to remove its transcript

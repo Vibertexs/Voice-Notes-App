@@ -26,7 +26,7 @@ from pypdf import PdfReader
 from pydantic import BaseModel, Field
 from pptx import Presentation
 
-from transcription import transcribe_audio
+from transcription import load_model, transcribe_audio
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 # Overridable so a test run can point at a scratch library instead of the real one.
@@ -49,6 +49,9 @@ LOCAL_AI_HISTORY_LIMIT = 8
 ALLOWED_SUFFIXES = {".wav", ".mp3", ".m4a", ".ogg", ".webm", ".mp4"}
 ALLOWED_MATERIAL_SUFFIXES = {".pdf", ".txt", ".md", ".doc", ".docx", ".ppt", ".pptx"}
 TRANSCRIPTION_MODELS = {"tiny.en", "base.en", "small.en"}
+# Live captions deliberately stay on the smallest local model.  The chosen model
+# is reserved for the complete, higher-quality transcript after the recording is saved.
+LIVE_TRANSCRIPTION_MODEL = "tiny.en"
 FOLDER_COLORS = {"blue", "violet", "rose", "coral", "amber", "lime", "mint", "sky", "slate"}
 
 
@@ -66,14 +69,6 @@ class LectureUpdate(BaseModel):
     title: str | None = Field(default=None, max_length=180)
     note_body: str | None = Field(default=None, max_length=100_000)
     folder_id: str | None = None
-
-
-class RecordingMove(BaseModel):
-    folder_id: str | None = None
-
-
-class RecordingAttach(BaseModel):
-    workspace_id: str = Field(min_length=1)
 
 
 class WorkspaceCreate(BaseModel):
@@ -391,11 +386,14 @@ def initialize_database() -> None:
         folder_columns = {row["name"] for row in connection.execute("PRAGMA table_info(folders)")}
         if "color" not in folder_columns:
             connection.execute("ALTER TABLE folders ADD COLUMN color TEXT NOT NULL DEFAULT 'blue'")
+        # A recording without a lecture page was a short-lived experiment.  Keep
+        # every existing audio file, but give each orphan its own lecture so the
+        # library has one predictable mental model from now on.
         legacy_rows = connection.execute(
             """
             SELECT id, folder_id, title, created_at, note_body
             FROM lectures
-            WHERE workspace_id IS NULL AND is_standalone = 0
+            WHERE workspace_id IS NULL
             """
         ).fetchall()
         for lecture in legacy_rows:
@@ -414,7 +412,11 @@ def initialize_database() -> None:
                 ),
             )
             connection.execute(
-                "UPDATE lectures SET workspace_id = ?, capture_notes_workspace_id = ? WHERE id = ?",
+                """
+                UPDATE lectures
+                SET workspace_id = ?, is_standalone = 0, capture_notes_workspace_id = ?
+                WHERE id = ?
+                """,
                 (workspace_id, workspace_id, lecture["id"]),
             )
             connection.execute(
@@ -461,6 +463,9 @@ def initialize_database() -> None:
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     initialize_database()
+    # Start warming the small caption model as soon as the local server is up.
+    # It runs on the caption executor, never ahead of a real caption request.
+    LIVE_TRANSCRIBER.submit(warm_live_caption_model)
     with connect_database() as connection:
         indexed = connection.execute("SELECT COUNT(*) AS total FROM search_index").fetchone()["total"]
         if not indexed:
@@ -487,6 +492,7 @@ async def lifespan(_: FastAPI):
     sweep_orphan_captures()
     yield
     TRANSCRIBER.shutdown(wait=False, cancel_futures=True)
+    LIVE_TRANSCRIBER.shutdown(wait=False, cancel_futures=True)
 
 
 app = FastAPI(title="Class Notes", lifespan=lifespan)
@@ -848,28 +854,6 @@ def build_class_ai_context(folder_id: str) -> str:
                             session["transcript"].strip(),
                         )
                     )
-        loose_recordings = connection.execute(
-            f"""
-            SELECT title, created_at, transcript, note_body
-            FROM lectures
-            WHERE workspace_id IS NULL AND is_standalone = 1
-              AND folder_id IN ({placeholders})
-            ORDER BY created_at DESC
-            """,
-            folder_ids,
-        ).fetchall()
-        for recording in loose_recordings:
-            if recording["note_body"].strip():
-                source_parts.append(
-                    (f"Loose recording {recording['title']} — capture notes", recording["note_body"].strip())
-                )
-            if recording["transcript"].strip():
-                source_parts.append(
-                    (
-                        f"Loose recording {recording['title']} ({recording['created_at']})",
-                        recording["transcript"].strip(),
-                    )
-                )
         materials = connection.execute(
             f"""
             SELECT original_filename, extracted_text, extraction_status
@@ -989,8 +973,11 @@ def serialize_material(row: sqlite3.Row) -> dict[str, object]:
     }
 
 
-# One at a time: transcription is CPU bound, so a queue beats thrashing.
+# Final transcription is CPU bound, so one job at a time beats thrashing.
 TRANSCRIBER = ThreadPoolExecutor(max_workers=1, thread_name_prefix="transcribe")
+# Captions never wait behind a long, high-accuracy final pass.  Keeping this
+# separate is what makes the in-class experience responsive.
+LIVE_TRANSCRIBER = ThreadPoolExecutor(max_workers=1, thread_name_prefix="live-caption")
 
 
 # Measured on a CPU-only laptop: how many seconds of audio each model chews
@@ -1000,7 +987,17 @@ MODEL_REALTIME_FACTOR = {"tiny.en": 4.9, "base.en": 2.2, "small.en": 0.9}
 
 # Capture ids with a tail pass queued or running, so chunks cannot pile up jobs.
 LIVE_JOBS: set[str] = set()
+LIVE_DIRTY: set[str] = set()
 LIVE_JOBS_LOCK = Lock()
+
+
+def warm_live_caption_model() -> None:
+    """Best-effort warmup so the first class does not pay model-load latency."""
+    try:
+        load_model(LIVE_TRANSCRIPTION_MODEL, "cpu", "int8")
+    except Exception:
+        # Capturing still works if a first-run model download is unavailable.
+        pass
 
 
 def remove_capture_file(filename: str) -> bool:
@@ -1054,7 +1051,7 @@ def transcribe_capture_tail(capture_id: str) -> None:
             return
         processed = float(row["processed_seconds"] or 0.0)
         result = transcribe_audio(
-            capture_path, model_name=row["model"], start_seconds=processed
+            capture_path, model_name=row["model"], start_seconds=processed, live=True
         )
         # The seek rewinds by a margin, so drop anything already recorded.
         fresh = [
@@ -1083,14 +1080,21 @@ def transcribe_capture_tail(capture_id: str) -> None:
     finally:
         with LIVE_JOBS_LOCK:
             LIVE_JOBS.discard(capture_id)
+            needs_catch_up = capture_id in LIVE_DIRTY
+            LIVE_DIRTY.discard(capture_id)
+        # A chunk can arrive while the current tail is being decoded.  Run one
+        # immediate catch-up pass instead of making it wait for the next chunk.
+        if needs_catch_up:
+            queue_capture_tail(capture_id)
 
 
 def queue_capture_tail(capture_id: str) -> None:
     with LIVE_JOBS_LOCK:
         if capture_id in LIVE_JOBS:
+            LIVE_DIRTY.add(capture_id)
             return
         LIVE_JOBS.add(capture_id)
-    TRANSCRIBER.submit(transcribe_capture_tail, capture_id)
+    LIVE_TRANSCRIBER.submit(transcribe_capture_tail, capture_id)
 
 
 class TranscriptionCancelled(Exception):
@@ -1420,7 +1424,6 @@ def serialize_lecture(row: sqlite3.Row, *, include_content: bool) -> dict[str, o
     result: dict[str, object] = {
         "id": row["id"],
         "workspace_id": row["workspace_id"],
-        "is_standalone": bool(row["is_standalone"]),
         "folder_id": row["folder_id"],
         "course": row["course"],
         "title": row["title"],
@@ -1576,9 +1579,6 @@ def list_library(folder_id: str | None = Query(default=None)) -> dict[str, objec
             folders = connection.execute(
                 "SELECT * FROM folders WHERE parent_id = ? ORDER BY name COLLATE NOCASE", (folder_id,)
             ).fetchall()
-            lectures = connection.execute(
-                "SELECT * FROM lectures WHERE folder_id = ? AND workspace_id IS NULL ORDER BY created_at DESC", (folder_id,)
-            ).fetchall()
             workspaces = connection.execute(
                 """
                 SELECT workspaces.*, COUNT(lectures.id) AS session_count
@@ -1596,9 +1596,6 @@ def list_library(folder_id: str | None = Query(default=None)) -> dict[str, objec
         else:
             folders = connection.execute(
                 "SELECT * FROM folders WHERE parent_id IS NULL ORDER BY name COLLATE NOCASE"
-            ).fetchall()
-            lectures = connection.execute(
-                "SELECT * FROM lectures WHERE folder_id IS NULL AND workspace_id IS NULL ORDER BY created_at DESC"
             ).fetchall()
             workspaces = connection.execute(
                 """
@@ -1618,7 +1615,7 @@ def list_library(folder_id: str | None = Query(default=None)) -> dict[str, objec
         "breadcrumbs": get_folder_path(current_folder),
         "folders": [serialize_folder(folder) for folder in folders],
         "workspaces": [serialize_workspace(workspace) for workspace in workspaces],
-        "lectures": [serialize_lecture(lecture, include_content=False) for lecture in lectures],
+        "lectures": [],
         "materials": [serialize_material(material) for material in materials],
     }
 
@@ -1977,14 +1974,6 @@ def read_class_ai(folder_id: str) -> dict[str, object]:
             "SELECT * FROM folder_ai_messages WHERE folder_id = ? ORDER BY created_at ASC",
             (folder_id,),
         ).fetchall()
-        loose_recording_count = connection.execute(
-            f"""
-            SELECT COUNT(*) AS count FROM lectures
-            WHERE workspace_id IS NULL AND is_standalone = 1
-              AND folder_id IN ({placeholders})
-            """,
-            folder_ids,
-        ).fetchone()["count"]
         material_count = connection.execute(
             f"SELECT COUNT(*) AS count FROM materials WHERE folder_id IN ({placeholders})",
             folder_ids,
@@ -1992,8 +1981,7 @@ def read_class_ai(folder_id: str) -> dict[str, object]:
     return {
         "folder": serialize_folder(folder),
         "lecture_count": len(workspace_sources),
-        "recording_count": sum(source["session_count"] for source in workspace_sources)
-        + loose_recording_count,
+        "recording_count": sum(source["session_count"] for source in workspace_sources),
         "material_count": material_count,
         "ai_notes": ai_notes["note_body"] if ai_notes else "",
         "ai_notes_model": ai_notes["model"] if ai_notes else None,
@@ -2365,7 +2353,7 @@ def read_lecture_audio(lecture_id: str) -> FileResponse:
 
 @app.post("/api/captures", status_code=201)
 def start_capture(model: str = Form(default="base.en")) -> dict[str, object]:
-    """Open a live capture so audio can be transcribed while the class is still running."""
+    """Open a low-latency local caption stream for an in-progress recording."""
     if model not in TRANSCRIPTION_MODELS:
         raise HTTPException(status_code=400, detail="Choose a supported transcription quality.")
     capture_id = str(uuid4())
@@ -2377,9 +2365,13 @@ def start_capture(model: str = Form(default="base.en")) -> dict[str, object]:
             INSERT INTO captures (id, created_at, model, filename, processed_seconds, segments_json, status)
             VALUES (?, ?, ?, ?, 0, '[]', 'live')
             """,
-            (capture_id, datetime.now(timezone.utc).isoformat(), model, filename),
+            (capture_id, datetime.now(timezone.utc).isoformat(), LIVE_TRANSCRIPTION_MODEL, filename),
         )
-    return {"capture_id": capture_id, "model": model}
+    return {
+        "capture_id": capture_id,
+        "live_model": LIVE_TRANSCRIPTION_MODEL,
+        "final_model": model,
+    }
 
 
 @app.post("/api/captures/{capture_id}/chunk")
@@ -2417,6 +2409,8 @@ def discard_capture(capture_id: str) -> dict[str, str]:
         connection.execute("UPDATE captures SET status = 'discarded' WHERE id = ?", (capture_id,))
         connection.execute("DELETE FROM captures WHERE id = ?", (capture_id,))
     remove_capture_file(row["filename"])
+    with LIVE_JOBS_LOCK:
+        LIVE_DIRTY.discard(capture_id)
     return {"status": "discarded"}
 
 
@@ -2435,7 +2429,6 @@ def create_lecture(
         raise HTTPException(status_code=400, detail="Choose a supported transcription quality.")
     selected_workspace_id = workspace_id or None
     selected_workspace = get_workspace(selected_workspace_id) if selected_workspace_id else None
-    should_create_workspace = create_workspace and selected_workspace_id is None
     selected_folder_id = selected_workspace["folder_id"] if selected_workspace else folder_id or None
     selected_folder = get_folder(selected_folder_id) if selected_folder_id else None
     suffix = Path(audio.filename or "recording.webm").suffix.lower()
@@ -2465,11 +2458,13 @@ def create_lecture(
         shutil.copyfile(temporary_audio_path, saved_audio_path)
 
     note_body = capture_notes
-    is_standalone = selected_workspace_id is None and not should_create_workspace
     course = selected_folder["name"] if selected_folder else "Unfiled recordings"
     try:
         with connect_database() as connection:
-            if should_create_workspace:
+            # A saved recording always belongs to a lecture page.  `create_workspace`
+            # remains an accepted form field for older clients, but is no longer a
+            # branch in the product model.
+            if selected_workspace_id is None:
                 selected_workspace_id = str(uuid4())
                 connection.execute(
                     """
@@ -2484,7 +2479,7 @@ def create_lecture(
                         created_at_datetime.isoformat(),
                     ),
                 )
-            if selected_workspace_id and capture_notes:
+            if capture_notes:
                 current_notes = connection.execute(
                     "SELECT note_body FROM workspace_notes WHERE workspace_id = ?",
                     (selected_workspace_id,),
@@ -2504,10 +2499,6 @@ def create_lecture(
                     """,
                     (selected_workspace_id, merged_notes, created_at_datetime.isoformat()),
                 )
-                connection.execute(
-                    "UPDATE workspaces SET updated_at = ? WHERE id = ?",
-                    (created_at_datetime.isoformat(), selected_workspace_id),
-                )
             connection.execute(
                 """
                 INSERT INTO lectures (
@@ -2517,8 +2508,8 @@ def create_lecture(
                 (
                     lecture_id,
                     selected_workspace_id,
-                    int(is_standalone),
-                    selected_workspace_id if capture_notes and selected_workspace_id else None,
+                    0,
+                    selected_workspace_id if capture_notes else None,
                     selected_folder_id,
                     course,
                     clean_title,
@@ -2532,27 +2523,23 @@ def create_lecture(
             connection.execute(
                 "UPDATE lectures SET transcription_status = 'pending' WHERE id = ?", (lecture_id,)
             )
+            connection.execute(
+                "UPDATE workspaces SET updated_at = ? WHERE id = ?",
+                (created_at_datetime.isoformat(), selected_workspace_id),
+            )
     except Exception:
         saved_audio_path.unlink(missing_ok=True)
         raise
-    # Anything the live pass already transcribed is kept, so the final run only
-    # has to cover the tail.
-    resume_from = 0.0
     if capture_id:
         try:
             capture = read_capture(capture_id)
         except HTTPException:
             capture = None
         if capture is not None:
-            seeded = json.loads(capture["segments_json"] or "[]")
-            resume_from = float(capture["processed_seconds"] or 0.0)
+            # Live captions are intentionally fast drafts.  A saved lecture is
+            # transcribed from byte zero with the chosen quality model so the
+            # durable transcript is never a mixture of draft and final text.
             with connect_database() as connection:
-                if seeded:
-                    replace_transcript_segments(connection, lecture_id, seeded)
-                connection.execute(
-                    "UPDATE lectures SET transcription_resume_from = ? WHERE id = ?",
-                    (resume_from, lecture_id),
-                )
                 connection.execute(
                     "UPDATE captures SET status = 'finished' WHERE id = ?", (capture_id,)
                 )
@@ -2590,155 +2577,6 @@ def update_lecture(lecture_id: str, update: LectureUpdate) -> dict[str, object]:
             connection.execute(
                 "UPDATE lectures SET folder_id = ?, course = ? WHERE workspace_id = ?",
                 (folder_id, course, current["workspace_id"]),
-            )
-    return serialize_lecture(get_lecture(lecture_id), include_content=True)
-
-
-def attach_recording_to_workspace_in_connection(
-    connection: sqlite3.Connection,
-    recording: sqlite3.Row,
-    workspace_id: str,
-    folder_id: str | None,
-    course: str,
-    attached_at: datetime,
-) -> None:
-    capture_notes = recording["note_body"].strip()
-    connection.execute(
-        """
-        UPDATE lectures
-        SET workspace_id = ?, is_standalone = 0, capture_notes_workspace_id = ?, folder_id = ?, course = ?
-        WHERE id = ?
-        """,
-        (workspace_id, workspace_id, folder_id, course, recording["id"]),
-    )
-    if capture_notes and recording["capture_notes_workspace_id"] != workspace_id:
-        current_notes = connection.execute(
-            "SELECT note_body FROM workspace_notes WHERE workspace_id = ?",
-            (workspace_id,),
-        ).fetchone()
-        merged_notes = append_capture_notes(
-            current_notes["note_body"] if current_notes else "",
-            capture_notes,
-            attached_at,
-            f"Notes from {recording['title']}",
-        )
-        connection.execute(
-            """
-            INSERT INTO workspace_notes (workspace_id, note_body, updated_at)
-            VALUES (?, ?, ?)
-            ON CONFLICT(workspace_id) DO UPDATE SET
-                note_body = excluded.note_body,
-                updated_at = excluded.updated_at
-            """,
-            (workspace_id, merged_notes, attached_at.isoformat()),
-        )
-    connection.execute(
-        "UPDATE workspaces SET updated_at = ? WHERE id = ?",
-        (attached_at.isoformat(), workspace_id),
-    )
-
-
-@app.post("/api/lectures/{lecture_id}/attach")
-def attach_recording_to_workspace(lecture_id: str, attach: RecordingAttach) -> dict[str, object]:
-    recording = get_lecture(lecture_id)
-    workspace = get_workspace(attach.workspace_id)
-    if recording["workspace_id"] == workspace["id"]:
-        return serialize_lecture(recording, include_content=True)
-    if recording["workspace_id"]:
-        raise HTTPException(
-            status_code=422,
-            detail="This recording already belongs to a lecture. Detach it before moving it again.",
-        )
-    folder = get_folder(workspace["folder_id"]) if workspace["folder_id"] else None
-    course = folder["name"] if folder else "Unfiled recordings"
-    with connect_database() as connection:
-        attach_recording_to_workspace_in_connection(
-            connection,
-            recording,
-            workspace["id"],
-            workspace["folder_id"],
-            course,
-            datetime.now(timezone.utc),
-        )
-    return serialize_lecture(get_lecture(lecture_id), include_content=True)
-
-
-@app.post("/api/lectures/{lecture_id}/workspace", status_code=201)
-def create_workspace_from_recording(lecture_id: str) -> dict[str, object]:
-    recording = get_lecture(lecture_id)
-    if recording["workspace_id"]:
-        raise HTTPException(status_code=422, detail="This recording already has a lecture page.")
-    folder = get_folder(recording["folder_id"]) if recording["folder_id"] else None
-    course = folder["name"] if folder else "Unfiled recordings"
-    workspace_id = str(uuid4())
-    created_at = datetime.now(timezone.utc)
-    with connect_database() as connection:
-        connection.execute(
-            """
-            INSERT INTO workspaces (id, folder_id, title, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?)
-            """,
-            (
-                workspace_id,
-                recording["folder_id"],
-                recording["title"],
-                created_at.isoformat(),
-                created_at.isoformat(),
-            ),
-        )
-        attach_recording_to_workspace_in_connection(
-            connection,
-            recording,
-            workspace_id,
-            recording["folder_id"],
-            course,
-            created_at,
-        )
-    return serialize_workspace(get_workspace(workspace_id), include_sessions=True)
-
-
-@app.post("/api/lectures/{lecture_id}/detach")
-def detach_recording_from_workspace(lecture_id: str) -> dict[str, object]:
-    recording = get_lecture(lecture_id)
-    if not recording["workspace_id"]:
-        raise HTTPException(status_code=422, detail="This recording is already loose.")
-    detached_at = datetime.now(timezone.utc).isoformat()
-    with connect_database() as connection:
-        connection.execute(
-            """
-            UPDATE lectures
-            SET workspace_id = NULL, is_standalone = 1
-            WHERE id = ?
-            """,
-            (lecture_id,),
-        )
-        connection.execute(
-            "UPDATE workspaces SET updated_at = ? WHERE id = ?",
-            (detached_at, recording["workspace_id"]),
-        )
-    return serialize_lecture(get_lecture(lecture_id), include_content=True)
-
-
-@app.patch("/api/lectures/{lecture_id}/move")
-def move_lecture(lecture_id: str, move: RecordingMove) -> dict[str, object]:
-    current = get_lecture(lecture_id)
-    folder_id = move.folder_id or None
-    destination = get_folder(folder_id) if folder_id else None
-    course = destination["name"] if destination else "Unfiled recordings"
-    with connect_database() as connection:
-        if current["workspace_id"]:
-            connection.execute(
-                "UPDATE workspaces SET folder_id = ?, updated_at = ? WHERE id = ?",
-                (folder_id, datetime.now(timezone.utc).isoformat(), current["workspace_id"]),
-            )
-            connection.execute(
-                "UPDATE lectures SET folder_id = ?, course = ? WHERE workspace_id = ?",
-                (folder_id, course, current["workspace_id"]),
-            )
-        else:
-            connection.execute(
-                "UPDATE lectures SET folder_id = ?, course = ? WHERE id = ?",
-                (folder_id, course, lecture_id),
             )
     return serialize_lecture(get_lecture(lecture_id), include_content=True)
 

@@ -37,11 +37,10 @@ dedicated section after the folder's imported files, where it is clearly a
 class-wide study tool rather than an action attached to one note or recording.
 
 The library has one **Lectures** collection rather than separate “lecture
-notes” and “loose recordings” sections. It is a single chronological card feed:
-dark cards are editable lecture pages with their attached recordings, and light
-cards are older or detached recordings that have not yet been made into a
-lecture page. This preserves the useful distinction without making a student
-scan two empty states or guess where a lecture belongs.
+notes” and “loose recordings” sections. Each card is a durable editable lecture
+page with one or more recordings attached. This gives students one predictable
+place to reopen a class, whether they recorded once or returned over several
+days.
 
 ## Capture before organization
 
@@ -55,34 +54,26 @@ capture creates no empty lecture page.
 Folders are an organizational layer, not a prerequisite for capture. They can
 represent a course, a semester, or a topic and may be nested.
 
-## Moving recordings
+## Moving lectures
 
-Drag a recording row onto a folder to file it. Drop targets use a distinct but
-subtle blue outline and surface change so it is clear where the recording will
+Drag a lecture card onto a folder to file it. Drop targets use a distinct but
+subtle blue outline and surface change so it is clear where the lecture will
 go.
 
 When a student is viewing a folder, one full-width **parent location** target
 appears above its contents. Clicking it opens the immediate parent (or the
-Library at the top level). Dragging a recording onto the same target moves it
+Library at the top level). Dragging a lecture onto the same target moves it
 there—one folder level at a time; at the top level, that means Unfiled. The
 copy always names the dual behavior directly: "Click to open" and "Drag a
-recording here to move it." Breadcrumbs remain available for direct jumps to
-any ancestor.
+lecture here to move it." Breadcrumbs remain available for direct jumps to any
+ancestor.
 
-Drag-and-drop is not reliable on every touch or keyboard environment, so the
-recording detail view offers an **Attach to lecture** selector as an accessible
-alternative. Folder placement is inherited from the place where capture began,
-so there is no second “save to folder” decision during review. The bottom
-**Done** button saves a name change only. Moving between folders remains an
-intentional drag action from the library. A loose recording can also become its
-own lecture page in one click, preserving its audio, transcript, and capture
-notes.
-
-A lecture note can hold any number of recording sessions. Besides recording a
-new session from the note itself or dragging one onto its card, the recording
-review tab has an **Add recordings** picker for selecting several loose
-recordings at once. Each selected recording is attached independently and its
-capture notes are appended to the lecture note once.
+Folder placement is inherited from the place where capture began, so there is
+no second “save to folder” decision during review. Moving between folders is an
+intentional drag action from the library and always moves the full lecture,
+including all of its audio, notes, and attachments. A lecture note can hold any
+number of recording sessions; **Continue recording** creates the next session
+directly in that same lecture.
 
 An open lecture puts a large blue **Continue recording** bar above its tabs.
 This is the obvious next action when class resumes; it starts another dated
@@ -125,8 +116,10 @@ an existing class note's recording, the draft is appended under a timestamped
 "Capture notes" heading; for a first recording, it becomes that new class
 note's initial content. Discarding or cancelling capture therefore creates no
 orphan note. The live waveform uses a small noise gate, eased level changes,
-and neighbouring-bar averaging so it reads as stable audio feedback instead of
-jittering with every microphone sample.
+neighbouring-bar averaging, and symmetric edge fading so it reads as stable
+audio feedback instead of jittering with every microphone sample. Live captions
+use a dedicated local `tiny.en` worker and one-second chunks; the complete saved
+audio is then transcribed from the beginning using the selected quality model.
 
 Folders are portrait covers, deliberately unlike the wide recording rows. A
 textured color field sits above a large dark inlay, with a local sequence number,
@@ -159,17 +152,17 @@ the extracted source. Scanned PDFs are labeled as needing OCR, and older
 `.doc`/`.ppt` files are kept but require conversion before Class AI can read
 them. Deleting a recording removes its database entry and saved audio, but
 keeps the surrounding class note and its student-authored notes. Deleting a
-lecture note removes only its written notes and releases its recordings as
-loose recordings; its attachments are retained as class-wide files so a
-student does not lose imported work. An occupied folder cannot be deleted until
-its contents are moved or deleted.
+lecture page removes the recordings and notes it owns; its attachments are
+kept as class-wide files so imported work is not lost. This is deliberately
+confirmed before action. An occupied folder cannot be deleted until its contents
+are moved or deleted.
 
 The optional AI integration is also local: the server communicates only with an
 Ollama process on `127.0.0.1`. It never sends class notes, transcripts, or
 question history to a hosted provider. AI belongs to a **class folder**, not a
 single lecture note: it can use every saved lecture note, attached recording,
-loose recording, and imported file in that class folder (including nested
-folders). It never uses data from another class. The server builds a bounded, labeled context for
+and imported file in that class folder (including nested folders). It never uses
+data from another class. The server builds a bounded, labeled context for
 each response because a local model has a finite context window; this is a
 technical limit on one request, not a manual source-selection burden placed on
 the student. An installed model does consume local disk, memory, and processing

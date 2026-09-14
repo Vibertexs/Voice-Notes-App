@@ -76,13 +76,13 @@ def decode_audio_from(
     return audio, float(actual_start if actual_start is not None else target)
 
 
-@lru_cache(maxsize=1)
+@lru_cache(maxsize=2)
 def load_model(
     model_name: str,
     device: str,
     compute_type: str,
 ) -> WhisperModel:
-    """Reuse the active model while keeping local memory use predictable."""
+    """Keep the live draft model and one selected final model warm locally."""
     return WhisperModel(model_name, device=device, compute_type=compute_type)
 
 
@@ -96,6 +96,7 @@ def transcribe_audio(
     on_progress: Callable[[float, float], None] | None = None,
     start_seconds: float = 0.0,
     on_segment: Callable[[dict[str, object]], None] | None = None,
+    live: bool = False,
 ) -> dict[str, object]:
     """Transcribe one local audio file and return a JSON-serializable result.
 
@@ -116,7 +117,10 @@ def transcribe_audio(
 
     segments, info = model.transcribe(
         source,
-        beam_size=5,
+        # Captions are explicitly a short-lived draft, so favor a quick first
+        # hypothesis. The saved pass keeps the slower, higher-quality beam.
+        beam_size=1 if live else 5,
+        condition_on_previous_text=False if live else True,
         language=language,
         vad_filter=True,
     )

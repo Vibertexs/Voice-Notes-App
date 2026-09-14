@@ -91,6 +91,8 @@
       .empty { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem .15rem; color: var(--muted); font-size: .9rem; }
       .empty .button { flex: 0 0 auto; }
       .dragging { opacity: .45; }
+      .file-drop-zone { width: 100%; display: flex; align-items: center; justify-content: center; min-height: 4.65rem; margin: .15rem 0 .45rem; padding: .8rem 1rem; border: 1px dashed rgba(52,119,212,.45); border-radius: .9rem; color: #315f99; background: rgba(255,255,255,.28); font-size: .85rem; font-weight: 650; transition: border-color .16s ease, background .16s ease, transform .16s ease; }
+      .file-drop-zone:hover, .file-drop-zone.is-file-drop { border-color: var(--blue); background: rgba(224,241,255,.72); transform: translateY(-1px); }
 
       .panel { width: min(34rem, 100%); padding: clamp(1.25rem, 4vw, 2rem); border: 1px solid var(--line); border-radius: 1rem; background: var(--surface); box-shadow: inset 0 1px rgba(255,255,255,.7), 0 1rem 2.4rem rgba(65,99,148,.12); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
       .panel h2 { margin: 0; font-size: 1.55rem; letter-spacing: -.035em; }
@@ -121,7 +123,7 @@
       .transport[data-phase="recording"] .phase-label::before { display: inline-block; }
       .recording-timer { margin-top: .15rem; color: var(--ink); font-size: clamp(2.6rem, 8vw, 3.3rem); font-weight: 300; letter-spacing: -.02em; line-height: 1.1; font-variant-numeric: tabular-nums; }
       .transport[data-phase="paused"] .recording-timer { animation: blink 1.6s ease-in-out infinite; }
-      .waveform { display: block; width: 100%; height: 3.6rem; margin: 1rem 0 1.25rem; -webkit-mask-image: linear-gradient(90deg, transparent, #000 30%); mask-image: linear-gradient(90deg, transparent, #000 30%); }
+      .waveform { display: block; width: 100%; height: 3.6rem; margin: 1rem 0 1.25rem; -webkit-mask-image: linear-gradient(90deg, transparent, #000 15%, #000 85%, transparent); mask-image: linear-gradient(90deg, transparent, #000 15%, #000 85%, transparent); }
       .capture-marker-panel { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .55rem; margin: -.3rem 0 1rem; }
       .capture-marker-panel label { margin: 0; }
       .capture-marker-panel label span { color: rgba(235,239,255,.74); font-size: .7rem; font-weight: 760; letter-spacing: .06em; text-transform: uppercase; }
@@ -137,6 +139,8 @@
       .live-transcript-body { max-height: 7.5rem; margin-top: .4rem; overflow-y: auto; color: #e9efff; font-size: .82rem; line-height: 1.55; }
       .live-transcript-line { display: block; opacity: .72; }
       .live-transcript-line:last-child { opacity: 1; }
+      .live-transcript-line.is-new { animation: live-caption-in .22s ease-out both; }
+      @keyframes live-caption-in { from { opacity: 0; transform: translateY(.22rem); } to { opacity: 1; transform: none; } }
       .transport-controls { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; }
       .shutter { position: relative; grid-column: 2; width: 5.25rem; height: 5.25rem; display: grid; place-items: center; padding: 0; border-radius: 50%; background: transparent; -webkit-tap-highlight-color: transparent; }
       .shutter:disabled { opacity: 1; cursor: progress; }
@@ -653,18 +657,6 @@
       .transcript-working-eta { color: #2a5699; font-size: .78rem; font-weight: 740; font-variant-numeric: tabular-nums; }
       @keyframes transcribe-slide { 0% { transform: translateX(-100%); } 100% { transform: translateX(300%); } }
       @media (prefers-reduced-motion: reduce) { .transcript-working-bar.indeterminate .transcript-working-fill { animation: none; width: 100%; } }
-      .add-recordings-panel { margin-top: .85rem; padding: .8rem; border: 2px solid #d9e2ef; border-radius: 1rem; background: #f7faff; }
-      .add-recordings-panel h4 { margin: 0; color: #334865; font-size: .8rem; }
-      .add-recordings-panel p { margin: .25rem 0 0; color: #68778d; font-size: .74rem; line-height: 1.4; }
-      .recording-picker { display: grid; gap: .38rem; max-height: 13.5rem; margin-top: .7rem; overflow: auto; }
-      .recording-choice { display: grid; grid-template-columns: 1rem minmax(0, 1fr); align-items: start; gap: .52rem; padding: .58rem; border: 2px solid #d9e2ef; border-radius: .75rem; color: #33445e; background: #fff; cursor: pointer; }
-      .recording-choice:has(input:checked) { border-color: #5d8bd8; background: #edf5ff; }
-      .recording-choice input { width: 1.25rem; min-height: 1.25rem; margin: .13rem 0 0; accent-color: #1769d2; }
-      .recording-choice strong, .recording-choice span { display: block; }
-      .recording-choice strong { overflow: hidden; font-size: .76rem; text-overflow: ellipsis; white-space: nowrap; }
-      .recording-choice span { margin-top: .14rem; color: #718097; font-size: .68rem; line-height: 1.3; }
-      .attach-existing-status { min-height: 1.1rem; margin: .55rem 0 0; color: #64728a; font-size: .72rem; line-height: 1.35; }
-      .attach-selected-recordings { width: 100%; margin-top: .55rem; }
       .material-status { min-height: 1.1rem; margin: .55rem 0 0; color: #64728a; font-size: .72rem; line-height: 1.35; }
       .material-list { display: grid; gap: .45rem; margin-top: .7rem; }
       .material-item { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: .55rem; padding: .62rem; border: 2px solid #d9e2ef; border-radius: .8rem; background: #fff; }
@@ -818,8 +810,6 @@
       .class-ai-source-card h3 { margin: 0; font-size: 1rem; }
       .class-ai-source-card p { margin: .35rem 0 0; color: var(--muted); font-size: .8rem; line-height: 1.45; }
       .class-ai-source-summary { margin-top: .8rem !important; color: #244b88 !important; font-weight: 720; }
-      .move-panel #attach-recording-panel { margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 2px solid #dbe4f0; }
-      .move-panel #attach-recording { width: 100%; margin-top: .7rem; }
       @media (max-width: 840px) { .capture-notes { min-height: 18rem; } }
       @media (max-width: 540px) {
         .workspace-notes { padding: 1.25rem 1rem 2rem; }
@@ -886,7 +876,7 @@
           </div>
           <button id="parent-target" class="parent-target" hidden>
             <span class="parent-icon" aria-hidden="true"></span>
-            <span><strong id="parent-title">Library</strong><span id="parent-copy" class="parent-copy">Tap to open. Drag a recording here to move it.</span></span>
+            <span><strong id="parent-title">Library</strong><span id="parent-copy" class="parent-copy">Tap to open. Drag a lecture here to move it.</span></span>
             <span class="parent-arrow" aria-hidden="true">›</span>
           </button>
           <h3 class="section-title">Folders</h3>
@@ -909,6 +899,7 @@
           <div id="workspace-list" class="workspace-grid"></div>
           <div id="no-workspaces" class="empty"><span>No lectures here yet. Start with Record &amp; note to keep audio and notes together.</span></div>
           <h3 class="section-title">Imported files</h3>
+          <button id="file-drop-zone" class="file-drop-zone" type="button">Drop PDFs, slides, or notes here — or choose files</button>
           <p id="file-status" class="material-status" role="status"></p>
           <div id="file-list" class="material-list"></div>
           <div id="no-files" class="empty" hidden><span>No imported files here yet.</span><button id="empty-file-action" class="button secondary">＋ Import file</button></div>
@@ -949,7 +940,7 @@
               </div>
               <div class="recording-options">
                 <label>Recording name <span>(optional)</span><input id="recording-title" maxlength="180" placeholder="e.g. Cell respiration" /></label>
-                <label>Transcription quality<select id="quality"><option value="tiny.en">Fast</option><option value="base.en" selected>Balanced</option><option value="small.en">High accuracy</option></select></label>
+                <label>Saved transcript quality<select id="quality"><option value="tiny.en">Fast</option><option value="base.en" selected>Balanced</option><option value="small.en">High accuracy</option></select></label>
               </div>
               <section id="transport" class="transport" data-phase="idle" aria-label="Recording controls">
                 <div id="phase-label" class="phase-label">Ready</div>
@@ -1052,14 +1043,7 @@
           <section id="review-pane" class="workspace-pane" role="tabpanel" aria-labelledby="workspace-tab-review">
             <div class="review-layout">
               <aside class="sessions-card">
-                <div class="sessions-card-head"><div><h3>Recording sessions</h3><p>Each date is one saved recording. Select one to replay and read its transcript.</p></div><button id="add-existing-recordings" type="button" class="button secondary">＋ Add recordings</button></div>
-                <section id="add-recordings-panel" class="add-recordings-panel" aria-labelledby="add-recordings-heading" hidden>
-                  <h4 id="add-recordings-heading">Add saved recordings</h4>
-                  <p>Select one or more loose recordings. Their capture notes will join this lecture note.</p>
-                  <div id="loose-recording-options" class="recording-picker"></div>
-                  <p id="attach-existing-status" class="attach-existing-status" role="status"></p>
-                  <button id="attach-selected-recordings" type="button" class="button primary attach-selected-recordings" disabled>Add selected recordings</button>
-                </section>
+                <div class="sessions-card-head"><div><h3>Recording sessions</h3><p>Each date is one saved recording. Select one to replay and read its transcript.</p></div></div>
                 <div id="review-session-list" class="session-list"></div>
               </aside>
               <section class="review-card" aria-label="Recording review">
@@ -1172,32 +1156,6 @@
           </div>
         </section>
 
-        <section id="detail-view" class="view" hidden>
-          <div class="detail-header">
-            <div><button id="back-to-library" class="back"><span class="back-chevron" aria-hidden="true">‹</span>Back to library</button><h2 id="detail-heading">Recording</h2></div>
-            <button id="delete-recording" class="button danger">Delete</button>
-          </div>
-          <div class="detail-grid">
-            <div class="detail-section">
-              <div id="saved-date" class="detail-meta"></div>
-              <label>Recording name<input id="saved-title" maxlength="180" /></label>
-              <audio id="playback" controls></audio>
-            </div>
-            <aside class="detail-section move-panel">
-              <div id="attach-recording-panel">
-                <h3>Make this a lecture</h3>
-                <p>Give this recording its own editable lecture page, then keep adding notes and recording sessions.</p>
-                <button id="create-workspace-from-recording" type="button" class="button primary">Create lecture page</button>
-                <p>Or add it to a lecture page you already have.</p>
-                <label>Lecture note<select id="attach-target"></select></label>
-                <button id="attach-recording" type="button" class="button primary">Attach recording</button>
-              </div>
-            </aside>
-          </div>
-          <div class="save-bar"><span id="save-status" class="status" role="status"></span><button id="save-recording" class="button primary">Done</button></div>
-          <h3 class="section-title">Transcript</h3>
-          <div id="transcript" class="transcript"></div>
-        </section>
       </main>
 
       <nav id="mobile-bar" class="mobile-bar" aria-label="Main">
@@ -1221,17 +1179,15 @@
         'library-home', 'new-folder', 'record-from-library', 'add-folder-material', 'folder-material-upload', 'folder-ai-entry', 'folder-ai-open', 'empty-folder-action', 'empty-file-action', 'capture-launch', 'capture-copy',
         'recent-toggle', 'recent-menu', 'recent-recording-list', 'recent-empty', 'library-view', 'breadcrumb', 'library-title',
         'library-subtitle', 'delete-folder', 'folder-color-toggle', 'folder-color-control', 'parent-target', 'parent-title', 'parent-copy',
-        'folder-list', 'no-folders', 'workspace-list', 'no-workspaces', 'file-list', 'no-files', 'file-status', 'folder-view',
+        'folder-list', 'no-folders', 'workspace-list', 'no-workspaces', 'file-drop-zone', 'file-list', 'no-files', 'file-status', 'folder-view',
         'folder-context', 'folder-form', 'folder-name', 'new-folder-colors', 'cancel-folder', 'folder-status',
         'recording-view', 'capture-layout', 'recording-title', 'quality', 'record', 'recording-location', 'recording-helper', 'recording-timer', 'transport', 'phase-label', 'waveform', 'capture-session-strip', 'capture-strip-state', 'capture-strip-clock',
         'capture-marker-panel', 'capture-marker-label', 'capture-add-marker', 'capture-marker-list',
         'live-transcript', 'live-transcript-meta', 'live-transcript-body', 'finish-group', 'finish-recording', 'discard-reveal', 'discard-slider', 'discard-thumb',
-        'cancel-recording', 'recording-status', 'capture-notes-toggle', 'capture-notes-panel', 'capture-notes-close', 'capture-notes-context', 'capture-notes', 'capture-notes-footer', 'capture-add-material', 'capture-material-upload', 'capture-material-status', 'capture-material-list', 'detail-view', 'back-to-library', 'detail-heading',
-        'delete-recording', 'saved-title', 'save-recording', 'save-status', 'saved-date', 'playback',
-        'attach-recording-panel', 'create-workspace-from-recording', 'attach-target', 'attach-recording', 'transcript', 'workspace-view', 'workspace-back', 'workspace-location',
+        'cancel-recording', 'recording-status', 'capture-notes-toggle', 'capture-notes-panel', 'capture-notes-close', 'capture-notes-context', 'capture-notes', 'capture-notes-footer', 'capture-add-material', 'capture-material-upload', 'capture-material-status', 'capture-material-list', 'workspace-view', 'workspace-back', 'workspace-location',
         'workspace-title', 'workspace-notes', 'workspace-notes-status', 'workspace-add-material', 'workspace-material-upload', 'workspace-material-status', 'workspace-material-list', 'workspace-no-materials', 'record-from-workspace', 'delete-workspace',
         'workspace-tab-notes', 'workspace-tab-review', 'workspace-tab-study', 'notes-pane', 'review-pane', 'study-pane',
-        'review-session-list', 'add-existing-recordings', 'add-recordings-panel', 'loose-recording-options', 'attach-existing-status', 'attach-selected-recordings', 'review-empty', 'review-content', 'review-session-title', 'review-session-meta',
+        'review-session-list', 'review-empty', 'review-content', 'review-session-title', 'review-session-meta',
         'session-playback', 'session-play-toggle', 'session-play-back', 'session-play-forward', 'session-play-scrubber', 'session-play-time', 'session-play-speed', 'retranscribe-session', 'marker-label', 'marker-time-hint', 'add-marker', 'marker-list', 'session-transcript', 'transcript-meta', 'delete-session',
         'study-notes', 'study-notes-status', 'study-notes-save', 'generate-study-notes',
         'ai-setup', 'ai-model', 'ai-refresh', 'generate-ai-notes', 'ai-notes', 'ai-notes-status', 'ai-notes-save',
@@ -1278,6 +1234,8 @@
       let captureId = null;
       let capturePollTimer = 0;
       let liveSegments = [];
+      let liveCaptionSignature = '';
+      let pendingLiveChunks = [];
       let chunkQueue = Promise.resolve();
       let captureInterrupted = false;
       let wakeLock = null;
@@ -1306,7 +1264,10 @@
         saving: { label: 'Saving', hint: 'Saving and transcribing…', action: 'Saving recording' },
         discarding: { label: 'Discarding', hint: 'Discarding recording…', action: 'Discarding recording' },
       };
-      const CAPTURE_CHUNK_MS = 3000;
+      // One-second chunks plus the tiny local model keeps captions close to the room.
+      const CAPTURE_CHUNK_MS = 1000;
+      const LIVE_POLL_MS = 350;
+      const WORKSPACE_DRAG_TYPE = 'application/x-class-notes-workspace';
       const PLAYBACK_SPEEDS = [1, 1.25, 1.5, 1.75, 2];
       const BAR_WIDTH = 3;
       const BAR_GAP = 2;
@@ -1323,7 +1284,7 @@
           showToast('Finish or discard the recording first.');
           return;
         }
-        ['search', 'library', 'folder', 'recording', 'workspace', 'class-ai', 'detail'].forEach(name => {
+        ['search', 'library', 'folder', 'recording', 'workspace', 'class-ai'].forEach(name => {
           el[`${name}-view`].hidden = name !== view;
         });
         currentView = view;
@@ -1349,7 +1310,6 @@
       }
       function backActionForCurrentView() {
         if (currentView === 'workspace') return () => loadLibrary(activeWorkspace?.folder_id ?? null);
-        if (currentView === 'detail') return () => loadLibrary(activeRecording?.folder_id ?? null);
         if (currentView === 'class-ai') return () => loadLibrary(activeClassAI?.folder?.id ?? null);
         if (currentView === 'search') return () => loadLibrary(activeFolder?.id ?? null);
         if (currentView === 'folder') return () => loadLibrary(parentDestination().id);
@@ -1379,9 +1339,12 @@
         if (!response.ok) throw new Error(body.detail || 'Something went wrong.');
         return body;
       }
-      function addDropTarget(node, destination) {
+      function hasWorkspaceDrag(event) {
+        return [...event.dataTransfer.types].includes(WORKSPACE_DRAG_TYPE);
+      }
+      function addWorkspaceDropTarget(node, destination) {
         node.addEventListener('dragover', event => {
-          if (!event.dataTransfer.types.includes('text/plain')) return;
+          if (!hasWorkspaceDrag(event)) return;
           event.preventDefault();
           event.dataTransfer.dropEffect = 'move';
           node.classList.add('drop-target');
@@ -1390,30 +1353,16 @@
         node.addEventListener('drop', async event => {
           event.preventDefault();
           node.classList.remove('drop-target');
-          const recordingId = event.dataTransfer.getData('text/plain');
-          if (recordingId) await moveRecording(recordingId, typeof destination === 'function' ? destination() : destination);
+          const workspaceId = event.dataTransfer.getData(WORKSPACE_DRAG_TYPE);
+          if (workspaceId) await moveWorkspace(workspaceId, typeof destination === 'function' ? destination() : destination);
         });
       }
-      function addWorkspaceDropTarget(node, workspaceId) {
-        node.addEventListener('dragover', event => {
-          if (!event.dataTransfer.types.includes('text/plain')) return;
-          event.preventDefault();
-          event.dataTransfer.dropEffect = 'move';
-          node.classList.add('drop-target');
-        });
-        node.addEventListener('dragleave', () => node.classList.remove('drop-target'));
-        node.addEventListener('drop', async event => {
-          event.preventDefault();
-          node.classList.remove('drop-target');
-          const recordingId = event.dataTransfer.getData('text/plain');
-          if (recordingId) await attachRecording(recordingId, workspaceId);
-        });
-      }
-      function addRecordingDrag(node, recording) {
+      function addWorkspaceDrag(node, workspace) {
         node.draggable = true;
         node.addEventListener('dragstart', event => {
           event.dataTransfer.effectAllowed = 'move';
-          event.dataTransfer.setData('text/plain', recording.id);
+          event.dataTransfer.setData(WORKSPACE_DRAG_TYPE, workspace.id);
+          event.dataTransfer.setData('text/plain', workspace.title);
           node.classList.add('dragging');
         });
         node.addEventListener('dragend', () => node.classList.remove('dragging'));
@@ -1437,8 +1386,7 @@
         chevron.textContent = '›';
         node.append(icon, content, chevron);
         node.addEventListener('click', onClick);
-        if (kind === 'folder') addDropTarget(node, item.id);
-        if (kind === 'recording') addRecordingDrag(node, item);
+        if (kind === 'folder') addWorkspaceDropTarget(node, item.id);
         return node;
       }
       function folderTile(folder, index) {
@@ -1450,9 +1398,9 @@
         node.querySelector('.folder-name').textContent = folder.name;
         node.querySelector('.folder-note').textContent = subfolders
           ? `${subfolders} ${subfolders === 1 ? 'folder' : 'folders'} inside`
-          : 'Drop recordings here';
+          : 'Drop lectures here';
         node.addEventListener('click', () => loadLibrary(folder.id));
-        addDropTarget(node, folder.id);
+        addWorkspaceDropTarget(node, folder.id);
         return node;
       }
       function workspaceCard(workspace) {
@@ -1466,33 +1414,14 @@
         title.textContent = workspace.title;
         const copy = document.createElement('p');
         copy.textContent = workspace.session_count
-          ? `${workspace.session_count} ${workspace.session_count === 1 ? 'recording attached' : 'recordings attached'} · drop another recording here`
-          : 'Start or paste notes · drop a loose recording here';
+          ? `${workspace.session_count} ${workspace.session_count === 1 ? 'recording attached' : 'recordings attached'} · continue anytime`
+          : 'Start or paste notes';
         const footer = document.createElement('span');
         footer.className = 'workspace-card-footer';
         footer.innerHTML = '<span>Open notes</span><span aria-hidden="true">↗</span>';
         node.append(kicker, title, copy, footer);
         node.addEventListener('click', () => loadWorkspace(workspace.id));
-        addWorkspaceDropTarget(node, workspace.id);
-        return node;
-      }
-      function looseRecordingCard(recording) {
-        const node = document.createElement('button');
-        node.className = 'workspace-card recording-card';
-        node.setAttribute('aria-label', `Open loose recording ${recording.title}`);
-        const kicker = document.createElement('span');
-        kicker.className = 'workspace-kicker';
-        kicker.textContent = 'RECORDING';
-        const title = document.createElement('h4');
-        title.textContent = recording.title;
-        const copy = document.createElement('p');
-        copy.textContent = `Loose · ${formatDate(recording.created_at)} · Open to make a lecture page or add it to one`;
-        const footer = document.createElement('span');
-        footer.className = 'workspace-card-footer';
-        footer.innerHTML = '<span>Open recording</span><span aria-hidden="true">↗</span>';
-        node.append(kicker, title, copy, footer);
-        node.addEventListener('click', () => loadRecording(recording.id));
-        addRecordingDrag(node, recording);
+        addWorkspaceDrag(node, workspace);
         return node;
       }
       function formatFileSize(bytes) {
@@ -1603,6 +1532,31 @@
           el['add-folder-material'].disabled = false;
           el['folder-material-upload'].value = '';
         }
+      }
+      function addFolderFileDropTarget(node) {
+        let dragDepth = 0;
+        node.addEventListener('dragenter', event => {
+          if (![...event.dataTransfer.types].includes('Files')) return;
+          event.preventDefault();
+          dragDepth += 1;
+          node.classList.add('is-file-drop');
+        });
+        node.addEventListener('dragover', event => {
+          if (![...event.dataTransfer.types].includes('Files')) return;
+          event.preventDefault();
+          event.dataTransfer.dropEffect = 'copy';
+        });
+        node.addEventListener('dragleave', () => {
+          dragDepth = Math.max(0, dragDepth - 1);
+          if (!dragDepth) node.classList.remove('is-file-drop');
+        });
+        node.addEventListener('drop', event => {
+          if (!event.dataTransfer.files.length) return;
+          event.preventDefault();
+          dragDepth = 0;
+          node.classList.remove('is-file-drop');
+          uploadFolderMaterials(event.dataTransfer.files);
+        });
       }
       async function removeFolderMaterial(material) {
         if (!confirm(`Delete ${material.original_filename} from this folder?`)) return;
@@ -1949,65 +1903,6 @@
           el['review-session-list'].replaceChildren(makeSessionEmpty('No recordings yet. Add a saved recording, or start one when class begins.'));
         }
         scheduleTranscriptionPoll();
-      }
-      function renderAttachableRecordings() {
-        const candidates = allRecordings
-          .filter(recording => !recording.workspace_id)
-          .sort((left, right) => new Date(right.created_at) - new Date(left.created_at));
-        el['loose-recording-options'].replaceChildren(...candidates.map(recording => {
-          const choice = document.createElement('label');
-          choice.className = 'recording-choice';
-          const input = document.createElement('input');
-          input.type = 'checkbox';
-          input.value = recording.id;
-          input.addEventListener('change', syncAttachSelectedButton);
-          const copy = document.createElement('span');
-          const title = document.createElement('strong');
-          title.textContent = recording.title;
-          const location = recording.folder_id ? recording.course || 'Folder' : 'Unfiled';
-          const meta = document.createElement('span');
-          meta.textContent = `${formatDate(recording.created_at)} · ${location}`;
-          copy.append(title, meta);
-          choice.append(input, copy);
-          return choice;
-        }));
-        el['attach-existing-status'].textContent = candidates.length
-          ? `${candidates.length} loose recording${candidates.length === 1 ? '' : 's'} available.`
-          : 'No loose recordings are available right now.';
-        syncAttachSelectedButton();
-      }
-      function syncAttachSelectedButton() {
-        const selected = el['loose-recording-options'].querySelectorAll('input:checked').length;
-        el['attach-selected-recordings'].disabled = selected === 0;
-        el['attach-selected-recordings'].textContent = selected
-          ? `Add ${selected} recording${selected === 1 ? '' : 's'}`
-          : 'Add selected recordings';
-      }
-      async function toggleAttachableRecordings() {
-        const opening = el['add-recordings-panel'].hidden;
-        if (opening) {
-          await refreshNavigation();
-          renderAttachableRecordings();
-        }
-        el['add-recordings-panel'].hidden = !opening;
-        el['add-existing-recordings'].textContent = opening ? 'Hide recordings' : '＋ Add recordings';
-      }
-      async function attachSelectedRecordings() {
-        if (!activeWorkspace) return;
-        const recordingIds = [...el['loose-recording-options'].querySelectorAll('input:checked')].map(input => input.value);
-        if (!recordingIds.length) return;
-        const workspaceId = activeWorkspace.id;
-        el['attach-selected-recordings'].disabled = true;
-        el['attach-existing-status'].textContent = `Adding ${recordingIds.length} recording${recordingIds.length === 1 ? '' : 's'}…`;
-        const results = await Promise.allSettled(recordingIds.map(id => api(`/api/lectures/${id}/attach`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ workspace_id: workspaceId })
-        })));
-        const added = results.filter(result => result.status === 'fulfilled').length;
-        const failed = results.length - added;
-        await refreshNavigation();
-        await loadWorkspace(workspaceId);
-        setWorkspaceTab('review');
-        showToast(failed ? `${added} added. ${failed} could not be added.` : `${added} recording${added === 1 ? '' : 's'} added to this lecture.`);
       }
       function renderSessionMarkers(markers) {
         if (!(markers || []).length) {
@@ -2914,17 +2809,15 @@
             const destination = parentDestination();
             el['parent-title'].textContent = destination.locationName;
             el['parent-copy'].textContent = destination.id
-              ? `Tap to open ${destination.locationName}. Drag a recording here to move it there.`
-              : 'Tap to open your library. Drag a recording here to unfile it.';
+              ? `Tap to open ${destination.locationName}. Drag a lecture here to move it there.`
+              : 'Tap to open your library. Drag a lecture here to unfile it.';
           }
           await refreshNavigation();
           renderBreadcrumb();
           el['folder-list'].replaceChildren(...library.folders.map((folder, index) => folderTile(folder, index)));
-          const lectureItems = [
-            ...(library.workspaces || []).map(workspace => ({ type: 'workspace', item: workspace, sortDate: workspace.updated_at || workspace.created_at })),
-            ...library.lectures.map(recording => ({ type: 'recording', item: recording, sortDate: recording.created_at }))
-          ].sort((left, right) => new Date(right.sortDate) - new Date(left.sortDate));
-          el['workspace-list'].replaceChildren(...lectureItems.map(entry => entry.type === 'workspace' ? workspaceCard(entry.item) : looseRecordingCard(entry.item)));
+          const lectureItems = [...(library.workspaces || [])]
+            .sort((left, right) => new Date(right.updated_at || right.created_at) - new Date(left.updated_at || left.created_at));
+          el['workspace-list'].replaceChildren(...lectureItems.map(workspaceCard));
           renderFolderMaterials(activeMaterials);
           el['folder-list'].hidden = library.folders.length === 0;
           el['workspace-list'].hidden = lectureItems.length === 0;
@@ -2933,7 +2826,7 @@
           el['file-list'].hidden = activeMaterials.length === 0;
           el['no-files'].hidden = activeMaterials.length > 0;
           if (!el['parent-target'].dataset.dropReady) {
-            addDropTarget(el['parent-target'], () => parentDestination().id);
+            addWorkspaceDropTarget(el['parent-target'], () => parentDestination().id);
             el['parent-target'].dataset.dropReady = 'true';
           }
           show('library');
@@ -2950,57 +2843,21 @@
             selectWorkspaceSession(recording.id, true);
             return;
           }
-          activeRecording = recording;
-          el['detail-heading'].textContent = recording.title;
-          el['saved-title'].value = recording.title;
-          el['saved-date'].textContent = `${formatDate(recording.created_at)} · ${recording.model}`;
-          el.playback.src = recording.audio_url;
-          el.transcript.textContent = recording.transcript || 'No speech was detected.';
-          const folderSuffix = recording.folder_id ? `?folder_id=${encodeURIComponent(recording.folder_id)}` : '';
-          const [_, destinations] = await Promise.all([refreshNavigation(), api(`/api/library${folderSuffix}`)]);
-          const attachOptions = destinations.workspaces || [];
-          el['attach-target'].replaceChildren(
-            new Option(attachOptions.length ? 'Choose a lecture note…' : 'No lecture notes here yet', ''),
-            ...attachOptions.map(workspace => new Option(workspace.title, workspace.id))
-          );
-          el['attach-recording'].disabled = !attachOptions.length;
-          el['attach-recording-panel'].hidden = false;
-          show('detail');
+          showToast('This recording is being organized into its own lecture page. Refresh the library in a moment.');
+          await loadLibrary(recording.folder_id);
         } catch (error) {
-          el['save-status'].textContent = error.message;
-          show('detail');
+          showToast(error.message);
         }
       }
-      async function moveRecording(recordingId, folderId, keepDetail = false) {
+      async function moveWorkspace(workspaceId, folderId) {
         try {
-          const recording = await api(`/api/lectures/${recordingId}/move`, {
+          await api(`/api/workspaces/${workspaceId}`, {
             method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ folder_id: folderId || null })
           });
           const destination = folderId ? allFolders.find(folder => folder.id === folderId)?.name || 'folder' : 'Unfiled';
           showToast(`Moved to ${destination}`);
-          if (keepDetail) { activeRecording = recording; await loadRecording(recording.id); }
-          else await loadLibrary(activeFolder?.id);
+          await loadLibrary(activeFolder?.id);
         } catch (error) { showToast(error.message); }
-      }
-      async function attachRecording(recordingId, workspaceId) {
-        try {
-          const recording = await api(`/api/lectures/${recordingId}/attach`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ workspace_id: workspaceId })
-          });
-          showToast(`Added ${recording.title} to a lecture note.`);
-          await loadLibrary(recording.folder_id);
-        } catch (error) { showToast(error.message); }
-      }
-      async function createWorkspaceFromRecording() {
-        if (!activeRecording) return;
-        el['create-workspace-from-recording'].disabled = true;
-        try {
-          const workspace = await api(`/api/lectures/${activeRecording.id}/workspace`, { method: 'POST' });
-          showToast('Lecture page created. Keep building on it anytime.');
-          await refreshNavigation();
-          await loadWorkspace(workspace.id);
-        } catch (error) { el['save-status'].textContent = error.message; }
-        finally { el['create-workspace-from-recording'].disabled = false; }
       }
 
       function openFolderForm() {
@@ -3220,6 +3077,8 @@
       el['add-folder-material'].addEventListener('click', () => el['folder-material-upload'].click());
       el['empty-file-action'].addEventListener('click', () => el['folder-material-upload'].click());
       el['folder-material-upload'].addEventListener('change', event => uploadFolderMaterials(event.target.files));
+      el['file-drop-zone'].addEventListener('click', () => el['folder-material-upload'].click());
+      addFolderFileDropTarget(el['file-drop-zone']);
       el['folder-ai-open'].addEventListener('click', () => loadClassAI(activeFolder?.id));
       el['capture-notes-toggle'].addEventListener('click', () => setCaptureNotesOpen(el['capture-notes-panel'].hidden, true));
       el['capture-notes-close'].addEventListener('click', () => setCaptureNotesOpen(false));
@@ -3264,11 +3123,6 @@
       el['capture-material-upload'].addEventListener('change', event => attachCaptureFiles(event.target.files));
       el['workspace-add-material'].addEventListener('click', () => el['workspace-material-upload'].click());
       el['workspace-material-upload'].addEventListener('change', event => uploadWorkspaceMaterials(event.target.files));
-      el['add-existing-recordings'].addEventListener('click', () => toggleAttachableRecordings().catch(error => showToast(error.message)));
-      el['attach-selected-recordings'].addEventListener('click', () => attachSelectedRecordings().catch(error => {
-        el['attach-existing-status'].textContent = error.message;
-        syncAttachSelectedButton();
-      }));
       el['delete-workspace'].addEventListener('click', deleteActiveWorkspace);
       el['workspace-title'].addEventListener('change', saveWorkspaceTitle);
       el['workspace-title'].addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); event.target.blur(); } });
@@ -3367,6 +3221,8 @@
       async function openCaptureSession() {
         captureId = null;
         liveSegments = [];
+        liveCaptionSignature = '';
+        pendingLiveChunks = [];
         renderLiveTranscript();
         try {
           const form = new FormData();
@@ -3374,7 +3230,11 @@
           const session = await api('/api/captures', { method: 'POST', body: form });
           captureId = session.capture_id;
           el['live-transcript'].hidden = false;
-          el['live-transcript-meta'].textContent = 'listening…';
+          el['live-transcript-meta'].textContent = 'fast local captions';
+          el['recording-status'].textContent = `Fast local captions are on. The ${el.quality.options[el.quality.selectedIndex].text.toLowerCase()} transcript is created after Done.`;
+          const queued = pendingLiveChunks;
+          pendingLiveChunks = [];
+          queued.forEach(sendCaptureChunk);
           pollCaptureTranscript();
         } catch {
           // Live transcription is a bonus; recording must work without it.
@@ -3383,7 +3243,11 @@
         }
       }
       function sendCaptureChunk(blob) {
-        if (!captureId || !blob?.size) return;
+        if (!blob?.size) return;
+        if (!captureId) {
+          pendingLiveChunks.push(blob);
+          return;
+        }
         const sessionId = captureId;
         // Chained so chunks always land in the order they were recorded.
         chunkQueue = chunkQueue
@@ -3395,13 +3259,13 @@
         if (!liveSegments.length) {
           body.replaceChildren(Object.assign(document.createElement('span'), {
             className: 'live-transcript-line',
-            textContent: 'Words will appear here a few seconds behind the room.'
+            textContent: 'Captions will begin in about a second.'
           }));
           return;
         }
-        body.replaceChildren(...liveSegments.slice(-40).map(segment => {
+        body.replaceChildren(...liveSegments.slice(-40).map((segment, index, visible) => {
           const line = document.createElement('span');
-          line.className = 'live-transcript-line';
+          line.className = `live-transcript-line${index === visible.length - 1 ? ' is-new' : ''}`;
           line.textContent = segment.text;
           return line;
         }));
@@ -3414,20 +3278,28 @@
         try {
           const progress = await api(`/api/captures/${sessionId}`);
           if (captureId !== sessionId) return;
-          liveSegments = progress.segments || [];
-          renderLiveTranscript();
+          const nextSegments = progress.segments || [];
+          const last = nextSegments.at(-1);
+          const signature = `${nextSegments.length}:${last?.end ?? ''}:${last?.text ?? ''}`;
+          if (signature !== liveCaptionSignature) {
+            liveCaptionSignature = signature;
+            liveSegments = nextSegments;
+            renderLiveTranscript();
+          }
           const done = Math.floor(Number(progress.processed_seconds) || 0);
           el['live-transcript-meta'].textContent = done
             ? `${liveSegments.length} line${liveSegments.length === 1 ? '' : 's'} · ${formatPlaybackTime(done)} transcribed`
             : 'listening…';
         } catch { /* keep trying while the recorder runs */ }
-        if (captureId === sessionId) capturePollTimer = setTimeout(pollCaptureTranscript, 1500);
+        if (captureId === sessionId) capturePollTimer = setTimeout(pollCaptureTranscript, LIVE_POLL_MS);
       }
       function closeCaptureSession(discard) {
         clearTimeout(capturePollTimer);
         const sessionId = captureId;
         captureId = null;
         liveSegments = [];
+        liveCaptionSignature = '';
+        pendingLiveChunks = [];
         el['live-transcript'].hidden = true;
         el['live-transcript-meta'].textContent = '';
         renderLiveTranscript();
@@ -3660,39 +3532,6 @@
           resetCaptureControls(error.message);
         }
       }
-      el['back-to-library'].addEventListener('click', () => loadLibrary(activeRecording?.folder_id));
-      el['create-workspace-from-recording'].addEventListener('click', createWorkspaceFromRecording);
-      el['attach-recording'].addEventListener('click', () => {
-        if (!activeRecording) return;
-        const workspaceId = el['attach-target'].value;
-        if (!workspaceId) { el['attach-target'].focus(); return; }
-        attachRecording(activeRecording.id, workspaceId);
-      });
-      el['save-recording'].addEventListener('click', async () => {
-        if (!activeRecording) return;
-        el['save-recording'].disabled = true; el['save-status'].textContent = 'Saving…';
-        try {
-          const recording = await api(`/api/lectures/${activeRecording.id}`, {
-            method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ title: el['saved-title'].value })
-          });
-          activeRecording = recording;
-          el['detail-heading'].textContent = recording.title;
-          el['save-status'].textContent = 'Saved.';
-          showToast('Recording ready');
-          await loadLibrary(recording.folder_id);
-        } catch (error) { el['save-status'].textContent = error.message; }
-        finally { el['save-recording'].disabled = false; }
-      });
-      el['delete-recording'].addEventListener('click', async () => {
-        if (!activeRecording || !confirm('Delete this recording and its transcript from this computer?')) return;
-        const folderId = activeRecording.folder_id;
-        try {
-          await api(`/api/lectures/${activeRecording.id}`, { method: 'DELETE' });
-          showToast('Recording deleted');
-          await loadLibrary(folderId);
-        } catch (error) { el['save-status'].textContent = error.message; }
-      });
       loadLibrary();
     </script>
   </body>
