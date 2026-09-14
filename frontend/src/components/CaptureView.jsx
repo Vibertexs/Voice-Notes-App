@@ -107,7 +107,7 @@ export default function CaptureView({ context, onSaved, onCancel, notify }) {
   const isRecording = phase === 'recording';
   const isPaused = phase === 'paused';
   return <main className="page capture-page">
-    <header className="capture-heading"><button className="back-link" onClick={onCancel}>‹ Back</button><p className="eyebrow">{context.workspace ? 'Continuing lecture' : 'New lecture'}</p><h1>{context.workspace ? context.workspace.title : 'Capture a lecture'}</h1><p className="muted">Recording saves to <strong>{location}</strong>. Start only when you are ready.</p>{!context.workspace && <label className="capture-title-field">Recording name <small>optional</small><input value={title} maxLength="180" onChange={(event) => setTitle(event.target.value)} placeholder="A timestamped lecture name is used if you leave this blank" /></label>}</header>
+    <header className="capture-heading"><button className="back-link" onClick={onCancel}>‹ Back</button><p className="eyebrow">{context.workspace ? 'Continuing lecture' : 'New lecture'}</p><h1>{context.workspace ? context.workspace.title : 'Capture a lecture'}</h1><p className="muted">Saves to <strong>{location}</strong></p>{!context.workspace && <label className="capture-title-field">Recording name <small>optional</small><input value={title} maxLength="180" onChange={(event) => setTitle(event.target.value)} placeholder="A timestamped lecture name is used if you leave this blank" /></label>}</header>
     <div className="capture-grid">
       <section className={`capture-station ${phase}`}>
         <div className="transport" data-phase={phase}>
