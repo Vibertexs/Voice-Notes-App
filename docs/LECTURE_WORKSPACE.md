@@ -34,10 +34,10 @@ then can add capture notes and files while recording. Saving creates the
 lecture workspace, while cancelling creates nothing. **Continue recording**
 inside an existing workspace adds another dated session to that same topic.
 
-After **Done**, the server runs the student-selected Fast, Balanced, or High
-accuracy model over the complete saved audio file. The capture experience stays
-focused on the recording and its notes; the durable transcript appears in the
-lecture's review tab once processing is complete.
+After **Done**, the server runs the fixed high-accuracy local `small.en` model
+over the complete saved audio file. The capture experience stays focused on the
+recording and its notes; the durable transcript appears in the lecture's review
+tab once processing is complete.
 
 ## Review and material handling
 

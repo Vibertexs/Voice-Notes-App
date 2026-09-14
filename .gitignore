@@ -9,6 +9,7 @@ models/
 !package.json
 !package-lock.json
 node_modules/
+frontend-dist/
 __pycache__/
 pip-install*.log
 server*.log

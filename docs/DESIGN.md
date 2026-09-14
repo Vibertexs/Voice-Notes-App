@@ -119,7 +119,7 @@ orphan note. The live waveform uses a small noise gate, eased level changes,
 neighbouring-bar averaging, and symmetric edge fading so it reads as stable
 audio feedback instead of jittering with every microphone sample. The capture
 screen intentionally avoids imperfect draft captions: after the student taps
-**Done**, the complete saved audio is transcribed using the selected quality
+**Done**, the complete saved audio is transcribed with the fixed high-accuracy
 model and appears in the lecture review.
 
 Folders are portrait covers, deliberately unlike the wide recording rows. A

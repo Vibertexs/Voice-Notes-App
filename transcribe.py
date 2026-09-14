@@ -4,6 +4,7 @@ import argparse
 import json
 from pathlib import Path
 
+from backend.settings import FINAL_TRANSCRIPTION_MODEL
 from transcription import transcribe_audio
 
 
@@ -14,8 +15,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("audio", type=Path, help="Path to an audio file to transcribe.")
     parser.add_argument(
         "--model",
-        default="tiny.en",
-        help="Whisper model size or local model path. Start with tiny.en for the POC.",
+        default=FINAL_TRANSCRIPTION_MODEL,
+        help="Whisper model size or local model path. Defaults to the app's high-accuracy final model.",
     )
     parser.add_argument(
         "--device",
