@@ -83,3 +83,68 @@ _Made locally from your notes and {len(transcripts)} saved {session_label}. Chec
 ## Questions to review
 {questions}
 """
+
+
+def build_local_flashcards(
+    title: str, note_body: str, transcripts: list[str], *, limit: int = 6
+) -> list[dict[str, str]]:
+    """Make source-backed review prompts without sending class material anywhere.
+
+    Cards intentionally quote the student's own notes or transcript rather than
+    pretending a model inferred a definition that was never said in class.
+    """
+    source_text = "\n".join([note_body, *transcripts])
+    words = [word for word in study_words(source_text) if word not in STUDY_STOP_WORDS]
+    if len(words) < 8:
+        raise HTTPException(
+            status_code=422,
+            detail="Add a few notes or save a recording before making flashcards.",
+        )
+
+    sentences = study_sentences(source_text)
+    if not sentences:
+        raise HTTPException(
+            status_code=422,
+            detail="Save a little more class material before making flashcards.",
+        )
+
+    cards: list[dict[str, str]] = []
+    used_sentences: set[str] = set()
+    terms = [term for term, _ in Counter(words).most_common(limit * 3)]
+    for term in terms:
+        pattern = re.compile(rf"\b{re.escape(term)}\b", re.IGNORECASE)
+        sentence = next(
+            (
+                candidate
+                for candidate in sentences
+                if candidate.casefold() not in used_sentences and pattern.search(candidate)
+            ),
+            None,
+        )
+        if sentence is None:
+            continue
+        used_sentences.add(sentence.casefold())
+        cards.append(
+            {
+                "front": f"What did this lecture say about {term.title()}?",
+                "back": sentence,
+            }
+        )
+        if len(cards) == limit:
+            return cards
+
+    # Short, conversational recordings may not repeat a term enough to rank.
+    # Fill any remaining slots with the strongest untouched source statements.
+    for sentence in sentences:
+        if sentence.casefold() in used_sentences:
+            continue
+        used_sentences.add(sentence.casefold())
+        cards.append(
+            {
+                "front": f"What key idea should you remember from {title}?",
+                "back": sentence,
+            }
+        )
+        if len(cards) == limit:
+            break
+    return cards

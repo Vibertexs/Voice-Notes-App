@@ -41,6 +41,7 @@ export const libraryApi = {
   saveNotes: (id, noteBody) => api(`/api/workspaces/${id}/notes`, { method: 'PUT', body: { note_body: noteBody } }),
   saveStudyNotes: (id, noteBody) => api(`/api/workspaces/${id}/study-notes`, { method: 'PUT', body: { note_body: noteBody } }),
   generateStudyNotes: (id) => api(`/api/workspaces/${id}/study-notes/generate`, { method: 'POST' }),
+  generateFlashcards: (id) => api(`/api/workspaces/${id}/flashcards/generate`, { method: 'POST' }),
   uploadMaterial: (file, { folderId, workspaceId } = {}) => {
     const params = new URLSearchParams();
     if (folderId) params.set('folder_id', folderId);

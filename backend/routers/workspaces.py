@@ -74,6 +74,7 @@ def delete_workspace(workspace_id: str) -> dict[str, object]:
         connection.execute("DELETE FROM workspace_notes WHERE workspace_id = ?", (workspace_id,))
         drop_from_search_index(connection, "note", workspace_id)
         connection.execute("DELETE FROM workspace_study_notes WHERE workspace_id = ?", (workspace_id,))
+        connection.execute("DELETE FROM workspace_flashcards WHERE workspace_id = ?", (workspace_id,))
         connection.execute("DELETE FROM workspace_ai_notes WHERE workspace_id = ?", (workspace_id,))
         connection.execute("DELETE FROM workspace_ai_messages WHERE workspace_id = ?", (workspace_id,))
         connection.execute("UPDATE materials SET workspace_id = NULL WHERE workspace_id = ?", (workspace_id,))
@@ -161,3 +162,46 @@ def generate_workspace_study_notes(workspace_id: str) -> dict[str, object]:
             "UPDATE workspaces SET updated_at = ? WHERE id = ?", (saved_at, workspace_id)
         )
     return {"note_body": draft, "updated_at": saved_at, "mode": "local_draft"}
+
+
+@router.post("/api/workspaces/{workspace_id}/flashcards/generate")
+def generate_workspace_flashcards(workspace_id: str) -> dict[str, object]:
+    """Replace a lecture's review deck with cards grounded in its saved material."""
+    workspace = get_workspace(workspace_id)
+    with connect_database() as connection:
+        notes = connection.execute(
+            "SELECT note_body FROM workspace_notes WHERE workspace_id = ?", (workspace_id,)
+        ).fetchone()
+        sessions = connection.execute(
+            "SELECT transcript FROM lectures WHERE workspace_id = ? ORDER BY created_at ASC",
+            (workspace_id,),
+        ).fetchall()
+    cards = build_local_flashcards(
+        workspace["title"],
+        notes["note_body"] if notes else "",
+        [session["transcript"] for session in sessions],
+    )
+    saved_at = datetime.now(timezone.utc).isoformat()
+    rows = [
+        (str(uuid4()), workspace_id, card["front"], card["back"], position, saved_at)
+        for position, card in enumerate(cards, start=1)
+    ]
+    with connect_database() as connection:
+        connection.execute("DELETE FROM workspace_flashcards WHERE workspace_id = ?", (workspace_id,))
+        connection.executemany(
+            """
+            INSERT INTO workspace_flashcards (id, workspace_id, front, back, position, created_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            rows,
+        )
+        connection.execute(
+            "UPDATE workspaces SET updated_at = ? WHERE id = ?", (saved_at, workspace_id)
+        )
+    return {
+        "flashcards": [
+            {"id": row[0], "front": row[2], "back": row[3], "position": row[4], "created_at": row[5]}
+            for row in rows
+        ],
+        "updated_at": saved_at,
+    }

@@ -88,6 +88,18 @@ def initialize_database() -> None:
         )
         connection.execute(
             """
+            CREATE TABLE IF NOT EXISTS workspace_flashcards (
+                id TEXT PRIMARY KEY,
+                workspace_id TEXT NOT NULL,
+                front TEXT NOT NULL,
+                back TEXT NOT NULL,
+                position INTEGER NOT NULL,
+                created_at TEXT NOT NULL
+            )
+            """
+        )
+        connection.execute(
+            """
             CREATE VIRTUAL TABLE IF NOT EXISTS search_index USING fts5(
                 body,
                 kind UNINDEXED,
@@ -193,6 +205,10 @@ def initialize_database() -> None:
         connection.execute(
             "CREATE INDEX IF NOT EXISTS idx_workspace_ai_messages_created "
             "ON workspace_ai_messages (workspace_id, created_at)"
+        )
+        connection.execute(
+            "CREATE INDEX IF NOT EXISTS idx_workspace_flashcards_position "
+            "ON workspace_flashcards (workspace_id, position)"
         )
         connection.execute(
             "CREATE INDEX IF NOT EXISTS idx_folder_ai_messages_created "

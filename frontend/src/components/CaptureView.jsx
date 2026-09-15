@@ -29,6 +29,7 @@ export default function CaptureView({ context, onSaved, onCancel, notify }) {
   const fileInputRef = useRef(null);
 
   const location = context.workspace ? context.workspace.title : context.folder?.name ?? 'Library';
+  const backLabel = context.workspace ? 'Back to lecture' : `Back to ${location}`;
   const currentTime = () => carriedMsRef.current + (startedAtRef.current ? performance.now() - startedAtRef.current : 0);
 
   useEffect(() => () => {
@@ -123,7 +124,7 @@ export default function CaptureView({ context, onSaved, onCancel, notify }) {
       ? ['Recording saved', 'Transcribing with the high-accuracy model…']
       : ['Finishing your recording', 'Saving your audio and notes…'];
   return <main className="page capture-page">
-    <header className="capture-heading"><button className="back-link" onClick={onCancel} disabled={isFinalizing}>‹ Back</button><p className="eyebrow">{context.workspace ? 'Continuing lecture' : `New lecture · ${location}`}</p><h1>{context.workspace ? context.workspace.title : 'Capture a lecture'}</h1>{!context.workspace && <label className="capture-title-field">Recording name <small>optional</small><input value={title} maxLength="180" onChange={(event) => setTitle(event.target.value)} placeholder="Leave blank for a dated lecture" disabled={isFinalizing} /></label>}</header>
+    <header className="capture-heading"><button className="capture-back-bar" onClick={onCancel} disabled={isFinalizing}><span aria-hidden="true">‹</span>{backLabel}<span className="capture-back-arrow" aria-hidden="true">›</span></button><p className="eyebrow">{context.workspace ? 'Continuing lecture' : `New lecture · ${location}`}</p><h1>{context.workspace ? context.workspace.title : 'Capture a lecture'}</h1>{!context.workspace && <label className="capture-title-field">Recording name <small>optional</small><input value={title} maxLength="180" onChange={(event) => setTitle(event.target.value)} placeholder="Leave blank for a dated lecture" disabled={isFinalizing} /></label>}</header>
     <div className="capture-grid">
       <section className={`capture-station ${phase}`}>
         {isFinalizing && <div className={`save-veil ${phase === 'discarding' ? 'discard-veil' : ''} ${phase === 'saved' ? 'saved-veil' : ''}`} role="status" aria-live="polite">
@@ -142,8 +143,11 @@ export default function CaptureView({ context, onSaved, onCancel, notify }) {
           <div className="recording-timer">{elapsedLabel(elapsed)}</div>
           <Waveform stream={liveStream} phase={phase} />
         </div>
-        {isRecording && <div className="marker-control"><input value={markerLabel} maxLength="120" onChange={(event) => setMarkerLabel(event.target.value)} onKeyDown={(event) => event.key === 'Enter' && addMarker()} placeholder="What should you revisit?" /><button className="button ghost" onClick={addMarker}>＋ Marker</button></div>}
-        {markers.length > 0 && <div className="marker-pills">{markers.map((marker, index) => <span key={`${marker.label}-${index}`}>● {elapsedLabel(marker.time_seconds * 1000)} · {marker.label}<button onClick={() => setMarkers((current) => current.filter((_, position) => position !== index))} aria-label={`Remove ${marker.label}`}>×</button></span>)}</div>}
+        <div className={`marker-slot ${isRecording ? 'active' : ''}`}>
+          {isRecording
+            ? <div className="marker-control"><input value={markerLabel} maxLength="120" onChange={(event) => setMarkerLabel(event.target.value)} onKeyDown={(event) => event.key === 'Enter' && addMarker()} placeholder="Mark an important moment…" /><button className="button ghost" onClick={addMarker}>Add marker</button></div>
+            : <span className="marker-slot-copy">{markers.length ? `${markers.length} marker${markers.length === 1 ? '' : 's'} saved to this recording` : 'Mark important moments while recording'}</span>}
+        </div>
         <div className="capture-controls">
           <div className="transport-controls">
             <button
@@ -163,6 +167,7 @@ export default function CaptureView({ context, onSaved, onCancel, notify }) {
           <p className="transport-hint">{phase === 'ready' ? 'Tap to record' : isRecording ? 'Tap to pause' : isPaused ? 'Tap to resume, or slide to discard' : 'Saving…'}</p>
           <DiscardSlider open={isPaused} onDiscard={discard} />
         </div>
+        {markers.length > 0 && <div className="marker-pills">{markers.map((marker, index) => <span key={`${marker.label}-${index}`}>● {elapsedLabel(marker.time_seconds * 1000)} · {marker.label}<button onClick={() => setMarkers((current) => current.filter((_, position) => position !== index))} aria-label={`Remove ${marker.label}`}>×</button></span>)}</div>}
         {phase === 'ready' && <button className="text-button cancel-capture" onClick={onCancel}>Cancel</button>}
         {error && <p className="form-error" role="alert">{error}</p>}
       </section>

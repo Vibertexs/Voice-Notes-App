@@ -12,7 +12,7 @@ function MaterialList({ materials, onDelete }) {
         <span className="file-icon">{material.original_filename.split('.').at(-1)?.toUpperCase()}</span>
         <span>
           <strong>{material.original_filename}</strong>
-          <small>{Math.max(1, Math.round(material.size_bytes / 1024))} KB · {material.extraction_status === 'ready' ? 'Ready for AI' : 'Needs extraction'}</small>
+          <small>{Math.max(1, Math.round(material.size_bytes / 1024))} KB · {material.ai_status === 'ready' ? 'Ready for AI' : 'Needs extraction'}</small>
         </span>
       </a>
       <button className="icon-button subtle" onClick={() => onDelete(material)} aria-label={`Delete ${material.original_filename}`}>×</button>
@@ -64,12 +64,11 @@ export default function LibraryView({
       onDragLeave={() => setDropping(false)}
       onDrop={(event) => { event.preventDefault(); setDropping(false); receiveWorkspace(event, null); }}
     >
-      <span className="parent-icon" aria-hidden="true">↰</span>
+      <svg className="back-chevron" viewBox="0 0 20 20" aria-hidden="true"><path d="M12 4.5 6.5 10l5.5 5.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
       <span className="parent-copy">
         <strong>All classes</strong>
-        <small>{dropping ? 'Drop to move here' : 'Move a lecture here'}</small>
+        <small>{dropping ? 'Drop to move here' : 'Drag a lecture here to take it out'}</small>
       </span>
-      <span className="parent-arrow" aria-hidden="true">›</span>
     </button>}
 
     {!folder && <section className="library-section">

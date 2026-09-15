@@ -121,6 +121,15 @@ def serialize_workspace(row: sqlite3.Row, *, include_sessions: bool = False) -> 
                 "SELECT * FROM materials WHERE workspace_id = ? ORDER BY created_at DESC",
                 (row["id"],),
             ).fetchall()
+            flashcards = connection.execute(
+                """
+                SELECT id, front, back, position, created_at
+                FROM workspace_flashcards
+                WHERE workspace_id = ?
+                ORDER BY position ASC
+                """,
+                (row["id"],),
+            ).fetchall()
         result["sessions"] = [serialize_lecture(session, include_content=True) for session in sessions]
         result["note_body"] = notes["note_body"] if notes else ""
         result["notes_updated_at"] = notes["updated_at"] if notes else None
@@ -130,6 +139,7 @@ def serialize_workspace(row: sqlite3.Row, *, include_sessions: bool = False) -> 
         result["ai_notes_model"] = ai_notes["model"] if ai_notes else None
         result["ai_notes_updated_at"] = ai_notes["updated_at"] if ai_notes else None
         result["materials"] = [serialize_material(material) for material in materials]
+        result["flashcards"] = [dict(flashcard) for flashcard in flashcards]
     return result
 
 

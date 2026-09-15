@@ -53,7 +53,7 @@ export default function SearchView({ onOpenResult, onBack }) {
 
   return <main className="page search-page">
     <header className="search-header">
-      <button className="back-link" onClick={onBack}>‹ Back to library</button>
+      <button className="back-link" onClick={onBack}><svg className="back-chevron" viewBox="0 0 20 20" aria-hidden="true"><path d="M12 4.5 6.5 10l5.5 5.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>Back to library</button>
       <h2>Search</h2>
       <input
         ref={inputRef}
