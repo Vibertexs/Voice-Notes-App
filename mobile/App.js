@@ -42,6 +42,10 @@ export default function App() {
   const active = useRef(null);
   const session = useRef(null);
   const draining = useRef(false);
+  // Whether the recogniser is actually usable, as opposed to merely linked.
+  // Settled at permission time, because a linked module with no offline
+  // language pack fails the whole session rather than degrading.
+  const transcriptionReady = useRef(false);
   const [ready, setReady] = useState(false);
   const [fatal, setFatal] = useState('');
   const [pageError, setPageError] = useState('');
@@ -137,7 +141,7 @@ export default function App() {
       month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
     });
 
-    if (TRANSCRIPTION_AVAILABLE) {
+    if (transcriptionReady.current) {
       // The recogniser writes its own WAV, so the final name is not known
       // until it closes the file. The row is still claimed first; recovery
       // tolerates a row whose audio never arrived.
@@ -256,19 +260,31 @@ export default function App() {
         const granted = await requestPermissions();
         if (!granted.ok) { reply(id, true, { ok: false }); return; }
         backgroundOk.current = granted.background;
+        transcriptionReady.current = granted.transcription === true;
+        if (TRANSCRIPTION_AVAILABLE && !transcriptionReady.current) {
+          setPageError((current) => current || (granted.reason === 'downloading'
+            ? 'transcription: Android is downloading the offline language pack. Recording works now; transcripts start once it finishes.'
+            : 'transcription: offline speech recognition is unavailable on this device. Recording and notes still work.'));
+        }
+        // The capability the page was told about at load may be wrong now.
+        webRef.current?.injectJavaScript(
+          `window.__CN_CAPS__ = ${JSON.stringify({ transcription: transcriptionReady.current, pause: !transcriptionReady.current })}; true;`,
+        );
         await configureAudio(granted.background);
         reply(id, true, { ok: true });
         return;
       }
       if (channel === 'rec.start') { reply(id, true, await startRecording()); return; }
       if (channel === 'rec.pause') {
-        if (SUPPORTS_PAUSE) recorder.pause();
-        reply(id, true, { ok: SUPPORTS_PAUSE });
+        const canPause = !transcriptionReady.current;
+        if (canPause) recorder.pause();
+        reply(id, true, { ok: canPause });
         return;
       }
       if (channel === 'rec.resume') {
-        if (SUPPORTS_PAUSE) recorder.record();
-        reply(id, true, { ok: SUPPORTS_PAUSE });
+        const canPause = !transcriptionReady.current;
+        if (canPause) recorder.record();
+        reply(id, true, { ok: canPause });
         return;
       }
       if (channel === 'rec.stop') { reply(id, true, await stopRecording()); return; }
@@ -313,6 +329,9 @@ export default function App() {
         source={{ html: WEB_APP_HTML, baseUrl: AUDIO_DIR.uri }}
         originWhitelist={['*']}
         injectedJavaScriptBeforeContentLoaded={
+          // A starting guess. Whether the recogniser really works is only
+          // known once permissions and the offline model are checked, and the
+          // page is corrected then.
           `window.__CN_CAPS__ = ${JSON.stringify({
             transcription: TRANSCRIPTION_AVAILABLE, pause: SUPPORTS_PAUSE,
           })};

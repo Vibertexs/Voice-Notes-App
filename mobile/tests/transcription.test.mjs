@@ -30,6 +30,11 @@ function check(label, ok, detail) {
 console.log('== a lecture never leaves the phone ==');
 check('recognition is pinned to on-device', /requiresOnDeviceRecognition:\s*true/.test(capture),
   'network recognition would upload the lecture and be rate limited');
+// The guarantee is only real if there is no path that flips it off. A missing
+// offline model must mean no transcript, never a silent upload.
+check('no code path turns on-device recognition off',
+  !/requiresOnDeviceRecognition:\s*(false|onDevice|[a-z]\w*\.\w+)/.test(capture),
+  'a variable here is a way for a lecture to leave the phone');
 
 console.log('\n== the app still works without the native module ==');
 // expo-speech-recognition does not exist in Expo Go. If its absence threw, the
