@@ -53,19 +53,33 @@ like it worked, so a screen that depends on them says so instead of showing
 empty results. Recording, classes, lectures, notes, markers, search and
 playback all run entirely on the device.
 
-## Background recording
+## Builds
 
-`app.json` declares what background capture needs — `UIBackgroundModes: audio`
-on iOS, and the foreground-service and notification permissions on Android.
+Expo Go runs the JS but is Expo's binary, not ours. It cannot grant the
+permissions `app.json` declares, so background recording and any native module
+are unavailable there. Everything still runs - capture falls back to
+foreground-only and transcription is skipped - but that is a development
+convenience, not the product.
 
-**None of that applies in Expo Go**, which ships its own fixed native manifest.
-If the OS refuses to arm the recorder there, the shell retries without
-background capture so recording still works, and the recording simply stops if
-you leave the app. To get real lock-screen capture, make a dev build:
+Three profiles, in `eas.json`:
+
+| Profile | What it is | Needs the laptop? |
+| ------- | ---------- | ----------------- |
+| `development` | Our binary, JS served by Metro. Hot reload, native modules present. | yes, for JS |
+| `standalone` | Everything bundled into an APK. The real thing. | no |
+| `production` | An app bundle for the Play Store. | no |
 
 ```bash
-npx expo run:android      # or: npx expo run:ios
+npx eas-cli login
+npx eas-cli build --profile development --platform android   # while building
+npx eas-cli build --profile standalone   --platform android   # to hand someone
 ```
+
+Builds run on Expo's machines, so no Android SDK or JDK is needed locally.
+Install the APK from the link the build prints.
+
+iOS needs no Mac to *build* - EAS compiles on Apple hardware - but installing
+on a device needs an Apple Developer account.
 
 ## Tests
 
