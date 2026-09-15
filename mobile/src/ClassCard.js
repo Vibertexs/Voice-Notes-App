@@ -98,7 +98,7 @@ export default function ClassCard({ folder, onOpen, onArchive, onRecolor, onDele
 }
 
 const styles = StyleSheet.create({
-  wrap: { flex: 1 },
+  wrap: { width: '47.5%' },
   card: {
     aspectRatio: 5 / 6, borderRadius: 22, borderWidth: 1,
     padding: 14, justifyContent: 'space-between', overflow: 'hidden',

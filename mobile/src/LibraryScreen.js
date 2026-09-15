@@ -260,10 +260,10 @@ const styles = StyleSheet.create({
   },
   textButton: { ...type.button, fontSize: 13, color: colors.accent },
 
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 14 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 14 },
 
   addCard: {
-    flex: 1, minWidth: '46%', aspectRatio: 5 / 6,
+    width: '47.5%', aspectRatio: 5 / 6,
     alignItems: 'center', justifyContent: 'center', gap: 4, padding: 14,
     borderWidth: 3, borderColor: '#aebfd7', borderStyle: 'dashed', borderRadius: 22,
     backgroundColor: 'rgba(250,252,255,.42)',
@@ -274,7 +274,7 @@ const styles = StyleSheet.create({
   emptyCopy: { ...type.body, color: colors.soft },
 
   lecture: {
-    flex: 1, minWidth: '46%', minHeight: 160, padding: 14,
+    width: '47.5%', minHeight: 160, padding: 14,
     borderRadius: 20, borderWidth: 4, borderColor: colors.edge,
     backgroundColor: colors.navy,
   },
