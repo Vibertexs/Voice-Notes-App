@@ -14,7 +14,7 @@
         "UIBackgroundModes": [
           "audio"
         ],
-        "NSMicrophoneUsageDescription": "Class Notes records your lectures so you can replay and search them later. Audio stays on this device.",
+        "NSMicrophoneUsageDescription": "Class Notes needs the microphone to record your lectures.",
         "NSSpeechRecognitionUsageDescription": "Class Notes turns your lectures into searchable text on this device. Nothing is sent anywhere."
       }
     },
@@ -26,7 +26,9 @@
         "android.permission.FOREGROUND_SERVICE_MICROPHONE",
         "android.permission.POST_NOTIFICATIONS",
         "android.permission.WAKE_LOCK",
-        "android.permission.INTERNET"
+        "android.permission.INTERNET",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
       ],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
@@ -68,6 +70,12 @@
     ],
     "runtimeVersion": {
       "policy": "appVersion"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "3cbe8982-d602-4249-81b1-387051546c9d"
+      }
+    },
+    "owner": "vibertexyt"
   }
 }
