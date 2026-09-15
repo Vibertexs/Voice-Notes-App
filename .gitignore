@@ -14,3 +14,8 @@ __pycache__/
 pip-install*.log
 server*.log
 data/
+
+# Expo
+mobile/node_modules/
+mobile/.expo/
+mobile/dist/
