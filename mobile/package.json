@@ -5,6 +5,7 @@
   "dependencies": {
     "expo": "~57.0.22",
     "expo-audio": "~57.0.5",
+    "expo-dev-client": "~57.0.19",
     "expo-file-system": "~57.0.7",
     "expo-keep-awake": "~57.0.2",
     "expo-speech-recognition": "^57.0.0",
