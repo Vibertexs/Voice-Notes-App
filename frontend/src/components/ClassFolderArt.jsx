@@ -33,11 +33,5 @@ export default function ClassFolderArt() {
       fill={`url(#${glowId})`}
       d="M31 62c0-15 12-27 27-27h64c10 0 18 4 25 12l13 15h108c16 0 29 13 29 29v96c0 17-13 30-30 30H53c-17 0-30-13-30-30V77c0-8 3-15 8-20Z"
     />
-    <g className="class-folder-record">
-      <circle cx="235" cy="91" r="51" />
-      <circle className="class-folder-record-ring" cx="235" cy="91" r="35" />
-      <circle className="class-folder-record-core" cx="235" cy="91" r="7" />
-      <path className="class-folder-record-cut" d="M235 40a51 51 0 0 1 51 51h-51Z" />
-    </g>
   </svg>;
 }
