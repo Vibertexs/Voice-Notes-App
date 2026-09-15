@@ -75,12 +75,21 @@ console.log('\n== pause is not offered when it cannot be honoured ==');
 check('the shell derives pause support', /SUPPORTS_PAUSE = !TRANSCRIPTION_AVAILABLE/.test(capture));
 check('capabilities reach the page', /__CN_CAPS__/.test(app) && /__CN_CAPS__/.test(bridge));
 check('the page reads them', /caps\.pause !== false/.test(captureView));
-check('the page does not claim to be paused when it is not',
-  /Still recording/.test(captureView),
-  'the label would otherwise say Paused while audio kept being captured');
-check('the clock is not stopped when pause is unavailable',
-  /if \(!canPause\)[\s\S]{0,400}return;/.test(captureView),
-  'stopping the clock while audio continues makes the duration wrong');
+// Resuming would open a second WAV and split the lecture, so the control is a
+// stop rather than a pause - and it has to really stop, or the timer keeps
+// running while the label claims otherwise.
+check('the control is labelled a stop, not a pause',
+  /Stopped/.test(captureView) && /Tap to stop/.test(captureView),
+  'calling it Paused while capture continues is the bug this replaced');
+check('capture actually ends when it is pressed',
+  /if \(!canPause\)[\s\S]{0,600}recorder\.stop\(\)/.test(captureView),
+  'the timer would otherwise keep counting audio nobody asked for');
+check('the clock stops with it',
+  /if \(!canPause\)[\s\S]{0,700}pauseClock\(\)/.test(captureView),
+  'a running clock over stopped capture reports the wrong duration');
+check('the finished take is reused rather than stopped twice',
+  /stoppedBlobRef/.test(captureView),
+  'stopping an already-stopped recorder fails and loses the recording');
 
 console.log('\n== native config a dev build needs ==');
 const android = appJson.expo.android;

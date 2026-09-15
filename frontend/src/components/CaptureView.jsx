@@ -20,6 +20,10 @@ export default function CaptureView({ context, onSaved, onCancel, notify }) {
   const [error, setError] = useState('');
   const [liveStream, setLiveStream] = useState(null);
   const [transcript, setTranscript] = useState({ text: '', interim: '' });
+  // Holds the finished audio when capture was ended early. In recogniser mode
+  // the take really stops rather than pausing, so the blob exists before Done
+  // is ever pressed.
+  const stoppedBlobRef = useRef(null);
 
   // The native shell advertises what this build can actually do. In a browser
   // neither flag is set, so both default to the browser's own behaviour.
@@ -92,11 +96,23 @@ export default function CaptureView({ context, onSaved, onCancel, notify }) {
     const recorder = recorderRef.current;
     if (!recorder) return;
     if (!canPause) {
-      // The on-device recogniser writes one audio file per session, so
-      // pausing would split the recording in two. The button still opens the
-      // save and discard controls; capture simply carries on underneath,
-      // which is why the clock is left running.
-      setPhase(phase === 'recording' ? 'paused' : 'recording');
+      // The recogniser writes one audio file per session, so resuming would
+      // start a second one and split the lecture. The control is a stop, not
+      // a pause: capture really ends here, the clock really stops, and the
+      // only choices left are to save or discard.
+      if (phase !== 'recording') return;
+      pauseClock();
+      setPhase('paused');
+      new Promise((resolve) => {
+        recorder.addEventListener('stop', () => resolve(
+          new Blob(chunksRef.current, { type: recorder.mimeType || 'audio/webm' }),
+        ), { once: true });
+        recorder.stop();
+      }).then((blob) => {
+        stoppedBlobRef.current = blob;
+        streamRef.current?.getTracks().forEach((track) => track.stop());
+        setLiveStream(null);
+      });
       return;
     }
     if (phase === 'recording') { recorder.pause(); pauseClock(); setPhase('paused'); }
@@ -120,7 +136,9 @@ export default function CaptureView({ context, onSaved, onCancel, notify }) {
     setError('');
     const savedElapsed = currentTime();
     pauseClock();
-    const blob = await new Promise((resolve) => {
+    // Capture may already have ended: in recogniser mode the stop control
+    // finishes the take, so stopping again here would fail.
+    const blob = stoppedBlobRef.current ?? await new Promise((resolve) => {
       recorder.addEventListener('stop', () => resolve(new Blob(chunksRef.current, { type: recorder.mimeType || 'audio/webm' })), { once: true });
       recorder.stop();
     });
@@ -175,7 +193,7 @@ export default function CaptureView({ context, onSaved, onCancel, notify }) {
           <span>{completionCopy[1]}</span>
         </div>}
         <div className="transport" data-phase={phase}>
-          <div className="phase-label">{phase === 'ready' ? 'Ready' : phase === 'recording' ? 'Recording' : phase === 'paused' ? (canPause ? 'Paused' : 'Still recording') : phase === 'discarding' ? 'Discarding' : phase === 'saved' ? 'Saved' : 'Saving'}</div>
+          <div className="phase-label">{phase === 'ready' ? 'Ready' : phase === 'recording' ? 'Recording' : phase === 'paused' ? (canPause ? 'Paused' : 'Stopped') : phase === 'discarding' ? 'Discarding' : phase === 'saved' ? 'Saved' : 'Saving'}</div>
           <div className="recording-timer">{elapsedLabel(elapsed)}</div>
           <Waveform stream={liveStream} phase={phase} />
         </div>
@@ -191,7 +209,7 @@ export default function CaptureView({ context, onSaved, onCancel, notify }) {
               data-phase={phase}
               onClick={phase === 'ready' ? start : pauseOrResume}
               disabled={phase === 'saving'}
-              aria-label={phase === 'ready' ? 'Start recording' : isPaused ? 'Keep recording' : canPause ? 'Pause recording' : 'Finish recording'}
+              aria-label={phase === 'ready' ? 'Start recording' : isPaused ? (canPause ? 'Resume recording' : 'Recording finished') : canPause ? 'Pause recording' : 'Stop recording'}
             ><span className="shutter-glyph" aria-hidden="true" /></button>
             <div className={`finish-group ${isPaused ? 'shown' : ''}`} inert={!isPaused}>
               <button className="finish-button" onClick={done} aria-label="Done — save and transcribe">
@@ -200,7 +218,7 @@ export default function CaptureView({ context, onSaved, onCancel, notify }) {
               <span className="finish-caption" aria-hidden="true">Done</span>
             </div>
           </div>
-          <p className="transport-hint">{phase === 'ready' ? 'Tap to record' : isRecording ? (canPause ? 'Tap to pause' : 'Tap to finish') : isPaused ? (canPause ? 'Tap to resume, or slide to discard' : 'Save, keep going, or slide to discard') : 'Saving…'}</p>
+          <p className="transport-hint">{phase === 'ready' ? 'Tap to record' : isRecording ? (canPause ? 'Tap to pause' : 'Tap to stop') : isPaused ? (canPause ? 'Tap to resume, or slide to discard' : 'Save it, or slide to discard') : 'Saving…'}</p>
           <DiscardSlider open={isPaused} onDiscard={discard} />
         </div>
         {markers.length > 0 && <div className="marker-pills">{markers.map((marker, index) => <span key={`${marker.label}-${index}`}>● {elapsedLabel(marker.time_seconds * 1000)} · {marker.label}<button onClick={() => setMarkers((current) => current.filter((_, position) => position !== index))} aria-label={`Remove ${marker.label}`}>×</button></span>)}</div>}

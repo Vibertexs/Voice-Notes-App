@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { libraryApi } from '../lib/api';
 import StudyPanel from './StudyPanel';
 import { MaterialList } from './LibraryView';
+import WaveScrubber from './WaveScrubber';
+import SyncedTranscript from './SyncedTranscript';
 
 const formatTime = (seconds = 0) => `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
 const formatRemaining = (seconds) => {
@@ -20,6 +22,12 @@ function RecordingReview({ session, onUpdate, notify, seekTo, onSeekHandled }) {
   const [retranscribing, setRetranscribing] = useState(false);
   const [speedIndex, setSpeedIndex] = useState(0);
   const [markerLabel, setMarkerLabel] = useState('');
+  const [position, setPosition] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const [duration, setDuration] = useState(session.duration_seconds ?? 0);
+  // Scrubbing drives the display directly; writing to the element on every
+  // pointer move would fight the browser's own seeking and stutter.
+  const scrubbingRef = useRef(false);
 
   useEffect(() => {
     if (audioRef.current) audioRef.current.playbackRate = PLAYBACK_SPEEDS[speedIndex];
@@ -69,18 +77,79 @@ function RecordingReview({ session, onUpdate, notify, seekTo, onSeekHandled }) {
 
   return <section className="review-card">
     <div className="session-meta"><span>{formatDate(session.created_at)}</span><span className={`transcription-state ${session.transcription_status}`}>{session.transcription_status === 'ready' ? 'Transcript ready' : session.transcription_status === 'failed' ? 'Transcription needs attention' : 'Transcribing locally…'}</span></div>
-    <div className="player-row">
-      <audio ref={audioRef} controls src={session.audio_url}>Your browser cannot play this recording.</audio>
-      <button
-        className="speed-button"
-        onClick={() => setSpeedIndex((current) => (current + 1) % PLAYBACK_SPEEDS.length)}
-        aria-label={`Playback speed ${PLAYBACK_SPEEDS[speedIndex]} times`}
-      >{PLAYBACK_SPEEDS[speedIndex]}×</button>
+    <div className="player">
+      <audio
+        ref={audioRef}
+        src={session.audio_url}
+        preload="metadata"
+        onLoadedMetadata={(event) => {
+          const value = event.currentTarget.duration;
+          if (Number.isFinite(value) && value > 0) setDuration(value);
+        }}
+        onTimeUpdate={(event) => {
+          if (!scrubbingRef.current) setPosition(event.currentTarget.currentTime);
+        }}
+        onPlay={() => setPlaying(true)}
+        onPause={() => setPlaying(false)}
+        onEnded={() => setPlaying(false)}
+      >Your browser cannot play this recording.</audio>
+
+      <WaveScrubber
+        durationSeconds={duration}
+        currentSeconds={position}
+        segments={session.segments}
+        playing={playing}
+        onScrub={(seconds) => { scrubbingRef.current = true; setPosition(seconds); }}
+        onScrubEnd={() => {
+          if (audioRef.current) audioRef.current.currentTime = position;
+          scrubbingRef.current = false;
+        }}
+      />
+
+      <div className="player-controls">
+        <span className="player-time">{formatTime(position)}</span>
+        <button
+          className="player-skip"
+          onClick={() => seek(Math.max(0, position - 15))}
+          aria-label="Back 15 seconds"
+        >15</button>
+        <button
+          className="player-play"
+          onClick={() => {
+            const player = audioRef.current;
+            if (!player) return;
+            if (player.paused) player.play(); else player.pause();
+          }}
+          aria-label={playing ? 'Pause' : 'Play'}
+        >
+          {playing
+            ? <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="5" width="3.6" height="14" rx="1.2" /><rect x="13.4" y="5" width="3.6" height="14" rx="1.2" /></svg>
+            : <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l11-6.5z" /></svg>}
+        </button>
+        <button
+          className="player-skip"
+          onClick={() => seek(Math.min(duration, position + 15))}
+          aria-label="Forward 15 seconds"
+        >15</button>
+        <button
+          className="speed-button"
+          onClick={() => setSpeedIndex((current) => (current + 1) % PLAYBACK_SPEEDS.length)}
+          aria-label={`Playback speed ${PLAYBACK_SPEEDS[speedIndex]} times`}
+        >{PLAYBACK_SPEEDS[speedIndex]}×</button>
+      </div>
     </div>
     {session.transcription_status !== 'ready' && <div className="progress-message"><span className="progress-track"><i style={{ width: `${Math.round((session.transcription_progress ?? 0) * 100)}%` }} /></span><p>{session.transcription_status === 'failed'
         ? 'The final transcription did not finish.'
         : `${Math.round((session.transcription_progress ?? 0) * 100)}% · ${formatRemaining(session.transcription_eta_seconds)}`}</p>{session.transcription_status === 'failed' && <button className="text-button" onClick={retranscribe} disabled={retranscribing}>{retranscribing ? 'Starting…' : 'Try again'}</button>}</div>}
-    <div className="transcript"><div className="section-heading"><h3>Transcript</h3></div>{session.segments?.length ? <ol>{session.segments.map((segment, index) => <li key={`${segment.start_seconds}-${index}`}><button onClick={() => seek(segment.start_seconds)}><time>{formatTime(segment.start_seconds)}</time><span>{segment.text}</span></button></li>)}</ol> : <p className="empty-copy">{session.transcription_status === 'ready' ? 'No speech detected.' : 'Transcribing…'}</p>}</div>
+    <div className="transcript">
+      <div className="section-heading"><h3>Transcript</h3></div>
+      <SyncedTranscript
+        segments={session.segments}
+        currentSeconds={position}
+        status={session.transcription_status}
+        onSeek={seek}
+      />
+    </div>
     <div className="saved-markers">
       <h3>Markers</h3>
       {session.markers?.length
