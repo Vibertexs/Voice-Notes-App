@@ -23,7 +23,16 @@ export default function CaptureView({ context, onSaved, onCancel, notify }) {
 
   // The native shell advertises what this build can actually do. In a browser
   // neither flag is set, so both default to the browser's own behaviour.
-  const caps = (typeof window !== 'undefined' && window.__CN_CAPS__) || {};
+  // The shell corrects these once it knows whether the recogniser really
+  // works, which can happen well after load - an offline language pack may
+  // still be downloading. Re-read on its signal rather than only at mount.
+  const [caps, setCaps] = useState(
+    () => (typeof window !== 'undefined' && window.__CN_CAPS__) || {});
+  useEffect(() => {
+    const refresh = () => setCaps({ ...(window.__CN_CAPS__ || {}) });
+    window.addEventListener('cn:caps', refresh);
+    return () => window.removeEventListener('cn:caps', refresh);
+  }, []);
   const canPause = caps.pause !== false;
   const isNativeShell = typeof window !== 'undefined' && window.__CN_NATIVE__ === true;
   const hasLiveTranscript = caps.transcription === true;

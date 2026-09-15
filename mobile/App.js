@@ -17,7 +17,8 @@ import {
 import { probe, transcribeRemotely } from './src/remote';
 import {
   RECORDING_OPTIONS, SUPPORTS_PAUSE, TRANSCRIPTION_AVAILABLE,
-  configureAudio, requestPermissions, startSpeechSession,
+  configureAudio, describeModelStatus, refreshOnDeviceSupport,
+  requestPermissions, startSpeechSession,
 } from './src/capture';
 
 /**
@@ -237,6 +238,30 @@ export default function App() {
     return { id };
   }, [recorder, state.durationMillis, drainTranscriptions]);
 
+  // The language pack can arrive minutes after it was asked for - Android may
+  // wait for wifi, or for the user to accept a dialog. Re-checking is cheap,
+  // so the app upgrades itself the moment it lands instead of asking anyone to
+  // restart or go into settings.
+  useEffect(() => {
+    if (!ready || !TRANSCRIPTION_AVAILABLE) return undefined;
+    let cancelled = false;
+
+    const recheck = async () => {
+      if (cancelled || transcriptionReady.current) return;
+      const nowSupported = await refreshOnDeviceSupport();
+      if (cancelled || !nowSupported) return;
+      transcriptionReady.current = true;
+      webRef.current?.injectJavaScript(
+        'window.__CN_CAPS__ = { transcription: true, pause: false };'
+        + 'window.dispatchEvent(new Event("cn:caps")); true;',
+      );
+      setPageError((current) => (current?.startsWith('transcription:') ? '' : current));
+    };
+
+    const timer = setInterval(recheck, 20_000);
+    return () => { cancelled = true; clearInterval(timer); };
+  }, [ready]);
+
   const onMessage = useCallback(async (event) => {
     let message;
     try { message = JSON.parse(event.nativeEvent.data); } catch { return; }
@@ -262,9 +287,8 @@ export default function App() {
         backgroundOk.current = granted.background;
         transcriptionReady.current = granted.transcription === true;
         if (TRANSCRIPTION_AVAILABLE && !transcriptionReady.current) {
-          setPageError((current) => current || (granted.reason === 'downloading'
-            ? 'transcription: Android is downloading the offline language pack. Recording works now; transcripts start once it finishes.'
-            : 'transcription: offline speech recognition is unavailable on this device. Recording and notes still work.'));
+          const explanation = describeModelStatus(granted.reason);
+          if (explanation) setPageError((current) => current || `transcription: ${explanation}`);
         }
         // The capability the page was told about at load may be wrong now.
         webRef.current?.injectJavaScript(

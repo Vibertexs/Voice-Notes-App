@@ -36,6 +36,29 @@ check('no code path turns on-device recognition off',
   !/requiresOnDeviceRecognition:\s*(false|onDevice|[a-z]\w*\.\w+)/.test(capture),
   'a variable here is a way for a lecture to leave the phone');
 
+console.log('\n== the language pack installs itself ==');
+// Expecting a user to find Android speech settings and install English by
+// hand is not a product. The app asks for it, and upgrades when it lands.
+check('the app triggers the download itself',
+  /androidTriggerOfflineModelDownload/.test(capture),
+  'the user would otherwise have to install a language pack by hand');
+check('it does not re-open the system dialog on every check',
+  /downloadRequested/.test(capture),
+  'Android 13 opens a dialog; reopening it repeatedly is its own bug');
+check('support is re-checked, not decided once',
+  /export async function refreshOnDeviceSupport/.test(capture));
+check('the shell keeps watching after the first failure',
+  /refreshOnDeviceSupport\(\)/.test(app) && /setInterval\(recheck/.test(app),
+  'a pack that arrives later must not need a restart');
+check('the page is told when capability changes',
+  /cn:caps/.test(app) && /cn:caps/.test(captureView),
+  'the capture screen would otherwise keep hiding the transcript panel');
+check('Android below 13 is reported, not retried forever',
+  /Platform\.Version\) < 33/.test(capture),
+  'the download API does not exist before Android 13');
+check('every model state has something to say',
+  /export function describeModelStatus/.test(capture));
+
 console.log('\n== the app still works without the native module ==');
 // expo-speech-recognition does not exist in Expo Go. If its absence threw, the
 // app would not start there at all.

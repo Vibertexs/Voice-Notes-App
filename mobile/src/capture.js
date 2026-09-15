@@ -46,15 +46,26 @@ export const SUPPORTS_PAUSE = !TRANSCRIPTION_AVAILABLE;
 const LOCALE = 'en-US';
 
 /**
- * Whether the device can recognise offline, decided once at permission time.
+ * Whether the device can recognise offline, and how to get it there.
  *
- * Asking for on-device recognition when the offline model is not installed
- * does not degrade - Android fails the whole session with ERROR_CLIENT, whose
- * own documentation calls it "other client side errors". That is what a
- * missing language pack looks like, and it is worth checking for rather than
- * showing the user that sentence.
+ * Asking for on-device recognition without the language pack does not
+ * degrade - Android fails the whole session with ERROR_CLIENT, whose own
+ * documentation calls it "other client side errors". Nobody can act on that,
+ * and nobody should have to go and install a language pack by hand either, so
+ * the app fetches it.
+ *
+ * What it cannot do is promise when. Android 13 shows a system dialog and
+ * tells us nothing more; Android 14+ may schedule the download for wifi. So
+ * this is written to re-check cheaply and often, and the app upgrades itself
+ * the moment the pack lands rather than asking the user to do anything.
  */
-const onDevice = { supported: false, checked: false };
+const onDevice = {
+  supported: false,
+  downloadRequested: false,
+  status: 'unknown',
+};
+
+export const onDeviceStatus = () => ({ ...onDevice });
 
 function recognitionOptions() {
   return {
@@ -65,43 +76,98 @@ function recognitionOptions() {
     // to a speech API, and Android rate-limits network recognition well below
     // lecture length anyway. When the offline model is missing we decline to
     // transcribe at all rather than quietly uploading instead - which is why
-    // no session starts unless ensureOnDeviceModel() found one.
+    // no session starts unless the model has been confirmed present.
     requiresOnDeviceRecognition: true,
     recordingOptions: { persist: true },
   };
 }
 
-/**
- * Checks for the offline model, and asks Android to fetch it if it is absent.
- * The download is the user's choice and happens in the system UI, so this
- * reports what it found rather than waiting on it.
- */
-export async function ensureOnDeviceModel() {
-  if (!TRANSCRIPTION_AVAILABLE) return { supported: false, reason: 'unavailable' };
-  if (onDevice.checked) return { supported: onDevice.supported };
-  onDevice.checked = true;
-
+/** Cheap enough to call repeatedly: just asks which locales are installed. */
+export async function refreshOnDeviceSupport() {
+  if (!TRANSCRIPTION_AVAILABLE) {
+    onDevice.status = 'unavailable';
+    return false;
+  }
   try {
     if (!speech.ExpoSpeechRecognitionModule.supportsOnDeviceRecognition()) {
       onDevice.supported = false;
-      return { supported: false, reason: 'unsupported' };
+      onDevice.status = 'unsupported';
+      return false;
     }
-    const locales = await speech.ExpoSpeechRecognitionModule.getSupportedLocales({}).catch(() => null);
+    const locales = await speech.ExpoSpeechRecognitionModule
+      .getSupportedLocales({}).catch(() => null);
     const installed = locales?.installedLocales ?? [];
-    if (installed.some((entry) => String(entry).toLowerCase().startsWith('en'))) {
-      onDevice.supported = true;
-      return { supported: true };
+    onDevice.supported = installed.some(
+      (entry) => String(entry).toLowerCase().startsWith('en'),
+    );
+    if (onDevice.supported) onDevice.status = 'ready';
+    else if (onDevice.status !== 'downloading' && onDevice.status !== 'scheduled') {
+      onDevice.status = 'missing';
     }
-    // Absent: ask Android to fetch it. On 13 this only opens a dialog, so the
-    // result is not a promise that the model now exists.
-    const download = await speech.ExpoSpeechRecognitionModule
-      .androidTriggerOfflineModelDownload({ locale: LOCALE })
-      .catch(() => null);
-    onDevice.supported = download?.status === 'download_success';
-    return { supported: onDevice.supported, reason: 'downloading' };
+    return onDevice.supported;
   } catch {
     onDevice.supported = false;
-    return { supported: false, reason: 'unsupported' };
+    onDevice.status = 'unsupported';
+    return false;
+  }
+}
+
+/**
+ * Asks Android for the language pack. Requested once per launch: on 13 this
+ * opens a dialog, and reopening it every time the app checks would be its own
+ * kind of broken.
+ */
+export async function requestModelDownload() {
+  if (!TRANSCRIPTION_AVAILABLE || onDevice.supported) return onDevice.status;
+  // The download API landed in Android 13. Below that there is genuinely
+  // nothing to call, and saying so beats failing quietly.
+  if (Platform.OS === 'android' && Number(Platform.Version) < 33) {
+    onDevice.status = 'too-old';
+    return onDevice.status;
+  }
+  if (onDevice.downloadRequested) return onDevice.status;
+  onDevice.downloadRequested = true;
+
+  try {
+    const result = await speech.ExpoSpeechRecognitionModule
+      .androidTriggerOfflineModelDownload({ locale: LOCALE });
+    if (result?.status === 'download_success') {
+      onDevice.supported = true;
+      onDevice.status = 'ready';
+    } else if (result?.status === 'download_scheduled') {
+      onDevice.status = 'scheduled';
+    } else {
+      onDevice.status = 'downloading';  // opened_dialog, Android 13
+    }
+  } catch {
+    onDevice.status = 'unsupported';
+  }
+  return onDevice.status;
+}
+
+/** Check, and start a download if the pack is absent. */
+export async function ensureOnDeviceModel() {
+  if (await refreshOnDeviceSupport()) return { supported: true, status: 'ready' };
+  const status = await requestModelDownload();
+  return { supported: onDevice.supported, status };
+}
+
+/** What to tell the user, for each state the model can be in. */
+export function describeModelStatus(status) {
+  switch (status) {
+    case 'ready': return '';
+    case 'downloading':
+      return 'Android is installing the offline speech model. Recording works now, and transcripts start once it finishes.';
+    case 'scheduled':
+      return 'The offline speech model will download when you are on wifi. Recording works now; transcripts start once it arrives.';
+    case 'missing':
+      return 'The offline speech model has not arrived yet. Recording works now, and transcripts start once it does.';
+    case 'too-old':
+      return 'This phone is too old for offline speech recognition (Android 13 or newer is needed). Recording and notes still work.';
+    case 'unsupported':
+      return 'This phone does not offer offline speech recognition. Recording and notes still work.';
+    default:
+      return 'Transcription is unavailable on this device. Recording and notes still work.';
   }
 }
 
@@ -133,7 +199,7 @@ export async function requestPermissions() {
     // pack is a message about a language pack rather than ERROR_CLIENT.
     const model = await ensureOnDeviceModel();
     if (!model.supported) {
-      return { ok: true, background, transcription: false, reason: model.reason };
+      return { ok: true, background, transcription: false, reason: model.status };
     }
   }
   return { ok: true, background, transcription: TRANSCRIPTION_AVAILABLE };
