@@ -131,10 +131,20 @@ export const BRIDGE_JS = String.raw`
       .then(function (body) { return call('api', { method: method, path: url, body: body }); })
       .then(function (result) {
         var payload = result && result.body !== undefined ? result.body : null;
-        return new Response(JSON.stringify(payload), {
-          status: (result && result.status) || 200,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        var status = (result && result.status) || 200;
+        // Built by hand rather than with the Response constructor. The client
+        // only reads ok, status, headers.get and json, and not every WebView
+        // exposes Response - one that does not would take the page down on its
+        // very first request.
+        return {
+          ok: status >= 200 && status < 300,
+          status: status,
+          headers: { get: function (name) {
+            return String(name).toLowerCase() === 'content-type' ? 'application/json' : null;
+          } },
+          json: function () { return Promise.resolve(payload); },
+          text: function () { return Promise.resolve(JSON.stringify(payload)); }
+        };
       });
   };
 

@@ -77,6 +77,18 @@ for (const key of ['current_folder', 'breadcrumbs', 'folders', 'workspaces', 'le
 }
 check('folders is an array', Array.isArray(res.body.folders));
 
+console.log('\n== response envelopes match what the client destructures ==');
+// Twice now a handler returned the right data in the wrong wrapper. The client
+// reads that as undefined and the render dies, so assert the envelope itself,
+// not only the contents.
+res = await GET('/api/folders');
+check('/api/folders is wrapped in {folders}, not bare', Array.isArray(res.body?.folders), res.body);
+res = await GET('/api/search?q=x');
+check('/api/search returns {query, results}', Array.isArray(res.body?.results), res.body);
+res = await GET('/api/ai/status');
+check('/api/ai/status returns an object, not a list',
+  res.body && typeof res.body === 'object' && !Array.isArray(res.body), res.body);
+
 console.log('\n== creating a class ==');
 res = await POST('/api/folders', { name: 'Biology', color: 'mint' });
 const bio = res.body;

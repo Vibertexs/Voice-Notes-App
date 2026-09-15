@@ -105,9 +105,23 @@ const dom = new JSDOM(WEB_APP_HTML, {
 });
 
 const settle = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-await settle(1500);
+const document_ = dom.window.document;
 
-const root = dom.window.document.getElementById('root');
+// Wait for the library to actually arrive rather than sampling at a fixed
+// moment. An earlier version of this test slept and then matched loose text,
+// so it passed while the page was still on its loading screen - and shipped a
+// render crash. Poll for the real page, and fail loudly if it never comes.
+let waited = 0;
+while (waited < 8000 && !document_.querySelector('.library-page') && !pageErrors.length) {
+  await settle(100);
+  waited += 100;
+}
+await settle(200);
+
+const root = document_.getElementById('root');
+const text = root ? root.textContent : '';
+const onLoadingScreen = /Opening your lecture library/i.test(text);
+const onErrorScreen = /Couldn.t open Class Notes/i.test(text);
 
 console.log('== the page boots ==');
 check('no script errors while loading', pageErrors.length === 0, pageErrors.join(' | '));
@@ -115,15 +129,20 @@ check('#root exists', Boolean(root));
 check('React mounted something into it', root && root.childNodes.length > 0,
   'root is empty - this is the white screen');
 
+console.log('\n== and gets past loading, to the real library ==');
+check('not stuck on the loading screen', !onLoadingScreen, text.slice(0, 160));
+check('not showing the error screen', !onErrorScreen, text.slice(0, 220));
+check('the library page rendered', Boolean(document_.querySelector('.library-page')),
+  `waited ${waited}ms; body: ${text.slice(0, 160)}`);
+check('the classes section is present', /class/i.test(text), text.slice(0, 160));
+check('the record button is present', Boolean(
+  [...document_.querySelectorAll('button')].find((b) => /record/i.test(b.textContent))),
+  [...document_.querySelectorAll('button')].map((b) => b.textContent).slice(0, 8).join(' | '));
+
 console.log('\n== the bridge replaced the browser APIs ==');
 check('fetch was taken over', dom.window.__CN_BRIDGE__ === true);
 check('the page knows it is in the native shell', dom.window.__CN_NATIVE__ === true);
 check('MediaRecorder is the shim', typeof dom.window.MediaRecorder === 'function');
-
-console.log('\n== the UI actually rendered ==');
-const text = root ? root.textContent : '';
-check('the library heading is on screen', /class|lecture/i.test(text), text.slice(0, 200));
-check('it is not just an error page', !/something went wrong/i.test(text), text.slice(0, 200));
 
 console.log('\n== a real /api round trip happened through the bridge ==');
 const rows = db.exec("SELECT name FROM sqlite_master WHERE type='table'");

@@ -298,7 +298,9 @@ export async function handleApi({ method, path, body }) {
   if (head === 'folders') {
     if (method === 'GET' && !id) {
       const rows = await db.getAllAsync('SELECT * FROM folders ORDER BY name COLLATE NOCASE');
-      return ok(rows.map(folderJson));
+      // Wrapped, not bare: the client reads result.folders, and a bare array
+      // leaves it undefined, which takes the whole render down.
+      return ok({ folders: rows.map(folderJson) });
     }
     if (method === 'POST' && !id) {
       const name = String(body?.name ?? '').trim();
