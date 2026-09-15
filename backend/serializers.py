@@ -103,7 +103,7 @@ def serialize_workspace(row: sqlite3.Row, *, include_sessions: bool = False) -> 
     if include_sessions:
         with connect_database() as connection:
             sessions = connection.execute(
-                "SELECT * FROM lectures WHERE workspace_id = ? ORDER BY created_at ASC", (row["id"],)
+                "SELECT * FROM lectures WHERE workspace_id = ? ORDER BY created_at DESC", (row["id"],)
             ).fetchall()
             notes = connection.execute(
                 "SELECT note_body, updated_at FROM workspace_notes WHERE workspace_id = ?",

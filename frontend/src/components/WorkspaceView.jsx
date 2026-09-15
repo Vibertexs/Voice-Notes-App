@@ -103,7 +103,8 @@ function RecordingReview({ session, onUpdate, notify, seekTo, onSeekHandled }) {
 }
 
 export default function WorkspaceView({ workspace, onBack, onContinue, onReload, onDelete, notify, pendingSeek, onSeekHandled }) {
-  const [tab, setTab] = useState('notes');
+  // Audio is the center of the product, so opening a lecture starts at its recordings.
+  const [tab, setTab] = useState('review');
   const [title, setTitle] = useState(workspace.title);
   const [notes, setNotes] = useState(workspace.note_body ?? '');
   const [selectedId, setSelectedId] = useState(workspace.sessions[0]?.id ?? null);
@@ -155,9 +156,8 @@ export default function WorkspaceView({ workspace, onBack, onContinue, onReload,
       <button className="button primary" onClick={onContinue}><span className="rec-dot" aria-hidden="true" />Continue recording</button>
       <input ref={materialInputRef} hidden type="file" multiple accept=".pdf,.txt,.md,.doc,.docx,.ppt,.pptx" onChange={(event) => uploadFiles(event.target.files)} />
     </div></header>
-    <nav className="tab-list" aria-label="Lecture sections">{[['notes', 'Notes'], ['review', `Recordings (${workspace.sessions.length})`], ['study', 'Study']].map(([id, label]) => <button key={id} className={tab === id ? 'active' : ''} onClick={() => setTab(id)}>{label}</button>)}</nav>
-    {tab === 'notes' && <section className="notes-layout"><article className="note-editor"><div className="section-heading"><h2>Notes</h2><button className="button ghost" onClick={saveNotes} disabled={saving}>{saving ? 'Saving…' : 'Save'}</button></div><textarea value={notes} onChange={(event) => setNotes(event.target.value)} maxLength="100000" placeholder="Start with the big idea, then add details from class…" /></article><aside className="workspace-aside"><section><h3>Files</h3><MaterialList materials={workspace.materials} onDelete={deleteMaterial} /></section></aside></section>}
+    <nav className="tab-list" aria-label="Lecture sections">{[['review', `Recordings (${workspace.sessions.length})`], ['notes', 'Notes & study']].map(([id, label]) => <button key={id} className={tab === id ? 'active' : ''} onClick={() => setTab(id)}>{label}</button>)}</nav>
+    {tab === 'notes' && <section className="notes-study-layout"><article className="note-editor"><div className="section-heading"><h2>Notes</h2><button className="button ghost" onClick={saveNotes} disabled={saving}>{saving ? 'Saving…' : 'Save'}</button></div><textarea value={notes} onChange={(event) => setNotes(event.target.value)} maxLength="100000" placeholder="Start with the big idea, then add details from class…" /></article>{workspace.materials.length > 0 && <section className="lecture-files"><h3>Files</h3><MaterialList materials={workspace.materials} onDelete={deleteMaterial} /></section>}<StudyPanel workspace={workspace} onReload={onReload} notify={notify} /></section>}
     {tab === 'review' && <section className="review-layout"><aside className="session-list">{workspace.sessions.map((session) => <button key={session.id} className={session.id === selected?.id ? 'selected' : ''} onClick={() => setSelectedId(session.id)}><strong>{session.title}</strong><small>{formatDate(session.created_at)}</small></button>)}</aside>{selected ? <RecordingReview session={selected} onUpdate={onReload} notify={notify} seekTo={pendingSeek?.lectureId === selected.id ? pendingSeek.seconds : null} onSeekHandled={onSeekHandled} /> : <div className="empty-state"><h3>No recordings yet</h3><button className="button primary" onClick={onContinue}>Continue recording</button></div>}</section>}
-    {tab === 'study' && <StudyPanel workspace={workspace} onReload={onReload} notify={notify} />}
   </main>;
 }
