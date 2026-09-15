@@ -21,16 +21,13 @@ function MaterialList({ materials, onDelete }) {
 }
 
 export default function LibraryView({
-  data, allFolders, onOpenFolder, onOpenWorkspace, onNewFolder, onRecord, onUpload, onSearch, onSettings,
+  data, allFolders, onOpenFolder, onOpenWorkspace, onNewFolder, onRecord, onUpload,
   onDeleteMaterial, onMoveWorkspace, showArchived, onToggleArchived, onArchiveFolder,
   onRecolorFolder, onDeleteFolder,
 }) {
   const inputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
   const [dropping, setDropping] = useState(false);
-  // Drag and drop is a mouse API: `draggable` and dataTransfer do nothing on a
-  // touch screen, so filing a lecture had no path at all on a phone.
-  const [filing, setFiling] = useState(null);
   const folder = data.current_folder;
 
   async function chooseFiles(files) {
@@ -55,12 +52,6 @@ export default function LibraryView({
         {folder && <p className="muted">{data.workspaces.length} lecture{data.workspaces.length === 1 ? '' : 's'} · {recordingCount} recording{recordingCount === 1 ? '' : 's'}</p>}
       </div>
       <div className="header-actions">
-        <button className="icon-button" onClick={onSearch} aria-label="Search every lecture" title="Search">
-          <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="9" cy="9" r="5.5" fill="none" stroke="currentColor" strokeWidth="1.9" /><path d="m13.2 13.2 3.3 3.3" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" /></svg>
-        </button>
-        <button className="icon-button" onClick={onSettings} aria-label="Settings" title="Settings">
-          <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="2.6" fill="none" stroke="currentColor" strokeWidth="1.9" /><path d="M10 2.6v2M10 15.4v2M17.4 10h-2M4.6 10h-2M15.2 4.8l-1.4 1.4M6.2 13.8l-1.4 1.4M15.2 15.2l-1.4-1.4M6.2 6.2 4.8 4.8" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" /></svg>
-        </button>
         {!folder && <button className="button ghost" onClick={onNewFolder}>＋ Class</button>}
         <button className="button primary capture-shortcut" onClick={onRecord}>Record &amp; note</button>
       </div>
@@ -114,29 +105,19 @@ export default function LibraryView({
 
       </div>
       <div className="workspace-grid">
-        {data.workspaces.map((workspace) => <div className="workspace-slot" key={workspace.id}>
-          <button
-            type="button"
-            className="workspace-card"
-            draggable
-            onDragStart={(event) => event.dataTransfer.setData('application/x-class-notes-workspace', workspace.id)}
-            onClick={() => onOpenWorkspace(workspace.id)}
-            aria-label={`Open lecture ${workspace.title}`}
-          >
-            <span className="workspace-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M6 10v4M10 7v10M14 9v6M18 5v14" /></svg></span>
-            <strong className="workspace-card-title">{workspace.title}</strong>
-            <span className="workspace-card-copy">{workspace.session_count} recording{workspace.session_count === 1 ? '' : 's'} · {readableDate(workspace.updated_at)}</span>
-          </button>
-          {allFolders.length > 0 && <button
-            type="button"
-            className="workspace-file"
-            onClick={() => setFiling(workspace)}
-            aria-label={`File ${workspace.title} into a class`}
-            title="File into a class"
-          >
-            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M2.5 5.5a1.6 1.6 0 0 1 1.6-1.6h3.1c.4 0 .8.2 1.1.5l1 1.1h6.2a1.6 1.6 0 0 1 1.6 1.6v6.9a1.6 1.6 0 0 1-1.6 1.6H4.1a1.6 1.6 0 0 1-1.6-1.6z" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" /></svg>
-          </button>}
-        </div>)}
+        {data.workspaces.map((workspace) => <button
+          type="button"
+          key={workspace.id}
+          className="workspace-card"
+          draggable
+          onDragStart={(event) => event.dataTransfer.setData('application/x-class-notes-workspace', workspace.id)}
+          onClick={() => onOpenWorkspace(workspace.id)}
+          aria-label={`Open lecture ${workspace.title}`}
+        >
+          <span className="workspace-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M6 10v4M10 7v10M14 9v6M18 5v14" /></svg></span>
+          <strong className="workspace-card-title">{workspace.title}</strong>
+          <span className="workspace-card-copy">{workspace.session_count} recording{workspace.session_count === 1 ? '' : 's'} · {readableDate(workspace.updated_at)}</span>
+        </button>)}
       </div>
       {!data.workspaces.length && <div className="empty-state">
         <span className="empty-orb">●</span>
@@ -161,29 +142,8 @@ export default function LibraryView({
       <MaterialList materials={data.materials} onDelete={onDeleteMaterial} />
     </section>}
 
-    {filing && <div className="modal-backdrop" onClick={() => setFiling(null)}>
-      <div className="modal" onClick={(event) => event.stopPropagation()}>
-        <div className="modal-header"><h2>File this lecture</h2></div>
-        <p className="muted settings-copy">{filing.title}</p>
-        <div className="class-picker">
-          {filing.folder_id && <button
-            className="class-picker-option"
-            onClick={() => { onMoveWorkspace(filing.id, null); setFiling(null); }}
-          >Take out of its class</button>}
-          {allFolders.filter((entry) => entry.id !== filing.folder_id).map((entry) => <button
-            key={entry.id}
-            className={`class-picker-option ${entry.color}`}
-            onClick={() => { onMoveWorkspace(filing.id, entry.id); setFiling(null); }}
-          ><span className="class-picker-dot" aria-hidden="true" />{entry.name}</button>)}
-        </div>
-        <div className="modal-actions">
-          <button className="button ghost" onClick={() => setFiling(null)}>Cancel</button>
-        </div>
-      </div>
-    </div>}
-
     {allFolders.length > 0 && !folder && <p className="library-footnote">
-      Use the folder button on a lecture to file it into a class. Archive a class when the term ends — nothing is deleted.
+      Drag a lecture onto a class to file it. Archive a class when the term ends — nothing is deleted.
     </p>}
   </main>;
 }

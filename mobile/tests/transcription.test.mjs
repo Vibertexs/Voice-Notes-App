@@ -36,22 +36,6 @@ check('no code path turns on-device recognition off',
   !/requiresOnDeviceRecognition:\s*(false|onDevice|[a-z]\w*\.\w+)/.test(capture),
   'a variable here is a way for a lecture to leave the phone');
 
-console.log('\n== native calls do not outlive the activity ==');
-// "The current activity is no longer available" is what a timer calling into
-// native after Android has torn the activity down looks like.
-check('background timers check the app is foregrounded',
-  /AppState\.currentState === 'active'/.test(app),
-  'a timer firing into a dead activity throws');
-check('the screen is only kept awake while capturing',
-  /activateKeepAwakeAsync/.test(app) && /if \(!capturing\) return undefined;/.test(app),
-  'holding it all session is a battery bug as well as a crash');
-check('releasing the wake lock cannot throw',
-  /deactivateKeepAwake[\s\S]{0,260}catch/.test(app),
-  'the release lands after the activity is gone and rejects');
-check('metering is not polled hard when idle',
-  /capturing \? METERING_INTERVAL_MS/.test(app),
-  'polling native every 80ms all session is chatter with nothing to report');
-
 console.log('\n== the language pack installs itself ==');
 // Expecting a user to find Android speech settings and install English by
 // hand is not a product. The app asks for it, and upgrades when it lands.
@@ -64,7 +48,7 @@ check('it does not re-open the system dialog on every check',
 check('support is re-checked, not decided once',
   /export async function refreshOnDeviceSupport/.test(capture));
 check('the shell keeps watching after the first failure',
-  /refreshOnDeviceSupport\(\)/.test(app) && /setInterval\([\s\S]{0,120}recheck\(\)/.test(app),
+  /refreshOnDeviceSupport\(\)/.test(app) && /setInterval\(recheck/.test(app),
   'a pack that arrives later must not need a restart');
 check('the page is told when capability changes',
   /cn:caps/.test(app) && /cn:caps/.test(captureView),

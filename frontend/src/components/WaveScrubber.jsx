@@ -120,74 +120,25 @@ export default function WaveScrubber({
 
   const secondsPerPixel = duration / (barsRef.current.values.length * (BAR_WIDTH + BAR_GAP));
 
-  function beginDrag(clientX) {
-    dragRef.current = { x: clientX, from: currentSeconds || 0, moved: false };
-  }
-
-  function moveDrag(clientX) {
-    const drag = dragRef.current;
-    if (!drag) return;
-    const travel = drag.x - clientX;
-    // A few pixels of slop, so a tap that wobbles is still a tap.
-    if (Math.abs(travel) > 3) drag.moved = true;
-    // Dragging left moves the tape forward, the way scrubbing a reel does -
-    // the playhead itself never moves.
-    const next = Math.min(duration, Math.max(0, drag.from + travel * secondsPerPixel));
-    onScrub?.(next);
-  }
-
-  function endDrag(clientX) {
-    const drag = dragRef.current;
-    if (!drag) return;
-    dragRef.current = null;
-    if (!drag.moved && typeof clientX === 'number') {
-      // A tap seeks to whatever was under the finger, measured from the
-      // centre, since that is where the playhead sits.
-      const rect = canvasRef.current?.getBoundingClientRect();
-      if (rect) {
-        const offset = clientX - (rect.left + rect.width / 2);
-        onScrub?.(Math.min(duration, Math.max(0, (currentSeconds || 0) + offset * secondsPerPixel)));
-      }
-    }
-    onScrubEnd?.();
-  }
-
   function pointerDown(event) {
-    beginDrag(event.clientX);
-    // Capture keeps events coming when the finger leaves the element, but some
-    // WebViews refuse it. The drag is already registered above, so a refusal
-    // costs the out-of-bounds tracking rather than the whole gesture.
-    try { event.currentTarget.setPointerCapture(event.pointerId); } catch { /* not supported */ }
+    event.currentTarget.setPointerCapture(event.pointerId);
+    dragRef.current = { x: event.clientX, from: currentSeconds || 0 };
   }
 
   function pointerMove(event) {
     if (!dragRef.current) return;
-    moveDrag(event.clientX);
+    // Dragging left moves the tape forward, the way scrubbing a physical reel
+    // does - the playhead never moves.
+    const delta = (dragRef.current.x - event.clientX) * secondsPerPixel;
+    const next = Math.min(duration, Math.max(0, dragRef.current.from + delta));
+    onScrub?.(next);
   }
 
   function pointerUp(event) {
     if (!dragRef.current) return;
-    const { clientX } = event;
-    try { event.currentTarget.releasePointerCapture?.(event.pointerId); } catch { /* never captured */ }
-    endDrag(clientX);
-  }
-
-  // Touch handlers as well as pointer handlers: an Android WebView may deliver
-  // one, the other, or both, and a scrubber that only responds to a mouse is
-  // no scrubber at all on a phone. The drag ref makes a doubled event a no-op.
-  function touchStart(event) {
-    const touch = event.touches[0];
-    if (touch) beginDrag(touch.clientX);
-  }
-
-  function touchMove(event) {
-    const touch = event.touches[0];
-    if (touch && dragRef.current) moveDrag(touch.clientX);
-  }
-
-  function touchEnd(event) {
-    const touch = event.changedTouches?.[0];
-    endDrag(touch?.clientX);
+    dragRef.current = null;
+    event.currentTarget.releasePointerCapture?.(event.pointerId);
+    onScrubEnd?.();
   }
 
   function keyDown(event) {
@@ -211,10 +162,6 @@ export default function WaveScrubber({
       onPointerMove={pointerMove}
       onPointerUp={pointerUp}
       onPointerCancel={pointerUp}
-      onTouchStart={touchStart}
-      onTouchMove={touchMove}
-      onTouchEnd={touchEnd}
-      onTouchCancel={touchEnd}
       onKeyDown={keyDown}
       role="slider"
       tabIndex={0}

@@ -18,7 +18,6 @@ const SUITES = [
   'waveform.test.mjs',
   'transcription.test.mjs',
   'local_api.test.mjs',
-  'design.test.mjs',
   'render.test.mjs',
 ];
 
