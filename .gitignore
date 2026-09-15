@@ -5,9 +5,16 @@ models/
 *.m4a
 *.ogg
 *.webm
+# Blanket-ignored because transcripts and scratch dumps land as .json; the
+# files a build genuinely needs are named back in below.
 *.json
 !package.json
 !package-lock.json
+!app.json
+!eas.json
+!tsconfig.json
+!mobile/app.json
+!mobile/eas.json
 node_modules/
 frontend-dist/
 __pycache__/

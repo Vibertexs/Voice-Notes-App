@@ -7,6 +7,7 @@
     "expo-audio": "~57.0.5",
     "expo-file-system": "~57.0.7",
     "expo-keep-awake": "~57.0.2",
+    "expo-speech-recognition": "^57.0.0",
     "expo-sqlite": "~57.0.3",
     "expo-status-bar": "~57.0.1",
     "react": "19.2.3",
@@ -19,7 +20,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "build:web": "node scripts/bundle-web.mjs",
-    "test": "node tests/bridge.test.mjs && node tests/waveform.test.mjs && node tests/local_api.test.mjs && node tests/render.test.mjs"
+    "test": "node tests/run.mjs"
   },
   "private": true,
   "devDependencies": {

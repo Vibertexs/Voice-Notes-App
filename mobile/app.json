@@ -1,0 +1,70 @@
+{
+  "expo": {
+    "name": "Class Notes",
+    "slug": "class-notes",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.classnotes.app",
+      "infoPlist": {
+        "UIBackgroundModes": [
+          "audio"
+        ],
+        "NSMicrophoneUsageDescription": "Class Notes records your lectures so you can replay and search them later. Audio stays on this device.",
+        "NSSpeechRecognitionUsageDescription": "Class Notes turns your lectures into searchable text on this device. Nothing is sent anywhere."
+      }
+    },
+    "android": {
+      "package": "com.classnotes.app",
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MICROPHONE",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.WAKE_LOCK",
+        "android.permission.INTERNET"
+      ],
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "queries": [
+        {
+          "intent": [
+            {
+              "action": "android.speech.RecognitionService"
+            }
+          ]
+        }
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Class Notes records your lectures so you can replay and search them later. Audio stays on this device."
+        }
+      ],
+      "expo-sqlite",
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Class Notes needs the microphone to record your lectures.",
+          "speechRecognitionPermission": "Class Notes turns your lectures into searchable text on this device. Nothing is sent anywhere.",
+          "androidSpeechServicePackages": [
+            "com.google.android.googlequicksearchbox"
+          ]
+        }
+      ]
+    ]
+  }
+}

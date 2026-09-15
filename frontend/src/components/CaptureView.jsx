@@ -19,6 +19,20 @@ export default function CaptureView({ context, onSaved, onCancel, notify }) {
   const [files, setFiles] = useState([]);
   const [error, setError] = useState('');
   const [liveStream, setLiveStream] = useState(null);
+  const [transcript, setTranscript] = useState({ text: '', interim: '' });
+
+  // The native shell advertises what this build can actually do. In a browser
+  // neither flag is set, so both default to the browser's own behaviour.
+  const caps = (typeof window !== 'undefined' && window.__CN_CAPS__) || {};
+  const canPause = caps.pause !== false;
+  const hasLiveTranscript = caps.transcription === true;
+
+  useEffect(() => {
+    if (!hasLiveTranscript) return undefined;
+    const receive = (event) => setTranscript(event.detail ?? { text: '', interim: '' });
+    window.addEventListener('cn:transcript', receive);
+    return () => window.removeEventListener('cn:transcript', receive);
+  }, [hasLiveTranscript]);
   const recorderRef = useRef(null);
   const streamRef = useRef(null);
   const chunksRef = useRef([]);
@@ -67,6 +81,14 @@ export default function CaptureView({ context, onSaved, onCancel, notify }) {
   function pauseOrResume() {
     const recorder = recorderRef.current;
     if (!recorder) return;
+    if (!canPause) {
+      // The on-device recogniser writes one audio file per session, so
+      // pausing would split the recording in two. The button still opens the
+      // save and discard controls; capture simply carries on underneath,
+      // which is why the clock is left running.
+      setPhase(phase === 'recording' ? 'paused' : 'recording');
+      return;
+    }
     if (phase === 'recording') { recorder.pause(); pauseClock(); setPhase('paused'); }
     else { recorder.resume(); startClock(); setPhase('recording'); }
   }
@@ -143,7 +165,7 @@ export default function CaptureView({ context, onSaved, onCancel, notify }) {
           <span>{completionCopy[1]}</span>
         </div>}
         <div className="transport" data-phase={phase}>
-          <div className="phase-label">{phase === 'ready' ? 'Ready' : phase === 'recording' ? 'Recording' : phase === 'paused' ? 'Paused' : phase === 'discarding' ? 'Discarding' : phase === 'saved' ? 'Saved' : 'Saving'}</div>
+          <div className="phase-label">{phase === 'ready' ? 'Ready' : phase === 'recording' ? 'Recording' : phase === 'paused' ? (canPause ? 'Paused' : 'Still recording') : phase === 'discarding' ? 'Discarding' : phase === 'saved' ? 'Saved' : 'Saving'}</div>
           <div className="recording-timer">{elapsedLabel(elapsed)}</div>
           <Waveform stream={liveStream} phase={phase} />
         </div>
@@ -159,7 +181,7 @@ export default function CaptureView({ context, onSaved, onCancel, notify }) {
               data-phase={phase}
               onClick={phase === 'ready' ? start : pauseOrResume}
               disabled={phase === 'saving'}
-              aria-label={phase === 'ready' ? 'Start recording' : isPaused ? 'Resume recording' : 'Pause recording'}
+              aria-label={phase === 'ready' ? 'Start recording' : isPaused ? 'Keep recording' : canPause ? 'Pause recording' : 'Finish recording'}
             ><span className="shutter-glyph" aria-hidden="true" /></button>
             <div className={`finish-group ${isPaused ? 'shown' : ''}`} inert={!isPaused}>
               <button className="finish-button" onClick={done} aria-label="Done — save and transcribe">
@@ -168,7 +190,7 @@ export default function CaptureView({ context, onSaved, onCancel, notify }) {
               <span className="finish-caption" aria-hidden="true">Done</span>
             </div>
           </div>
-          <p className="transport-hint">{phase === 'ready' ? 'Tap to record' : isRecording ? 'Tap to pause' : isPaused ? 'Tap to resume, or slide to discard' : 'Saving…'}</p>
+          <p className="transport-hint">{phase === 'ready' ? 'Tap to record' : isRecording ? (canPause ? 'Tap to pause' : 'Tap to finish') : isPaused ? (canPause ? 'Tap to resume, or slide to discard' : 'Save, keep going, or slide to discard') : 'Saving…'}</p>
           <DiscardSlider open={isPaused} onDiscard={discard} />
         </div>
         {markers.length > 0 && <div className="marker-pills">{markers.map((marker, index) => <span key={`${marker.label}-${index}`}>● {elapsedLabel(marker.time_seconds * 1000)} · {marker.label}<button onClick={() => setMarkers((current) => current.filter((_, position) => position !== index))} aria-label={`Remove ${marker.label}`}>×</button></span>)}</div>}
@@ -180,7 +202,19 @@ export default function CaptureView({ context, onSaved, onCancel, notify }) {
         <textarea value={notes} onChange={(event) => setNotes(event.target.value)} maxLength="100000" placeholder="Key idea, question, assignment, or something to revisit…" />
         <div className="attachment-picker"><strong>Files</strong><button className="button ghost" onClick={() => fileInputRef.current?.click()}>＋ Add file</button><input ref={fileInputRef} hidden type="file" multiple accept=".pdf,.txt,.md,.doc,.docx,.ppt,.pptx" onChange={(event) => setFiles([...files, ...event.target.files])} /></div>
         {files.length > 0 && <ul className="pending-files">{files.map((file, index) => <li key={`${file.name}-${index}`}>{file.name}<button onClick={() => setFiles((current) => current.filter((_, position) => position !== index))} aria-label={`Remove ${file.name}`}>×</button></li>)}</ul>}
-        <p className="quality-note">Final transcript: <strong>high accuracy</strong></p>
+        {hasLiveTranscript && <div className="live-transcript">
+          <div className="section-heading"><div><h2>Transcript</h2></div></div>
+          <div className="live-transcript-body" aria-live="polite">
+            {transcript.text || transcript.interim
+              ? <p>{transcript.text}{transcript.interim && <em> {transcript.interim}</em>}</p>
+              : <p className="empty-copy">{isRecording ? 'Listening…' : 'Starts when you do.'}</p>}
+          </div>
+        </div>}
+        <p className="quality-note">
+          {hasLiveTranscript
+            ? <>Transcript: <strong>on this device</strong></>
+            : <>Final transcript: <strong>high accuracy</strong></>}
+        </p>
       </aside>
     </div>
   </main>;

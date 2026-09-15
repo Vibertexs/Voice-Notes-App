@@ -173,6 +173,21 @@ export const BRIDGE_JS = String.raw`
   window.__cnLevel = 0;
   window.__cnSetLevel = function (value) { window.__cnLevel = Number(value) || 0; };
 
+  // Live transcript, pushed from native as the recogniser produces it. The
+  // page listens on this rather than polling, and the text is only written to
+  // the database when the take is saved.
+  window.__cnTranscriptText = '';
+  window.__cnTranscriptInterim = '';
+  window.__cnTranscript = function (text, interim) {
+    window.__cnTranscriptText = text || '';
+    window.__cnTranscriptInterim = interim || '';
+    try {
+      window.dispatchEvent(new CustomEvent('cn:transcript', {
+        detail: { text: window.__cnTranscriptText, interim: window.__cnTranscriptInterim }
+      }));
+    } catch (ignored) { /* CustomEvent is missing on very old engines */ }
+  };
+
   // Both spellings: some WebViews expose only the prefixed constructor, and
   // the page picks whichever it finds. Patching one and missing the other
   // leaves the trace flat with nothing to show for it.
@@ -308,6 +323,7 @@ export const BRIDGE_JS = String.raw`
   // talking to a server that is not there, so the flag is set now and the
   // attribute waits for a document to put it on.
   window.__CN_NATIVE__ = true;
+  if (!window.__CN_CAPS__) window.__CN_CAPS__ = { transcription: false, pause: true };
   function markNative() {
     if (document.documentElement) {
       document.documentElement.setAttribute('data-native', 'true');

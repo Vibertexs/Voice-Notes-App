@@ -13,7 +13,10 @@ import { JSDOM } from 'jsdom';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const bridgeSource = readFileSync(join(here, '..', 'src', 'bridge.js'), 'utf8');
-const appSource = readFileSync(join(here, '..', 'App.js'), 'utf8');
+// The recorder options live in capture.js and the push loop in App.js, so the
+// checks below read both rather than assuming one file holds everything.
+const appSource = readFileSync(join(here, '..', 'App.js'), 'utf8')
+  + readFileSync(join(here, '..', 'src', 'capture.js'), 'utf8');
 const waveSource = readFileSync(
   join(here, '..', '..', 'frontend', 'src', 'components', 'Waveform.jsx'), 'utf8',
 );
@@ -33,7 +36,7 @@ console.log('== native actually produces a level ==');
 check('metering is switched on explicitly', /isMeteringEnabled:\s*true/.test(appSource),
   'RecordingPresets.HIGH_QUALITY does not enable metering on its own');
 check('recorder options are hoisted, not rebuilt each render',
-  /^const RECORDING_OPTIONS/m.test(appSource),
+  /^(?:export )?const RECORDING_OPTIONS/m.test(appSource),
   'a fresh options object every render rebuilds the recorder');
 check('the level is pushed even when metering is missing',
   !/state\.metering === undefined\) return/.test(appSource),

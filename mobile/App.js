@@ -1,20 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator, Platform, Pressable, SafeAreaView, StatusBar, StyleSheet, Text, View,
+  ActivityIndicator, Pressable, SafeAreaView, StatusBar, StyleSheet, Text, View,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
-import {
-  RecordingPresets, setAudioModeAsync, useAudioRecorder, useAudioRecorderState,
-  requestRecordingPermissionsAsync, requestNotificationPermissionsAsync,
-} from 'expo-audio';
+import { useAudioRecorder, useAudioRecorderState } from 'expo-audio';
 import { useKeepAwake } from 'expo-keep-awake';
 import { File } from 'expo-file-system';
 import { BRIDGE_JS } from './src/bridge';
 import { WEB_APP_HTML } from './src/webapp.generated';
 import {
   AUDIO_DIR, audioFile, claimRecording, dropRecording, finishRecording,
-  handleApi, newId, openDatabase, recoverInterrupted,
+  handleApi, newId, openDatabase, recoverInterrupted, saveTranscript,
 } from './src/localApi';
+import {
+  RECORDING_OPTIONS, SUPPORTS_PAUSE, TRANSCRIPTION_AVAILABLE,
+  configureAudio, requestPermissions, startSpeechSession,
+} from './src/capture';
 
 /**
  * Class Notes, as a native shell around the real web UI.
@@ -28,14 +29,6 @@ import {
  * MediaRecorder is suspended the moment the screen locks, so audio is captured
  * natively and only a token naming the file ever crosses into the page.
  */
-/**
- * Metering is opt-in: RecordingPresets.HIGH_QUALITY does not enable it, and
- * without it status.metering is undefined and the page's waveform has nothing
- * to draw. Declared once at module scope because a fresh object on every
- * render would rebuild the recorder.
- */
-const RECORDING_OPTIONS = { ...RecordingPresets.HIGH_QUALITY, isMeteringEnabled: true };
-
 /** Fast enough that the trace follows a voice rather than stepping. */
 const METERING_INTERVAL_MS = 80;
 
@@ -44,6 +37,7 @@ export default function App() {
   const recorder = useAudioRecorder(RECORDING_OPTIONS);
   const state = useAudioRecorderState(recorder, METERING_INTERVAL_MS);
   const active = useRef(null);
+  const session = useRef(null);
   const [ready, setReady] = useState(false);
   const [fatal, setFatal] = useState('');
   const [pageError, setPageError] = useState('');
@@ -81,26 +75,36 @@ export default function App() {
     );
   }, []);
 
-  const configureAudio = useCallback(async (background) => {
-    await setAudioModeAsync({
-      playsInSilentMode: true,
-      allowsRecording: true,
-      allowsBackgroundRecording: background,
-      shouldPlayInBackground: true,
-      interruptionMode: 'doNotMix',
-    });
-  }, []);
-
   const startRecording = useCallback(async () => {
     const id = newId();
-    const fileName = `${id}.m4a`;
     const title = new Date().toLocaleString(undefined, {
       month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
     });
+
+    if (TRANSCRIPTION_AVAILABLE) {
+      // The recogniser writes its own WAV, so the final name is not known
+      // until it closes the file. The row is still claimed first; recovery
+      // tolerates a row whose audio never arrived.
+      const fileName = `${id}.wav`;
+      await claimRecording({ id, title, fileName });
+      active.current = { id, fileName, startedAt: Date.now(), engine: 'speech' };
+      session.current = startSpeechSession({
+        onTranscript: ({ text, interim }) => {
+          // Live text goes straight to the page; it is only persisted at stop.
+          webRef.current?.injectJavaScript(
+            `window.__cnTranscript && window.__cnTranscript(${JSON.stringify(text)}, ${JSON.stringify(interim)}); true;`,
+          );
+        },
+        onError: (message) => setPageError((current) => current || `transcription: ${message}`),
+      });
+      return { id };
+    }
+
+    const fileName = `${id}.m4a`;
     // Claim the row before any audio exists, so a crash mid-lecture still
     // leaves a pointer to whatever reached the disk.
     await claimRecording({ id, title, fileName });
-    active.current = { id, fileName, startedAt: Date.now() };
+    active.current = { id, fileName, startedAt: Date.now(), engine: 'audio' };
 
     try {
       await recorder.prepareToRecordAsync();
@@ -115,11 +119,37 @@ export default function App() {
     }
     recorder.record();
     return { id };
-  }, [recorder, configureAudio]);
+  }, [recorder]);
 
   const stopRecording = useCallback(async () => {
     if (!active.current) throw new Error('Nothing is recording.');
-    const { id, fileName, startedAt } = active.current;
+    const { id, fileName, startedAt, engine } = active.current;
+
+    if (engine === 'speech') {
+      const current = session.current;
+      current.stop();
+      // The WAV is not readable until the recogniser closes it.
+      const uri = await current.waitForAudio();
+      const transcript = current.transcript;
+      current.release();
+      session.current = null;
+      if (!uri) throw new Error('The recording file was not written.');
+
+      const source = new File(uri);
+      if (!source.exists) throw new Error('The recording file was not written.');
+      const destination = audioFile(fileName);
+      if (destination.exists) destination.delete();
+      await source.move(destination);
+      await finishRecording({
+        id,
+        durationMs: Date.now() - startedAt,
+        sizeBytes: destination.size ?? 0,
+      });
+      await saveTranscript(id, transcript);
+      active.current = null;
+      return { id };
+    }
+
     await recorder.stop();
     const source = recorder.uri ? new File(recorder.uri) : null;
     if (!source?.exists) throw new Error('The recording file was not written.');
@@ -155,35 +185,38 @@ export default function App() {
         return;
       }
       if (channel === 'mic.permission') {
-        const granted = await requestRecordingPermissionsAsync();
-        if (!granted.granted) { reply(id, true, { ok: false }); return; }
-        if (Platform.OS === 'android') {
-          // Android runs background capture as a foreground service, and a
-          // foreground service must post a notification.
-          try {
-            const notify = await requestNotificationPermissionsAsync();
-            backgroundOk.current = notify.granted;
-          } catch { backgroundOk.current = false; }
-        }
-        await configureAudio(backgroundOk.current);
+        const granted = await requestPermissions();
+        if (!granted.ok) { reply(id, true, { ok: false }); return; }
+        backgroundOk.current = granted.background;
+        await configureAudio(granted.background);
         reply(id, true, { ok: true });
         return;
       }
       if (channel === 'rec.start') { reply(id, true, await startRecording()); return; }
-      if (channel === 'rec.pause') { recorder.pause(); reply(id, true, { ok: true }); return; }
-      if (channel === 'rec.resume') { recorder.record(); reply(id, true, { ok: true }); return; }
+      if (channel === 'rec.pause') {
+        if (SUPPORTS_PAUSE) recorder.pause();
+        reply(id, true, { ok: SUPPORTS_PAUSE });
+        return;
+      }
+      if (channel === 'rec.resume') {
+        if (SUPPORTS_PAUSE) recorder.record();
+        reply(id, true, { ok: SUPPORTS_PAUSE });
+        return;
+      }
       if (channel === 'rec.stop') { reply(id, true, await stopRecording()); return; }
       reply(id, false, { message: `Unknown channel ${channel}` });
     } catch (caught) {
       // A failed start leaves a claimed row with no audio behind it. Drop it
       // rather than let recovery adopt an empty lecture on the next launch.
       if (channel === 'rec.start' && active.current) {
+        session.current?.abort();
+        session.current = null;
         await dropRecording(active.current.id).catch(() => {});
         active.current = null;
       }
       reply(id, false, { message: String(caught?.message ?? caught) });
     }
-  }, [reply, configureAudio, startRecording, stopRecording, recorder]);
+  }, [reply, startRecording, stopRecording, recorder]);
 
   if (fatal) {
     return (
@@ -211,7 +244,12 @@ export default function App() {
         // off disk, which is how playback avoids a server.
         source={{ html: WEB_APP_HTML, baseUrl: AUDIO_DIR.uri }}
         originWhitelist={['*']}
-        injectedJavaScriptBeforeContentLoaded={BRIDGE_JS}
+        injectedJavaScriptBeforeContentLoaded={
+          `window.__CN_CAPS__ = ${JSON.stringify({
+            transcription: TRANSCRIPTION_AVAILABLE, pause: SUPPORTS_PAUSE,
+          })};
+${BRIDGE_JS}`
+        }
         onMessage={onMessage}
         allowFileAccess
         allowFileAccessFromFileURLs

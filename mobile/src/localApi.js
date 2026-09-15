@@ -420,7 +420,19 @@ export async function handleApi({ method, path, body }) {
       await db.runAsync('DELETE FROM session_markers WHERE id = ? AND lecture_id = ?', subId, id);
       return ok({ ok: true });
     }
-    if (id && sub === 'retranscribe') return needsServer('Transcription');
+    if (id && sub === 'retranscribe' && method === 'POST') {
+      const row = await db.getFirstAsync('SELECT * FROM lectures WHERE id = ?', id);
+      if (!row) return fail(404, 'That recording is no longer on the device.');
+      const file = row.file_name ? audioFile(row.file_name) : null;
+      if (!file?.exists) return fail(404, 'The audio for that recording is missing.');
+      // Android will only read back 16kHz mono WAV, which is what the
+      // recogniser itself writes. An m4a from the fallback recorder cannot be
+      // re-read, and there is no transcoder on the device.
+      if (!row.file_name.endsWith('.wav')) {
+        return fail(503, 'This recording was captured without on-device transcription, and it cannot be transcribed after the fact. New recordings will be.');
+      }
+      return ok({ id, status: 'queued', uri: file.uri });
+    }
   }
 
   // ---- materials ----
@@ -549,6 +561,21 @@ export async function finishRecording({ id, durationMs, sizeBytes }) {
   await db.runAsync(
     `UPDATE lectures SET duration_seconds = ?, size_bytes = ?, status = 'captured' WHERE id = ?`,
     Math.round(durationMs) / 1000, sizeBytes, id,
+  );
+}
+
+/**
+ * Stores what the recogniser heard. A lecture with text is 'ready'; one
+ * without stays 'unavailable' so the page does not offer an empty transcript
+ * as though it were a real one.
+ */
+export async function saveTranscript(id, transcript) {
+  const db = await openDatabase();
+  const text = String(transcript ?? '').trim();
+  await db.runAsync(
+    `UPDATE lectures SET transcript = ?, transcription_status = ?, transcription_progress = ?
+     WHERE id = ?`,
+    text, text ? 'ready' : 'unavailable', text ? 1 : 0, id,
   );
 }
 
