@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator, Pressable, SafeAreaView, StatusBar, StyleSheet, Text, View,
+  ActivityIndicator, AppState, Pressable, SafeAreaView, StatusBar, StyleSheet, Text, View,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useAudioRecorder, useAudioRecorderState } from 'expo-audio';
-import { useKeepAwake } from 'expo-keep-awake';
+import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { File } from 'expo-file-system';
 import { BRIDGE_JS } from './src/bridge';
 import { WEB_APP_HTML } from './src/webapp.generated';
@@ -38,8 +38,9 @@ const METERING_INTERVAL_MS = 80;
 
 export default function App() {
   const webRef = useRef(null);
+  const [capturing, setCapturing] = useState(false);
   const recorder = useAudioRecorder(RECORDING_OPTIONS);
-  const state = useAudioRecorderState(recorder, METERING_INTERVAL_MS);
+  const state = useAudioRecorderState(recorder, capturing ? METERING_INTERVAL_MS : 1000);
   const active = useRef(null);
   const session = useRef(null);
   const draining = useRef(false);
@@ -52,7 +53,25 @@ export default function App() {
   const [pageError, setPageError] = useState('');
   const backgroundOk = useRef(true);
 
-  useKeepAwake();
+  // Only while capturing. Held for the whole session it is a battery bug, and
+  // its release lands after the activity is gone during a reload or a
+  // background kill - which surfaces as an unhandled rejection. Neither the
+  // request nor the release is worth failing the app over.
+  useEffect(() => {
+    if (!capturing) return undefined;
+    let released = false;
+    activateKeepAwakeAsync('capture').catch(() => {});
+    return () => {
+      if (released) return;
+      released = true;
+      try {
+        const result = deactivateKeepAwake('capture');
+        if (result?.catch) result.catch(() => {});
+      } catch {
+        /* the activity is already gone; nothing to release */
+      }
+    };
+  }, [capturing]);
 
   useEffect(() => {
     (async () => {
@@ -72,6 +91,7 @@ export default function App() {
   // level is pushed in rather than measured in the page - and it comes from
   // whichever engine currently holds the microphone.
   const pushLevel = useCallback((level) => {
+    if (AppState.currentState === 'background') return;
     webRef.current?.injectJavaScript(
       `window.__cnSetLevel && window.__cnSetLevel(${Math.max(0, Math.min(1, level)).toFixed(3)}); true;`,
     );
@@ -138,7 +158,9 @@ export default function App() {
     if (!ready) return undefined;
     drainTranscriptions();
     // A server that was unreachable at launch usually is not for long.
-    const timer = setInterval(drainTranscriptions, 60_000);
+    const timer = setInterval(() => {
+      if (AppState.currentState === 'active') drainTranscriptions();
+    }, 60_000);
     return () => clearInterval(timer);
   }, [ready, drainTranscriptions]);
 
@@ -267,7 +289,9 @@ export default function App() {
       setPageError((current) => (current?.startsWith('transcription:') ? '' : current));
     };
 
-    const timer = setInterval(recheck, 20_000);
+    const timer = setInterval(() => {
+      if (AppState.currentState === 'active') recheck();
+    }, 20_000);
     return () => { cancelled = true; clearInterval(timer); };
   }, [ready]);
 
@@ -311,7 +335,11 @@ export default function App() {
         reply(id, true, { ok: true });
         return;
       }
-      if (channel === 'rec.start') { reply(id, true, await startRecording()); return; }
+      if (channel === 'rec.start') {
+        setCapturing(true);
+        reply(id, true, await startRecording());
+        return;
+      }
       if (channel === 'rec.pause') {
         const canPause = !transcriptionReady.current;
         if (canPause) recorder.pause();
@@ -324,11 +352,17 @@ export default function App() {
         reply(id, true, { ok: canPause });
         return;
       }
-      if (channel === 'rec.stop') { reply(id, true, await stopRecording()); return; }
+      if (channel === 'rec.stop') {
+        const result = await stopRecording();
+        setCapturing(false);
+        reply(id, true, result);
+        return;
+      }
       reply(id, false, { message: `Unknown channel ${channel}` });
     } catch (caught) {
       // A failed start leaves a claimed row with no audio behind it. Drop it
       // rather than let recovery adopt an empty lecture on the next launch.
+      if (channel === 'rec.start') setCapturing(false);
       if (channel === 'rec.start' && active.current) {
         session.current?.abort();
         session.current = null;
