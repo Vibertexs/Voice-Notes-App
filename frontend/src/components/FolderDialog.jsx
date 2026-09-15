@@ -27,9 +27,9 @@ export default function FolderDialog({ parent, onClose, onCreate }) {
   return (
     <div className="modal-backdrop" role="presentation" onMouseDown={onClose}>
       <form className="modal" aria-labelledby="folder-dialog-title" onSubmit={submit} onMouseDown={(event) => event.stopPropagation()}>
-        <div className="modal-header"><div><p className="eyebrow">Organize your class</p><h2 id="folder-dialog-title">New folder</h2></div><button className="icon-button" type="button" onClick={onClose} aria-label="Close">×</button></div>
-        <p className="muted">{parent ? `This folder will live inside ${parent.name}.` : 'Use folders for classes, semesters, or study topics.'}</p>
-        <label htmlFor={nameId}>Folder name</label>
+        <div className="modal-header"><h2 id="folder-dialog-title">{parent ? 'New folder' : 'New class'}</h2><button className="icon-button" type="button" onClick={onClose} aria-label="Close">×</button></div>
+        {parent && <p className="muted">Inside {parent.name}</p>}
+        <label htmlFor={nameId}>{parent ? 'Folder name' : 'Class name'}</label>
         <input id={nameId} autoFocus value={name} maxLength="120" onChange={(event) => setName(event.target.value)} placeholder="e.g. Biology 101" />
         <fieldset className="color-field"><legend>Color</legend><div className="color-options">
           {COLORS.map((option) => <button key={option} type="button" className={`color-option ${option} ${color === option ? 'selected' : ''}`} onClick={() => setColor(option)} aria-label={`${option} folder color`} aria-pressed={color === option} />)}

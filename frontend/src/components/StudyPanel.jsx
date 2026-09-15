@@ -92,7 +92,7 @@ export default function StudyPanel({ workspace, onReload, notify }) {
 
   return <section className="study-panel glass-card">
     <div className="section-heading">
-      <div><p className="eyebrow">Review in less time</p><h2>Study guide</h2></div>
+      <h2>Study guide</h2>
       <div className="study-actions">
         <button className="button ghost" onClick={draftQuick} disabled={busy === 'quick'}>
           {busy === 'quick' ? 'Drafting…' : 'Quick outline'}
@@ -103,9 +103,6 @@ export default function StudyPanel({ workspace, onReload, notify }) {
       </div>
     </div>
 
-    <p className="muted">
-      Quick outline works with no model at all. Writing with AI uses a model running on this laptop.
-    </p>
     {status && !status.ready && <p className="assistant-setup">{status.message}</p>}
 
     <textarea
@@ -119,7 +116,7 @@ export default function StudyPanel({ workspace, onReload, notify }) {
 
     <div className="study-ask">
       <div className="section-heading">
-        <div><p className="eyebrow">Runs on this laptop</p><h3>Ask this lecture</h3></div>
+        <h3>Ask this lecture</h3>
         {status?.models?.length > 0 && <>
           <label className="sr-only" htmlFor="study-model">Local model</label>
           <select id="study-model" value={model} onChange={(event) => setModel(event.target.value)}>
@@ -130,7 +127,7 @@ export default function StudyPanel({ workspace, onReload, notify }) {
 
       <div className="assistant-thread" ref={threadRef}>
         {messages.length === 0
-          ? <p className="muted">Ask about your own notes and recordings. It will say when they don’t answer.</p>
+          ? <p className="muted">Ask about this lecture.</p>
           : messages.map((message) => (
             <p key={message.id} className={`assistant-message ${message.role}`}>
               <span className="assistant-role">{message.role === 'user' ? 'You' : 'Assistant'}</span>

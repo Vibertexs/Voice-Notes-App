@@ -123,7 +123,7 @@ export default function CaptureView({ context, onSaved, onCancel, notify }) {
       ? ['Recording saved', 'Transcribing with the high-accuracy model…']
       : ['Finishing your recording', 'Saving your audio and notes…'];
   return <main className="page capture-page">
-    <header className="capture-heading"><button className="back-link" onClick={onCancel} disabled={isFinalizing}>‹ Back</button><p className="eyebrow">{context.workspace ? 'Continuing lecture' : 'New lecture'}</p><h1>{context.workspace ? context.workspace.title : 'Capture a lecture'}</h1><p className="muted">Saves to <strong>{location}</strong></p>{!context.workspace && <label className="capture-title-field">Recording name <small>optional</small><input value={title} maxLength="180" onChange={(event) => setTitle(event.target.value)} placeholder="A timestamped lecture name is used if you leave this blank" disabled={isFinalizing} /></label>}</header>
+    <header className="capture-heading"><button className="back-link" onClick={onCancel} disabled={isFinalizing}>‹ Back</button><p className="eyebrow">{context.workspace ? 'Continuing lecture' : `New lecture · ${location}`}</p><h1>{context.workspace ? context.workspace.title : 'Capture a lecture'}</h1>{!context.workspace && <label className="capture-title-field">Recording name <small>optional</small><input value={title} maxLength="180" onChange={(event) => setTitle(event.target.value)} placeholder="Leave blank for a dated lecture" disabled={isFinalizing} /></label>}</header>
     <div className="capture-grid">
       <section className={`capture-station ${phase}`}>
         {isFinalizing && <div className={`save-veil ${phase === 'discarding' ? 'discard-veil' : ''} ${phase === 'saved' ? 'saved-veil' : ''}`} role="status" aria-live="polite">
@@ -167,11 +167,11 @@ export default function CaptureView({ context, onSaved, onCancel, notify }) {
         {error && <p className="form-error" role="alert">{error}</p>}
       </section>
       <aside className="capture-notes">
-        <div className="section-heading"><div><p className="eyebrow">Notes beside the audio</p><h2>Capture notes</h2></div></div>
+        <div className="section-heading"><div><h2>Notes</h2></div></div>
         <textarea value={notes} onChange={(event) => setNotes(event.target.value)} maxLength="100000" placeholder="Key idea, question, assignment, or something to revisit…" />
-        <div className="attachment-picker"><div><strong>Attachments</strong><p>Add slides or notes now; they will join this lecture only when you save.</p></div><button className="button ghost" onClick={() => fileInputRef.current?.click()}>＋ Attach file</button><input ref={fileInputRef} hidden type="file" multiple accept=".pdf,.txt,.md,.doc,.docx,.ppt,.pptx" onChange={(event) => setFiles([...files, ...event.target.files])} /></div>
+        <div className="attachment-picker"><strong>Files</strong><button className="button ghost" onClick={() => fileInputRef.current?.click()}>＋ Add file</button><input ref={fileInputRef} hidden type="file" multiple accept=".pdf,.txt,.md,.doc,.docx,.ppt,.pptx" onChange={(event) => setFiles([...files, ...event.target.files])} /></div>
         {files.length > 0 && <ul className="pending-files">{files.map((file, index) => <li key={`${file.name}-${index}`}>{file.name}<button onClick={() => setFiles((current) => current.filter((_, position) => position !== index))} aria-label={`Remove ${file.name}`}>×</button></li>)}</ul>}
-        <p className="quality-note"><strong>High accuracy, every time.</strong> The full saved recording is transcribed locally with the quality-first model after you tap Done.</p>
+        <p className="quality-note">Final transcript: <strong>high accuracy</strong></p>
       </aside>
     </div>
   </main>;

@@ -17,7 +17,7 @@ function Excerpt({ text }) {
 export default function SearchView({ onOpenResult, onBack }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
-  const [status, setStatus] = useState('Search every recording, note and attached file.');
+  const [status, setStatus] = useState('Notes, recordings, and files.');
   const inputRef = useRef(null);
   const requestRef = useRef(0);
 
@@ -28,7 +28,7 @@ export default function SearchView({ onOpenResult, onBack }) {
     if (!trimmed) {
       requestRef.current += 1;
       setResults([]);
-      setStatus('Search every recording, note and attached file.');
+      setStatus('Notes, recordings, and files.');
       return;
     }
     const ticket = ++requestRef.current;
@@ -54,8 +54,7 @@ export default function SearchView({ onOpenResult, onBack }) {
   return <main className="page search-page">
     <header className="search-header">
       <button className="back-link" onClick={onBack}>‹ Back to library</button>
-      <p className="eyebrow">Across every lecture</p>
-      <h2>Search everything</h2>
+      <h2>Search</h2>
       <input
         ref={inputRef}
         className="search-input"

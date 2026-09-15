@@ -47,11 +47,9 @@ export default function LibraryView({
   return <main className="page library-page">
     <header className="page-header">
       <div>
-        <p className="eyebrow">{folder ? 'Class' : 'Private lecture library'}</p>
+        {folder && <p className="eyebrow">Class</p>}
         <h1>{folder?.name ?? 'Your classes'}</h1>
-        <p className="muted">{folder
-          ? `${data.workspaces.length} lecture${data.workspaces.length === 1 ? '' : 's'} · ${recordingCount} recording${recordingCount === 1 ? '' : 's'}`
-          : 'Everything you need for class, in one place.'}</p>
+        {folder && <p className="muted">{data.workspaces.length} lecture{data.workspaces.length === 1 ? '' : 's'} · {recordingCount} recording{recordingCount === 1 ? '' : 's'}</p>}
       </div>
       <div className="header-actions">
         {!folder && <button className="button ghost" onClick={onNewFolder}>＋ Class</button>}
@@ -69,7 +67,7 @@ export default function LibraryView({
       <span className="parent-icon" aria-hidden="true">↰</span>
       <span className="parent-copy">
         <strong>All classes</strong>
-        <small>{dropping ? 'Drop to take this lecture out of the class' : 'Tap to go back · drag a lecture here to take it out'}</small>
+        <small>{dropping ? 'Drop to move here' : 'Move a lecture here'}</small>
       </span>
       <span className="parent-arrow" aria-hidden="true">›</span>
     </button>}
@@ -82,9 +80,8 @@ export default function LibraryView({
         </button>
       </div>
       <div className="class-grid">
-        {data.folders.map((child, position) => <ClassCard
+        {data.folders.map((child) => <ClassCard
           key={child.id}
-          index={position}
           folder={{ ...child, archived: showArchived || child.archived }}
           onOpen={onOpenFolder}
           onArchive={onArchiveFolder}
@@ -118,10 +115,9 @@ export default function LibraryView({
           onClick={() => onOpenWorkspace(workspace.id)}
           aria-label={`Open lecture ${workspace.title}`}
         >
-          <span className="workspace-card-top"><span>LECTURE</span><span>↗</span></span>
+          <span className="workspace-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M6 10v4M10 7v10M14 9v6M18 5v14" /></svg></span>
           <strong className="workspace-card-title">{workspace.title}</strong>
-          <span className="workspace-card-copy">{workspace.session_count} recording{workspace.session_count === 1 ? '' : 's'} · continue anytime</span>
-          <span className="workspace-card-footer"><span>{readableDate(workspace.updated_at)}</span><strong>Open notes</strong></span>
+          <span className="workspace-card-copy">{workspace.session_count} recording{workspace.session_count === 1 ? '' : 's'} · {readableDate(workspace.updated_at)}</span>
         </button>)}
       </div>
       {!data.workspaces.length && <div className="empty-state">
@@ -133,15 +129,15 @@ export default function LibraryView({
     </section>}
 
     {!showArchived && <section className="library-section files-section">
-      <div className="section-heading"><div><p className="eyebrow">Materials</p><h2>Imported files</h2></div></div>
+      <div className="section-heading"><div><h2>Files</h2></div></div>
       <button
         className="drop-zone"
         onClick={() => inputRef.current?.click()}
         onDragOver={(event) => event.preventDefault()}
         onDrop={(event) => { event.preventDefault(); chooseFiles(event.dataTransfer.files); }}
       >
-        <strong>{uploading ? 'Adding files…' : 'Drop PDFs, slides, or notes here'}</strong>
-        <span>or choose files from this device</span>
+        <strong>{uploading ? 'Adding files…' : 'Add files'}</strong>
+        <span>PDFs, slides, or notes</span>
       </button>
       <input ref={inputRef} hidden type="file" accept=".pdf,.txt,.md,.doc,.docx,.ppt,.pptx" multiple onChange={(event) => chooseFiles(event.target.files)} />
       <MaterialList materials={data.materials} onDelete={onDeleteMaterial} />

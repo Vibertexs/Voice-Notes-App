@@ -1188,3 +1188,108 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .save-veil, .saved-veil .save-symbol svg, .discard-veil .save-symbol svg, .save-spinner circle { animation: none; }
 }
+
+/* ---- Small-screen content rules, applied at every size ------------------
+   Mobile-friendly is mostly restraint: one object per card, one label per
+   action, and no helper copy repeating what the interface already shows. */
+.class-grid { grid-template-columns: repeat(auto-fill, minmax(11.5rem, 1fr)); gap: 1.25rem; }
+.class-card-open {
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  aspect-ratio: auto;
+  padding: 0;
+  gap: .5rem;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.class-card:hover .class-card-open,
+.class-card-open:focus-visible {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.class-folder-stage { width: 100%; min-width: 0; aspect-ratio: 1.35 / 1; }
+.class-folder-art { min-width: 0; filter: drop-shadow(0 .7rem .75rem rgba(36, 42, 54, .16)); }
+.class-card:hover .class-folder-art { filter: drop-shadow(0 .85rem .95rem rgba(36, 42, 54, .2)); }
+.class-card-copy { gap: .08rem; padding: 0 .2rem; }
+.class-name { color: #171b24; font-size: .95rem; }
+.class-meta { color: #737985; }
+.class-dial {
+  top: .15rem; right: .1rem;
+  color: #3a414e; background: rgba(255, 255, 255, .64);
+}
+.class-menu { top: 2.25rem; right: -.3rem; }
+
+.workspace-grid { grid-template-columns: repeat(auto-fill, minmax(12.25rem, 1fr)); gap: .9rem; }
+.workspace-card {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  align-items: start;
+  min-height: 0;
+  aspect-ratio: 1.12 / 1;
+  padding: 1rem;
+  border: 1px solid rgba(255, 255, 255, .48);
+  border-radius: 1.25rem;
+  box-shadow: inset 0 1px rgba(255, 255, 255, .1), 0 .75rem 1.7rem rgba(20, 23, 30, .12);
+}
+.workspace-card:hover { transform: translateY(-2px); }
+.workspace-card-icon {
+  display: grid; width: 2.35rem; height: 2.35rem; place-items: center;
+  border: 1px solid rgba(255, 255, 255, .18); border-radius: .82rem;
+  color: #f0f2f6; background: rgba(255, 255, 255, .1);
+}
+.workspace-card-icon svg { width: 1.22rem; height: 1.22rem; }
+.workspace-card-title {
+  display: -webkit-box; align-self: center; overflow: hidden;
+  color: #fafbfc; font-size: 1rem; line-height: 1.25; letter-spacing: -.025em;
+  -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+}
+.workspace-card-copy { color: #c6c9d0; font-size: .74rem; }
+.workspace-card-top, .workspace-card-footer { display: none; }
+
+.library-section.files-section {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.drop-zone {
+  min-height: 6rem;
+  border: 1px dashed rgba(83, 94, 113, .4);
+  border-radius: 1.1rem;
+  background: rgba(255, 255, 255, .34);
+  box-shadow: inset 0 1px rgba(255, 255, 255, .72);
+}
+.drop-zone strong { color: #222936; }
+.drop-zone span { color: #727a87; }
+.library-footnote { display: none; }
+
+.workspace-header > div:first-child { display: grid; gap: .5rem; }
+.workspace-header .back-link { margin-bottom: 0; }
+.note-editor .section-heading, .transcript .section-heading { margin-bottom: .7rem; }
+.workspace-aside section { padding: 1rem; }
+.workspace-aside section > h3 { margin: 0 0 .65rem; }
+.saved-markers > h3 { width: 100%; margin: 0; font-size: .92rem; }
+.attachment-picker { align-items: center; }
+.attachment-picker > strong { font-size: .9rem; }
+.quality-note { margin-top: .25rem; padding-top: .75rem; }
+
+@media (max-width: 44rem) {
+  .class-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .9rem; }
+  .class-card-open { min-height: 0; }
+  .class-name { font-size: .86rem; }
+  .class-meta { font-size: .68rem; }
+  .workspace-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .7rem; }
+  .workspace-card { padding: .8rem; border-radius: 1rem; }
+  .workspace-card-icon { width: 2rem; height: 2rem; border-radius: .68rem; }
+  .workspace-card-title { font-size: .87rem; }
+  .workspace-card-copy { font-size: .66rem; }
+}

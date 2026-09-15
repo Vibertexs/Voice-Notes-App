@@ -7,7 +7,7 @@ const COLORS = ['blue', 'violet', 'rose', 'coral', 'amber', 'lime', 'mint', 'sky
  * A class is represented by one responsive SVG folder, rather than assembled
  * CSS pieces. Its actions remain in the quiet corner menu.
  */
-export default function ClassCard({ index, folder, onOpen, onArchive, onRecolor, onDelete, onDropWorkspace }) {
+export default function ClassCard({ folder, onOpen, onArchive, onRecolor, onDelete, onDropWorkspace }) {
   const [over, setOver] = useState(false);
   const [menu, setMenu] = useState(false);
   const cardRef = useRef(null);
@@ -43,8 +43,6 @@ export default function ClassCard({ index, folder, onOpen, onArchive, onRecolor,
     >
       <span className="class-folder-stage">
         <ClassFolderArt />
-        <span className="class-index" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
-        <span className="class-arrow" aria-hidden="true">↗</span>
       </span>
       <span className="class-card-copy">
         <span className="class-name">{folder.name}</span>
