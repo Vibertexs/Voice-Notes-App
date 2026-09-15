@@ -55,7 +55,7 @@ export default function LibraryView({
       </div>
       <div className="header-actions">
         {!folder && <button className="button ghost" onClick={onNewFolder}>＋ Class</button>}
-        <button className="button primary" onClick={onRecord}>● Record &amp; note</button>
+        <button className="button primary capture-shortcut" onClick={onRecord}>Record &amp; note</button>
       </div>
     </header>
 

@@ -960,3 +960,171 @@ h2 { color: #151a35; }
   .class-name { font-size: .9rem; }
   .class-meta { font-size: .7rem; }
 }
+
+/* =========================================================================
+   Glass library refresh
+
+   The old class card was made from overlapping CSS rectangles. At some
+   widths, the seams became part of the design. The folder below is a single
+   SVG silhouette; the rest of this layer gives it a light, tactile glass
+   setting without changing any library or recorder behavior.
+   ========================================================================= */
+:root {
+  --glass-white: rgba(255, 255, 255, .45);
+  --glass-border: rgba(255, 255, 255, .78);
+  --glass-edge: rgba(171, 186, 207, .32);
+  --glass-ink: #182138;
+}
+
+body {
+  background:
+    radial-gradient(circle at 12% 8%, rgba(255, 255, 255, .96), transparent 27rem),
+    radial-gradient(circle at 84% 12%, rgba(213, 197, 255, .34), transparent 24rem),
+    radial-gradient(circle at 72% 88%, rgba(174, 217, 255, .44), transparent 31rem),
+    linear-gradient(145deg, #edf0f5 0%, #e3e8f1 48%, #eef1f6 100%);
+}
+.app-shell {
+  border-color: var(--glass-border);
+  background: linear-gradient(145deg, rgba(255, 255, 255, .34), rgba(244, 248, 255, .15));
+  box-shadow: 0 1.6rem 4.8rem rgba(49, 66, 98, .13);
+}
+.topbar {
+  border-bottom: 1px solid rgba(255, 255, 255, .65);
+  background: rgba(250, 252, 255, .44);
+}
+.topbar-copy button, .text-button {
+  border: 1px solid transparent;
+  background: transparent;
+}
+.topbar-copy button:hover, .text-button:hover { border-color: rgba(255, 255, 255, .8); background: rgba(255, 255, 255, .42); }
+.page { padding-top: 2.35rem; }
+.page-header { align-items: center; }
+.page-header h1 { margin-bottom: .3rem; }
+
+/* Controls are frosted objects, while recording is the one intentional dark action. */
+.button, .icon-button, .tab-list, .parent-target {
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, .48);
+  box-shadow: inset 0 1px rgba(255, 255, 255, .72), 0 .55rem 1.5rem rgba(40, 57, 87, .08);
+  backdrop-filter: blur(16px) saturate(135%);
+  -webkit-backdrop-filter: blur(16px) saturate(135%);
+}
+.button { border-radius: 999px; padding-inline: 1rem; }
+.button.primary { border-color: rgba(9, 14, 28, .8); background: #080c19; }
+.button.primary:hover:not(:disabled) { background: #151d30; }
+.capture-shortcut { padding-left: .95rem; }
+.capture-shortcut::before {
+  content: ''; width: .48rem; height: .48rem; border-radius: 50%;
+  background: #ff6a4f; box-shadow: 0 0 0 3px rgba(255, 106, 79, .18);
+}
+.button.ghost, .button.quiet { background: rgba(255, 255, 255, .4); }
+.icon-button { border-radius: 50%; }
+
+/* Each class is one glass card with a single-vector folder artwork. */
+.class-grid { grid-template-columns: repeat(auto-fill, minmax(12.25rem, 1fr)); gap: 1.15rem; }
+.class-card {
+  --folder-light: #b696ff;
+  --folder-mid: #7660ee;
+  --folder-deep: #4d34bf;
+  position: relative;
+}
+.class-card.blue   { --folder-light: #9dbfff; --folder-mid: #598be9; --folder-deep: #2d5dbd; }
+.class-card.violet { --folder-light: #d7adff; --folder-mid: #9b69ef; --folder-deep: #7044c4; }
+.class-card.rose   { --folder-light: #ffc1d9; --folder-mid: #eb7fae; --folder-deep: #b64c7e; }
+.class-card.coral  { --folder-light: #ffc3a4; --folder-mid: #ef8a67; --folder-deep: #bd5948; }
+.class-card.amber  { --folder-light: #ffe19a; --folder-mid: #efb750; --folder-deep: #c47b28; }
+.class-card.lime   { --folder-light: #d0f7ad; --folder-mid: #8fdb71; --folder-deep: #4eaa61; }
+.class-card.mint   { --folder-light: #a7f1db; --folder-mid: #62ccb4; --folder-deep: #328d82; }
+.class-card.sky    { --folder-light: #b3e9ff; --folder-mid: #76c4ea; --folder-deep: #3b91c0; }
+.class-card.slate  { --folder-light: #d7dfeb; --folder-mid: #9eafc3; --folder-deep: #6a7d96; }
+
+.class-card-open {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: .6rem;
+  min-height: 15rem;
+  aspect-ratio: 4 / 5;
+  padding: .7rem .7rem .85rem;
+  overflow: hidden;
+  border: 1px solid var(--glass-border);
+  border-radius: 1.5rem;
+  color: var(--glass-ink);
+  background: linear-gradient(150deg, rgba(255, 255, 255, .63), rgba(255, 255, 255, .24));
+  box-shadow: inset 0 1px rgba(255, 255, 255, .84), 0 1.15rem 2.35rem rgba(48, 66, 100, .1);
+  backdrop-filter: blur(16px) saturate(130%);
+  -webkit-backdrop-filter: blur(16px) saturate(130%);
+  transition: transform .22s var(--ease-out), background .22s var(--ease-out), box-shadow .22s var(--ease-out);
+}
+.class-card:hover .class-card-open,
+.class-card-open:focus-visible {
+  transform: translateY(-3px);
+  border-color: rgba(255, 255, 255, .95);
+  background: linear-gradient(150deg, rgba(255, 255, 255, .76), rgba(255, 255, 255, .34));
+  box-shadow: inset 0 1px rgba(255, 255, 255, .9), 0 1.45rem 2.8rem rgba(48, 66, 100, .14);
+}
+.class-card-open:focus-visible { outline: 3px solid rgba(78, 139, 234, .52); outline-offset: 3px; }
+.class-folder-stage { position: relative; display: block; min-height: 0; }
+.class-folder-art {
+  display: block; width: 100%; height: 100%; overflow: visible;
+  filter: drop-shadow(0 .65rem .7rem rgba(59, 73, 105, .18));
+  transition: filter .22s var(--ease-out), transform .25s var(--ease-out);
+}
+.class-card:hover .class-folder-art { filter: drop-shadow(0 .9rem .95rem rgba(59, 73, 105, .22)); transform: translateY(-1px) scale(1.01); }
+.class-folder-glow { pointer-events: none; }
+.class-folder-record circle:first-child { fill: #090b11; }
+.class-folder-record-ring { fill: none; stroke: rgba(255, 255, 255, .22); stroke-width: 1.25; }
+.class-folder-record-core { fill: var(--folder-light); filter: drop-shadow(0 0 .32rem var(--folder-light)); }
+.class-folder-record-cut { fill: rgba(255, 255, 255, .1); }
+.class-index, .class-arrow {
+  position: absolute; z-index: 1; top: 1.25rem; color: rgba(255, 255, 255, .92);
+  font-variant-numeric: tabular-nums; text-shadow: 0 1px 2px rgba(37, 47, 75, .22);
+}
+.class-index { left: 1.38rem; font-size: .68rem; font-weight: 800; letter-spacing: -.01em; }
+.class-arrow { right: 3.2rem; font-size: 1rem; }
+.class-card-copy { display: grid; gap: .12rem; min-width: 0; padding: 0 .25rem; text-align: left; }
+.class-name { overflow: hidden; color: #1a2238; font-size: .93rem; font-weight: 760; letter-spacing: -.025em; text-overflow: ellipsis; white-space: nowrap; }
+.class-meta { color: #6d7990; font-size: .73rem; font-weight: 540; }
+.class-dial {
+  top: 1.05rem; right: 1.05rem; bottom: auto;
+  width: 1.85rem; height: 1.85rem;
+  border: 1px solid rgba(255, 255, 255, .72);
+  color: #3b4661; background: rgba(255, 255, 255, .5);
+  box-shadow: inset 0 1px rgba(255, 255, 255, .82), 0 .25rem .7rem rgba(36, 52, 82, .1);
+  opacity: 1; transform: none;
+}
+.class-dial > span { width: auto; height: auto; border-radius: 0; background: none; font-size: 1.15rem; line-height: .7; }
+.class-dial:hover { background: rgba(255, 255, 255, .78); }
+.class-menu { top: 3.15rem; right: .45rem; bottom: auto; border: 1px solid var(--glass-border); background: rgba(250, 252, 255, .84); box-shadow: 0 1rem 2.5rem rgba(46, 63, 94, .18); backdrop-filter: blur(18px); }
+.class-card.drop-active .class-card-open { border-color: #6eabff; box-shadow: inset 0 0 0 2px #6eabff, 0 1.3rem 2.8rem rgba(55, 93, 156, .16); }
+.class-card.drop-active .class-meta { color: #276ed6; font-weight: 700; }
+
+.add-card {
+  min-height: 15rem; aspect-ratio: 4 / 5; border: 1px dashed rgba(101, 132, 177, .55);
+  background: rgba(255, 255, 255, .3); box-shadow: inset 0 1px rgba(255, 255, 255, .72);
+}
+.add-card:hover { border-color: #6d9cea; background: rgba(255, 255, 255, .58); }
+
+/* Carry the material through the rest of the product without competing with content. */
+.workspace-card, .note-editor, .workspace-aside section, .review-card, .session-list,
+.study-layout, .study-panel, .capture-notes, .library-section.files-section, .empty-state {
+  border-color: var(--glass-border);
+  background: rgba(255, 255, 255, .38);
+  box-shadow: inset 0 1px rgba(255, 255, 255, .76), 0 .8rem 2rem rgba(44, 62, 96, .07);
+}
+.workspace-card {
+  color: #edf4ff;
+  background:
+    radial-gradient(circle at 82% 4%, rgba(123, 155, 255, .62), transparent 35%),
+    linear-gradient(145deg, rgba(28, 42, 91, .94), rgba(12, 20, 55, .96));
+}
+.workspace-card:hover { background: radial-gradient(circle at 82% 4%, rgba(142, 168, 255, .72), transparent 35%), linear-gradient(145deg, rgba(28, 42, 91, .96), rgba(12, 20, 55, .99)); }
+.capture-station { border-color: rgba(255, 255, 255, .16); box-shadow: inset 0 1px rgba(255, 255, 255, .09), 0 1.2rem 2.8rem rgba(26, 39, 82, .16); }
+
+@media (max-width: 44rem) {
+  .class-card-open { min-height: 12.25rem; border-radius: 1.25rem; padding: .5rem .5rem .65rem; }
+  .class-index { top: .9rem; left: 1.05rem; }
+  .class-arrow { top: .88rem; right: 2.8rem; }
+  .class-dial { top: .7rem; right: .7rem; }
+  .class-name { font-size: .84rem; }
+  .class-meta { font-size: .66rem; }
+}

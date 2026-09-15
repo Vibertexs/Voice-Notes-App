@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
+import ClassFolderArt from './ClassFolderArt';
 
 const COLORS = ['blue', 'violet', 'rose', 'coral', 'amber', 'lime', 'mint', 'sky', 'slate'];
 
 /**
- * A class as a folder: a coloured cover with a dark sleeve sitting over it.
- * Hovering slides the sleeve down, the way a folder opens when you thumb it.
- * Everything you can do to the class lives behind the corner dial.
+ * A class is represented by one responsive SVG folder, rather than assembled
+ * CSS pieces. Its actions remain in the quiet corner menu.
  */
 export default function ClassCard({ index, folder, onOpen, onArchive, onRecolor, onDelete, onDropWorkspace }) {
   const [over, setOver] = useState(false);
@@ -41,19 +41,14 @@ export default function ClassCard({ index, folder, onOpen, onArchive, onRecolor,
       onDrop={(event) => { event.preventDefault(); setOver(false); onDropWorkspace(event, folder.id); }}
       aria-label={`Open ${folder.name}`}
     >
-      <span className="class-cover" aria-hidden="true" />
-      <span className="class-sleeve">
-        <span className="class-tab" aria-hidden="true" />
-        <span className="class-body">
-          <span className="class-top">
-            <span className="class-index" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
-            <span className="class-arrow" aria-hidden="true">↗</span>
-          </span>
-          <span className="class-text">
-            <span className="class-name">{folder.name}</span>
-            <span className="class-meta">{over ? 'Drop to file here' : summary}</span>
-          </span>
-        </span>
+      <span className="class-folder-stage">
+        <ClassFolderArt />
+        <span className="class-index" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
+        <span className="class-arrow" aria-hidden="true">↗</span>
+      </span>
+      <span className="class-card-copy">
+        <span className="class-name">{folder.name}</span>
+        <span className="class-meta">{over ? 'Drop to file here' : summary}</span>
       </span>
     </button>
 
@@ -63,7 +58,7 @@ export default function ClassCard({ index, folder, onOpen, onArchive, onRecolor,
       aria-label={`Options for ${folder.name}`}
       aria-expanded={menu}
       aria-haspopup="menu"
-    ><span aria-hidden="true" /></button>
+    ><span aria-hidden="true">⋯</span></button>
 
     {menu && <div className="class-menu" role="menu" aria-label={`${folder.name} options`}>
       <div className="class-menu-swatches">
