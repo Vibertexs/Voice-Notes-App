@@ -17,7 +17,7 @@ import {
 import { probe, transcribeRemotely } from './src/remote';
 import {
   RECORDING_OPTIONS, SUPPORTS_PAUSE, TRANSCRIPTION_AVAILABLE,
-  configureAudio, describeModelStatus, refreshOnDeviceSupport,
+  configureAudio, describeModelStatus, refreshOnDeviceSupport, releaseAudioSession,
   requestPermissions, startSpeechSession,
 } from './src/capture';
 
@@ -68,16 +68,22 @@ export default function App() {
     })();
   }, []);
 
-  // Feed the page's waveform from native metering. The browser has no audio
-  // graph here, so the level is pushed in rather than measured in the page.
-  useEffect(() => {
-    if (!webRef.current) return;
-    // Metering is dBFS: roughly -60 in a silent room, 0 at the clipping point.
-    const level = Math.max(0, Math.min(1, ((state.metering ?? -60) + 60) / 60));
-    webRef.current.injectJavaScript(
-      `window.__cnSetLevel && window.__cnSetLevel(${level.toFixed(3)}); true;`,
+  // Feed the page's waveform. The browser has no audio graph here, so the
+  // level is pushed in rather than measured in the page - and it comes from
+  // whichever engine currently holds the microphone.
+  const pushLevel = useCallback((level) => {
+    webRef.current?.injectJavaScript(
+      `window.__cnSetLevel && window.__cnSetLevel(${Math.max(0, Math.min(1, level)).toFixed(3)}); true;`,
     );
-  }, [state.metering]);
+  }, []);
+
+  useEffect(() => {
+    // expo-audio only meters while it is the one recording; in recogniser mode
+    // its reading is meaningless and the volumechange event drives this instead.
+    if (transcriptionReady.current) return;
+    // Metering is dBFS: roughly -60 in a silent room, 0 at the clipping point.
+    pushLevel(((state.metering ?? -60) + 60) / 60);
+  }, [state.metering, pushLevel]);
 
   const reply = useCallback((id, okValue, data) => {
     webRef.current?.injectJavaScript(
@@ -157,6 +163,7 @@ export default function App() {
           );
         },
         onError: (message) => setPageError((current) => current || `transcription: ${message}`),
+        onLevel: pushLevel,
       });
       return { id };
     }
@@ -180,7 +187,7 @@ export default function App() {
     }
     recorder.record();
     return { id };
-  }, [recorder]);
+  }, [recorder, pushLevel]);
 
   const stopRecording = useCallback(async () => {
     if (!active.current) throw new Error('Nothing is recording.');
@@ -192,6 +199,7 @@ export default function App() {
       // The WAV is not readable until the recogniser closes it.
       const uri = await current.waitForAudio();
       const transcript = current.transcript;
+      const segments = current.segments;
       current.release();
       session.current = null;
       if (!uri) throw new Error('The recording file was not written.');
@@ -206,7 +214,7 @@ export default function App() {
         durationMs: Date.now() - startedAt,
         sizeBytes: destination.size ?? 0,
       });
-      await saveTranscript(id, transcript);
+      await saveTranscript(id, transcript, segments);
       // A server transcript is better than the on-device one, so queue the
       // lecture for it. The device text stands in until it arrives.
       if (await getSetting(TRANSCRIPTION_SERVER, '')) {
@@ -251,6 +259,7 @@ export default function App() {
       const nowSupported = await refreshOnDeviceSupport();
       if (cancelled || !nowSupported) return;
       transcriptionReady.current = true;
+      await releaseAudioSession().catch(() => {});
       webRef.current?.injectJavaScript(
         'window.__CN_CAPS__ = { transcription: true, pause: false };'
         + 'window.dispatchEvent(new Event("cn:caps")); true;',
@@ -294,7 +303,11 @@ export default function App() {
         webRef.current?.injectJavaScript(
           `window.__CN_CAPS__ = ${JSON.stringify({ transcription: transcriptionReady.current, pause: !transcriptionReady.current })}; true;`,
         );
-        await configureAudio(granted.background);
+        // Whichever engine is going to record has to be the one holding the
+        // microphone. Claiming the recording session for expo-audio when the
+        // recogniser is the engine is exactly what makes it fail.
+        if (transcriptionReady.current) await releaseAudioSession();
+        else await configureAudio(granted.background);
         reply(id, true, { ok: true });
         return;
       }

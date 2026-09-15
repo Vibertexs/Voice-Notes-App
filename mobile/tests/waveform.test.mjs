@@ -42,6 +42,16 @@ check('the level is pushed even when metering is missing',
   !/state\.metering === undefined\) return/.test(appSource),
   'returning early on undefined metering means silence never reaches the page');
 check('the push happens on every metering change', /__cnSetLevel/.test(appSource));
+// When the recogniser owns the microphone expo-audio is not recording, so its
+// metering reports nothing and the trace sits flat. The level has to come from
+// whichever engine actually holds the mic.
+check('the recogniser reports volume too',
+  /volumeChangeEventOptions/.test(appSource) && /enabled:\s*true/.test(appSource),
+  'volumechange must be switched on or the waveform is dead in recogniser mode');
+check('the recogniser level is forwarded', /onLevel/.test(appSource));
+check('expo-audio metering is ignored when it is not the engine',
+  /if \(transcriptionReady\.current\) return;/.test(appSource),
+  'a stale reading from an idle recorder would fight the real one');
 
 console.log('\n== the page and the bridge agree on the gate constants ==');
 // If Waveform's maths is ever retuned, the synthetic trace has to follow.

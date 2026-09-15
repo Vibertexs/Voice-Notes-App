@@ -79,6 +79,10 @@ function recognitionOptions() {
     // no session starts unless the model has been confirmed present.
     requiresOnDeviceRecognition: true,
     recordingOptions: { persist: true },
+    // The waveform is fed from here while the recogniser owns the microphone.
+    // expo-audio is not running in this mode, so its metering reports nothing
+    // and the trace would sit flat.
+    volumeChangeEventOptions: { enabled: true, intervalMillis: 100 },
   };
 }
 
@@ -205,11 +209,33 @@ export async function requestPermissions() {
   return { ok: true, background, transcription: TRANSCRIPTION_AVAILABLE };
 }
 
+/**
+ * Puts the audio session into recording mode for expo-audio.
+ *
+ * Only for the expo-audio engine. The recogniser opens the microphone itself,
+ * and claiming the session here first is enough to stop it: Android hands back
+ * ERROR_CLIENT, or worse, a session that runs and hears nothing. Two engines,
+ * one microphone - whichever is going to record has to be the one that asks
+ * for it.
+ */
 export async function configureAudio(background) {
   await setAudioModeAsync({
     playsInSilentMode: true,
     allowsRecording: true,
     allowsBackgroundRecording: background,
+    shouldPlayInBackground: true,
+    interruptionMode: 'doNotMix',
+  });
+}
+
+/**
+ * Releases the recording session so the recogniser can take the microphone.
+ * Playback still works; only the capture claim is dropped.
+ */
+export async function releaseAudioSession() {
+  await setAudioModeAsync({
+    playsInSilentMode: true,
+    allowsRecording: false,
     shouldPlayInBackground: true,
     interruptionMode: 'doNotMix',
   });
@@ -227,8 +253,8 @@ export function explainRecognitionError(event) {
   const code = event?.error ?? '';
   if (code === 'client' || code === 5) {
     return onDevice.supported
-      ? 'The speech recogniser stopped unexpectedly. Recording is unaffected.'
-      : 'Offline speech recognition is not set up. On Android: Settings > System > Languages & input > On-device recognition, and install English.';
+      ? 'The recogniser could not start, usually because something else holds the microphone. Recording is unaffected. (client)'
+      : 'Offline speech recognition is not set up yet. Recording is unaffected. (client)';
   }
   if (code === 'language-not-supported' || code === 'language-unavailable') {
     return 'English is not installed for offline recognition. Add it in Android speech settings.';
@@ -242,7 +268,7 @@ export function explainRecognitionError(event) {
   if (code === 'network' || code === 'network-timeout') {
     return 'Speech recognition tried to use the network and could not reach it.';
   }
-  return event?.message || String(code) || 'Speech recognition failed';
+  return `${event?.message || 'Speech recognition failed'} (${code})`;
 }
 
 // --- the speech engine -----------------------------------------------------
@@ -252,8 +278,13 @@ export function explainRecognitionError(event) {
  * results only; interim text is reported separately so the page can show it
  * without it ever being committed twice.
  */
-export function startSpeechSession({ onTranscript, onError }) {
+export function startSpeechSession({ onTranscript, onError, onLevel }) {
   const finals = [];
+  // Each final result is stamped with when it arrived, so the transcript panel
+  // can offer tap-to-seek. The recogniser reports no timings of its own, and
+  // arrival time is close enough to be useful for jumping around a lecture.
+  const segments = [];
+  const startedAt = Date.now();
   let interim = '';
   let audioUri = null;
   let ended = false;
@@ -266,12 +297,26 @@ export function startSpeechSession({ onTranscript, onError }) {
   on('result', (event) => {
     const best = event?.results?.[0]?.transcript ?? '';
     if (event?.isFinal) {
-      if (best.trim()) finals.push(best.trim());
+      if (best.trim()) {
+        finals.push(best.trim());
+        segments.push({
+          start_seconds: Math.max(0, (Date.now() - startedAt) / 1000),
+          text: best.trim(),
+        });
+      }
       interim = '';
     } else {
       interim = best;
     }
     onTranscript?.({ text: finals.join(' '), interim });
+  });
+
+  // Reported between -2 and 10, with anything below zero inaudible. The page
+  // wants 0..1, and the shell's own metering maps to the same range.
+  on('volumechange', (event) => {
+    const raw = Number(event?.value);
+    if (!Number.isFinite(raw)) return;
+    onLevel?.(Math.max(0, Math.min(1, raw / 10)));
   });
 
   on('audiostart', (event) => { audioUri = event?.uri ?? audioUri; });
@@ -288,6 +333,7 @@ export function startSpeechSession({ onTranscript, onError }) {
 
   return {
     get transcript() { return finals.join(' '); },
+    get segments() { return segments.slice(); },
     get uri() { return audioUri; },
     get ended() { return ended; },
     stop() {

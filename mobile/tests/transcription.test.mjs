@@ -161,6 +161,15 @@ check('it is trimmed, not stored with its padding', !session.transcript.startsWi
 check('status flips to ready so the page shows it', session.transcription_status === 'ready',
   session.transcription_status);
 check('progress reads complete', session.transcription_progress === 1, session.transcription_progress);
+// The transcript panel renders segments, not the flat text. Returning an
+// empty list shows "No speech detected" over a perfectly good transcript,
+// which is exactly what happened.
+check('the transcript reaches the panel as a segment',
+  session.segments.length > 0, session.segments);
+check('the segment carries the text', /mitosis/.test(session.segments[0]?.text ?? ''),
+  session.segments[0]);
+check('and a timestamp to seek to', typeof session.segments[0]?.start_seconds === 'number',
+  session.segments[0]);
 
 console.log('\n== an empty transcript is not passed off as a real one ==');
 await api.claimRecording({ id: 'lec2', title: 'Silent', fileName: 'lec2.wav' });

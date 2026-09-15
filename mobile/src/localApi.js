@@ -63,7 +63,8 @@ export async function openDatabase() {
       duration_seconds REAL,
       transcription_status TEXT NOT NULL DEFAULT 'unavailable',
       transcription_progress REAL NOT NULL DEFAULT 0,
-      status TEXT NOT NULL DEFAULT 'complete'
+      status TEXT NOT NULL DEFAULT 'complete',
+      segments_json TEXT NOT NULL DEFAULT '[]'
     );
     CREATE TABLE IF NOT EXISTS workspace_notes (
       workspace_id TEXT PRIMARY KEY NOT NULL,
@@ -111,6 +112,14 @@ export async function openDatabase() {
     CREATE INDEX IF NOT EXISTS idx_markers_lecture
       ON session_markers (lecture_id, time_seconds);
   `);
+  // Segments arrived after the first recordings did. ALTER TABLE throws when
+  // the column is already there, which is the expected state on every launch
+  // but the first.
+  try {
+    await database.execAsync("ALTER TABLE lectures ADD COLUMN segments_json TEXT NOT NULL DEFAULT '[]'");
+  } catch {
+    /* already migrated */
+  }
   return database;
 }
 
@@ -200,6 +209,22 @@ function materialJson(row) {
   };
 }
 
+/**
+ * Timed segments for the transcript panel. A transcript with no timings still
+ * has to render, so flat text becomes a single segment at zero rather than
+ * nothing at all.
+ */
+function parseSegments(json, transcript) {
+  try {
+    const parsed = JSON.parse(json ?? '[]');
+    if (Array.isArray(parsed) && parsed.length) return parsed;
+  } catch {
+    /* fall through to the flat text */
+  }
+  const text = String(transcript ?? '').trim();
+  return text ? [{ start_seconds: 0, text }] : [];
+}
+
 async function lectureJson(db, row, { includeContent }) {
   const file = row.file_name ? audioFile(row.file_name) : null;
   const result = {
@@ -221,7 +246,10 @@ async function lectureJson(db, row, { includeContent }) {
   if (includeContent) {
     result.transcript = row.transcript ?? '';
     result.note_body = row.note_body ?? '';
-    result.segments = [];
+    // The transcript panel reads segments, not the flat text: returning an
+    // empty list here shows "No speech detected" over a perfectly good
+    // transcript. Fall back to one segment when only flat text exists.
+    result.segments = parseSegments(row.segments_json, row.transcript);
     result.markers = await db.getAllAsync(
       `SELECT id, label, time_seconds, created_at FROM session_markers
        WHERE lecture_id = ? ORDER BY time_seconds ASC, created_at ASC`,
@@ -654,13 +682,15 @@ export async function finishRecording({ id, durationMs, sizeBytes }) {
  * without stays 'unavailable' so the page does not offer an empty transcript
  * as though it were a real one.
  */
-export async function saveTranscript(id, transcript) {
+export async function saveTranscript(id, transcript, segments = []) {
   const db = await openDatabase();
   const text = String(transcript ?? '').trim();
+  const timed = Array.isArray(segments) ? segments.filter((s) => s?.text) : [];
   await db.runAsync(
-    `UPDATE lectures SET transcript = ?, transcription_status = ?, transcription_progress = ?
+    `UPDATE lectures SET transcript = ?, segments_json = ?, transcription_status = ?,
+            transcription_progress = ?
      WHERE id = ?`,
-    text, text ? 'ready' : 'unavailable', text ? 1 : 0, id,
+    text, JSON.stringify(timed), text ? 'ready' : 'unavailable', text ? 1 : 0, id,
   );
 }
 
