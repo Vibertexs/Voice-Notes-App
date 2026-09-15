@@ -1,61 +1,80 @@
 # Class Notes — mobile
 
-Everything runs on the phone. No server, no account, no network.
+The web UI, running on a phone, with a native shell underneath it.
 
-## Run it
+## Why it is built this way
 
-```bash
-cd mobile
-npm install
-npx expo start
-```
+The screen you see is the real web build from `frontend/`, unmodified, running
+in a WebView. That is deliberate: it is the same code, so the phone looks
+exactly like the desktop app and there is one UI to maintain rather than two.
 
-Scan the QR with **Expo Go** (iOS: Camera app, Android: the Expo Go app).
+Everything a browser cannot do on a phone is served by the native shell:
 
-## What to test
+| The page asks for       | The shell answers with              |
+| ----------------------- | ----------------------------------- |
+| `fetch('/api/…')`       | SQLite, via `src/localApi.js`       |
+| `MediaRecorder`         | `expo-audio`, via `src/bridge.js`   |
+| `<audio src=…>`         | the file on disk, over a `file://` base origin |
 
-The point of this build is one question: **does a recording survive a locked phone?**
-
-1. Start a recording
-2. Lock the screen, put the phone face down
-3. Wait several minutes
-4. Unlock, pause, save
-5. Play it back — is the whole thing there?
-
-Also worth trying: switch to another app mid-recording, and take a phone call.
-
-## If background recording fails in Expo Go
-
-Expo Go runs inside its own app container, so `UIBackgroundModes` from `app.json`
-may not apply. If recording stops when the screen locks, build a dev client —
-that uses this project's own native config:
-
-```bash
-npx expo run:ios      # needs Xcode
-npx expo run:android  # needs Android Studio
-```
+Recording is the reason this is a native app rather than a website saved to the
+home screen. **A WebView's `MediaRecorder` is suspended the moment the screen
+locks** — which is precisely the case this app exists to handle. So audio is
+captured by `expo-audio`, and only a token naming the file on disk ever crosses
+into the page. The bytes never do.
 
 ## Layout
 
+    App.js                    the shell: WebView, bridge handlers, the recorder
+    src/bridge.js             injected into the page; replaces fetch and MediaRecorder
+    src/localApi.js           the backend, on the phone: schema, routes, serializers
+    src/webapp.generated.js   the inlined web build (generated, do not edit)
+    scripts/bundle-web.mjs    regenerates the above from frontend-dist/
+
+## Working on it
+
+The web UI is built from the repo root, then inlined:
+
+```bash
+npm run build          # at the repo root, writes frontend-dist/
+cd mobile
+npm run build:web      # inlines frontend-dist/ into src/webapp.generated.js
+npx expo start
 ```
-App.js                 three screens, no router
-src/store.js           SQLite metadata + audio files on disk
-src/RecordScreen.js    capture, background audio session, crash-safe row
-src/DetailScreen.js    playback, notes, rename, delete
-src/LibraryScreen.js   list of lectures
+
+Any change to `frontend/` needs both build steps before it shows up on the
+phone. Changing only `App.js`, `src/bridge.js`, or `src/localApi.js` needs
+neither — Fast Refresh picks those up.
+
+## What does not work on the phone yet
+
+Transcription and the AI features need the Python service and its models. Those
+endpoints return a 503 with a plain explanation rather than a stub that looks
+like it worked, so a screen that depends on them says so instead of showing
+empty results. Recording, classes, lectures, notes, markers, search and
+playback all run entirely on the device.
+
+## Background recording
+
+`app.json` declares what background capture needs — `UIBackgroundModes: audio`
+on iOS, and the foreground-service and notification permissions on Android.
+
+**None of that applies in Expo Go**, which ships its own fixed native manifest.
+If the OS refuses to arm the recorder there, the shell retries without
+background capture so recording still works, and the recording simply stops if
+you leave the app. To get real lock-screen capture, make a dev build:
+
+```bash
+npx expo run:android      # or: npx expo run:ios
 ```
 
-## Design notes
+## Tests
 
-**Audio never sits in memory.** The recorder writes straight to a file and
-playback streams from it. A 50-minute lecture is ~25MB on disk but ~190MB
-decoded, which a phone will not tolerate.
+Run from `mobile/`, against `sql.js` and a fake filesystem:
 
-**The database row is written before recording starts.** If the OS kills the app
-mid-lecture, the row points at whatever audio reached the disk, and the next
-launch adopts it instead of losing it.
+```bash
+npm test
+```
 
-## Not here yet
-
-Transcription. That is the next step, and deliberately separate: this build
-exists to prove capture is reliable before anything is built on top of it.
+The suite drives `localApi.js` the way the real web client drives FastAPI, and
+asserts the JSON shapes the components actually read — the client is
+unmodified, so a missing field is a broken screen, not a caught error.
