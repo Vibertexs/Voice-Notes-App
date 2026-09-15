@@ -8,9 +8,14 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { JSDOM } from 'jsdom';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const source = readFileSync(join(here, '..', 'src', 'bridge.js'), 'utf8');
+const captureSource = readFileSync(
+  join(here, '..', '..', 'frontend', 'src', 'components', 'CaptureView.jsx'),
+  'utf8',
+);
 
 let pass = 0, total = 0;
 function check(label, ok, detail) {
@@ -51,6 +56,72 @@ for (const [label, pattern] of [
 ]) {
   check(`${label} is installed`, pattern.test(body), 'missing from the bridge');
 }
+
+console.log('\n== native recording handoff ==');
+const doneStart = captureSource.indexOf('async function done()');
+const doneEnd = captureSource.indexOf('\n  function ', doneStart);
+const doneBody = captureSource.slice(doneStart, doneEnd);
+check('the capture page allows Expo to deliver its first chunk at stop',
+  /window\.__CN_NATIVE__ === true/.test(doneBody)
+    && /!chunksRef\.current\.length && !nativeRecorderDeliversOnStop/.test(doneBody),
+  'the page must call native stop before its file token exists');
+
+const stopStart = body.indexOf('ShimRecorder.prototype.stop');
+const stopEnd = body.indexOf('ShimRecorder.isTypeSupported', stopStart);
+const stopBody = body.slice(stopStart, stopEnd);
+check('the bridge emits its recording token before the stop event',
+  stopBody.indexOf("__emit('dataavailable'") >= 0
+    && stopBody.indexOf("__emit('dataavailable'") < stopBody.indexOf("__emit('stop'"),
+  'the page builds its upload blob from dataavailable before it handles stop');
+check('quick recording controls wait for the native start command',
+  /this\.__operation = Promise\.resolve\(\)/.test(body)
+    && /self\.__operation = self\.__operation\.then\(function \(\) \{ return call\('rec\.stop'/.test(body),
+  'pause, resume, and stop must not overtake asynchronous native preparation');
+
+console.log('\n== a native recorder can finish without an early chunk ==');
+const dom = new JSDOM('<div id="root">ready</div>', {
+  runScripts: 'outside-only',
+  url: 'http://localhost/',
+});
+const { window } = dom;
+const operations = [];
+window.ReactNativeWebView = {
+  postMessage(message) {
+    const request = JSON.parse(message);
+    if (!request.id) return;
+
+    operations.push(request.channel);
+    const result = request.channel === 'rec.start' || request.channel === 'rec.stop'
+      ? { id: 'native-recording-1' }
+      : { ok: true };
+    // Delaying start makes Pause and Done race it as they can on a real phone.
+    const delay = request.channel === 'rec.start' ? 20 : 0;
+    setTimeout(() => window.__cnSettle(request.id, true, result), delay);
+  },
+};
+window.eval(body);
+
+const stream = await window.navigator.mediaDevices.getUserMedia({ audio: true });
+const recorder = new window.MediaRecorder(stream);
+let tokenBlob;
+const stopped = new Promise((resolve, reject) => {
+  recorder.addEventListener('dataavailable', (event) => { tokenBlob = event.data; });
+  recorder.addEventListener('error', (event) => reject(event.error));
+  recorder.addEventListener('stop', resolve);
+});
+recorder.start(1000);
+recorder.pause();
+recorder.stop();
+await Promise.race([
+  stopped,
+  new Promise((_, reject) => setTimeout(() => reject(new Error('Timed out waiting for native stop')), 500)),
+]);
+
+check('start, pause, and stop reach native in order',
+  operations.join(',') === 'mic.permission,rec.start,rec.pause,rec.stop', operations);
+check('stop produces the native-file token as its first audio data',
+  tokenBlob?.size > 0 && tokenBlob.type === 'audio/mp4', tokenBlob?.size);
+dom.window.close();
 
 console.log('\n== failures get reported rather than swallowed ==');
 check('window error is reported', /addEventListener\('error'/.test(body));

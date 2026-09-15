@@ -204,6 +204,9 @@ export const BRIDGE_JS = String.raw`
     this.mimeType = (options && options.mimeType) || 'audio/mp4';
     this.__listeners = {};
     this.__recordingId = null;
+    // Native preparation is asynchronous. Keeping its commands in order
+    // avoids a fast Pause or Done reaching Expo before rec.start completes.
+    this.__operation = Promise.resolve();
   }
 
   ShimRecorder.prototype.addEventListener = function (name, handler) {
@@ -224,7 +227,8 @@ export const BRIDGE_JS = String.raw`
   ShimRecorder.prototype.start = function () {
     var self = this;
     self.state = 'recording';
-    call('rec.start', {}).then(function (result) {
+    self.__operation = self.__operation.then(function () { return call('rec.start', {}); });
+    self.__operation.then(function (result) {
       self.__recordingId = result.id;
     }).catch(function (error) {
       self.state = 'inactive';
@@ -233,18 +237,23 @@ export const BRIDGE_JS = String.raw`
   };
 
   ShimRecorder.prototype.pause = function () {
-    this.state = 'paused';
-    call('rec.pause', {}).catch(function () {});
+    var self = this;
+    self.state = 'paused';
+    self.__operation = self.__operation.then(function () { return call('rec.pause', {}); });
+    self.__operation.catch(function () {});
   };
 
   ShimRecorder.prototype.resume = function () {
-    this.state = 'recording';
-    call('rec.resume', {}).catch(function () {});
+    var self = this;
+    self.state = 'recording';
+    self.__operation = self.__operation.then(function () { return call('rec.resume', {}); });
+    self.__operation.catch(function () {});
   };
 
   ShimRecorder.prototype.stop = function () {
     var self = this;
-    call('rec.stop', {}).then(function (result) {
+    self.__operation = self.__operation.then(function () { return call('rec.stop', {}); });
+    self.__operation.then(function (result) {
       self.state = 'inactive';
       // The token stands in for the audio. It is swapped for the file on disk
       // when the page posts it back, so the bytes never cross the bridge.

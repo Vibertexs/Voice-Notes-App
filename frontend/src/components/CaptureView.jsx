@@ -79,7 +79,11 @@ export default function CaptureView({ context, onSaved, onCancel, notify }) {
 
   async function done() {
     const recorder = recorderRef.current;
-    if (!recorder || !chunksRef.current.length) return;
+    // Browsers emit a chunk on the chosen timeslice. The Expo shell keeps the
+    // audio file native and emits its single file token only when stop() is
+    // called, so waiting for a chunk here would make Done a no-op on mobile.
+    const nativeRecorderDeliversOnStop = typeof window !== 'undefined' && window.__CN_NATIVE__ === true;
+    if (!recorder || (!chunksRef.current.length && !nativeRecorderDeliversOnStop)) return;
     setPhase('saving');
     setError('');
     const savedElapsed = currentTime();
