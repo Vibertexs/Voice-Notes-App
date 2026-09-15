@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import {
   RecordingPresets,
   setAudioModeAsync,
   useAudioRecorder,
   useAudioRecorderState,
   requestRecordingPermissionsAsync,
+  requestNotificationPermissionsAsync,
 } from 'expo-audio';
 import { useKeepAwake } from 'expo-keep-awake';
 import { File } from 'expo-file-system';
@@ -21,11 +22,13 @@ import { colors, type } from './theme';
  * the database row is written *before* recording starts, so audio that reached
  * the disk is recoverable even if the process is killed.
  */
-export default function RecordScreen({ onSaved, onCancel }) {
+export default function RecordScreen({ onSaved, onCancel, classId = null }) {
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const state = useAudioRecorderState(recorder, 250);
   const [phase, setPhase] = useState('idle');
   const [error, setError] = useState('');
+  const [warning, setWarning] = useState('');
+  const [backgroundOk, setBackgroundOk] = useState(true);
   const pending = useRef(null);
 
   // Stops the screen locking while the user is still looking at it. Recording
@@ -39,11 +42,32 @@ export default function RecordScreen({ onSaved, onCancel }) {
         setError('Microphone access is off. Enable it in Settings to record.');
         return;
       }
+
+      // Android runs background capture as a foreground service, and a
+      // foreground service must post a notification. Without POST_NOTIFICATIONS
+      // the OS refuses to prepare the recorder at all, so ask before arming it.
+      // Denying is survivable: we drop to foreground-only rather than refusing
+      // to record, and say so, because a recording that stops at screen-lock
+      // still beats no recording.
+      let background = true;
+      if (Platform.OS === 'android') {
+        try {
+          const notify = await requestNotificationPermissionsAsync();
+          background = notify.granted;
+        } catch {
+          background = false;
+        }
+        if (!background) {
+          setWarning('Notifications are off, so recording stops when you leave the app. Turn them on to record with the screen locked.');
+        }
+      }
+      setBackgroundOk(background);
+
       await setAudioModeAsync({
         playsInSilentMode: true,
         allowsRecording: true,
         // The whole point: keep capturing once the screen locks.
-        allowsBackgroundRecording: true,
+        allowsBackgroundRecording: background,
         shouldPlayInBackground: true,
         interruptionMode: 'doNotMix',
       });
@@ -56,7 +80,7 @@ export default function RecordScreen({ onSaved, onCancel }) {
       const createdAt = new Date().toISOString();
       const fileName = `${id}.m4a`;
       // Claim the row first: a crash after this still leaves a pointer to the audio.
-      await beginRecording({ id, title: timestampTitle(new Date()), fileName, createdAt });
+      await beginRecording({ id, title: timestampTitle(new Date()), fileName, createdAt, classId });
       pending.current = { id, fileName, startedAt: Date.now() };
       await recorder.prepareToRecordAsync();
       recorder.record();
@@ -65,7 +89,7 @@ export default function RecordScreen({ onSaved, onCancel }) {
       setError(String(caught?.message ?? caught));
       setPhase('idle');
     }
-  }, [recorder]);
+  }, [recorder, classId]);
 
   const toggle = useCallback(() => {
     if (phase === 'recording') { recorder.pause(); setPhase('paused'); }
@@ -131,6 +155,7 @@ export default function RecordScreen({ onSaved, onCancel }) {
       </View>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
+      {!error && warning ? <Text style={styles.warning}>{warning}</Text> : null}
 
       <View style={styles.controls}>
         {phase === 'idle' && (
@@ -149,8 +174,12 @@ export default function RecordScreen({ onSaved, onCancel }) {
       </View>
 
       <Text style={styles.hint}>
-        {phase === 'idle' ? 'Tap to record. You can lock the screen and put the phone down.'
-          : phase === 'recording' ? 'Recording continues with the screen off.'
+        {phase === 'idle'
+          ? (backgroundOk
+            ? 'Tap to record. You can lock the screen and put the phone down.'
+            : 'Tap to record. Keep this screen open — background capture is off.')
+          : phase === 'recording'
+            ? (backgroundOk ? 'Recording continues with the screen off.' : 'Keep the app open while recording.')
             : phase === 'paused' ? 'Paused' : 'Writing the file…'}
       </Text>
 
@@ -191,6 +220,7 @@ const styles = StyleSheet.create({
   pauseBar: { width: 9, height: 32, borderRadius: 3, backgroundColor: colors.rec },
   hint: { ...type.body, color: colors.dim, textAlign: 'center', marginTop: 8 },
   error: { ...type.body, color: '#ff9b93', textAlign: 'center', marginBottom: 8 },
+  warning: { ...type.body, color: '#f3c77b', textAlign: 'center', marginBottom: 8, paddingHorizontal: 12 },
   finishRow: { flexDirection: 'row', gap: 12, marginTop: 28 },
   button: { minHeight: 48, paddingHorizontal: 22, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   buttonPrimary: { backgroundColor: colors.accent },

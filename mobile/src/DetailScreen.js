@@ -3,17 +3,21 @@ import {
   Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView,
   StyleSheet, Text, TextInput, View,
 } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
-import { deleteRecording, recordingFile, renameRecording, saveNotes } from './store';
-import { colors, type } from './theme';
+import {
+  deleteRecording, fileRecording, recordingFile, renameRecording, saveNotes,
+} from './store';
+import { colors, lift, toneFor, type } from './theme';
 import { duration, fileSize, shortDate } from './util';
 
-export default function DetailScreen({ recording, onBack, onChanged }) {
+export default function DetailScreen({ recording, classes = [], onBack, onChanged }) {
   const file = recordingFile(recording.file_name);
   const player = useAudioPlayer(file.exists ? file.uri : null);
   const status = useAudioPlayerStatus(player);
   const [title, setTitle] = useState(recording.title);
   const [notes, setNotes] = useState(recording.notes ?? '');
+  const [classId, setClassId] = useState(recording.class_id ?? null);
 
   // Persist notes a moment after typing stops rather than on every keystroke.
   useEffect(() => {
@@ -38,14 +42,24 @@ export default function DetailScreen({ recording, onBack, onChanged }) {
     ]);
   }
 
+  async function file_(next) {
+    setClassId(next);
+    await fileRecording(recording.id, next);
+    onChanged();
+  }
+
   return (
     <KeyboardAvoidingView
       style={styles.screen}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
-        <Pressable onPress={onBack} style={styles.back}>
-          <Text style={styles.backText}>‹  Lectures</Text>
+        <Pressable onPress={onBack} style={styles.back} hitSlop={8}>
+          <Svg width={20} height={20} viewBox="0 0 20 20">
+            <Path d="M12 4.5 6.5 10l5.5 5.5" fill="none" stroke={colors.accent}
+              strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+          </Svg>
+          <Text style={styles.backText}>Lectures</Text>
         </Pressable>
 
         <TextInput
@@ -63,7 +77,7 @@ export default function DetailScreen({ recording, onBack, onChanged }) {
         {!file.exists ? (
           <Text style={styles.missing}>The audio file for this recording is missing.</Text>
         ) : (
-          <View style={styles.player}>
+          <View style={[styles.player, lift[1]]}>
             <Pressable
               style={styles.play}
               onPress={() => (status?.playing ? player.pause() : player.play())}
@@ -80,6 +94,36 @@ export default function DetailScreen({ recording, onBack, onChanged }) {
               <Text style={styles.time}>{duration(played)} / {duration(total)}</Text>
             </View>
           </View>
+        )}
+
+        {classes.length > 0 && (
+          <>
+            <Text style={styles.label}>Class</Text>
+            <View style={styles.chips}>
+              <Pressable
+                onPress={() => file_(null)}
+                style={[styles.chip, classId === null && styles.chipOn]}
+              >
+                <Text style={[styles.chipText, classId === null && styles.chipTextOn]}>Unfiled</Text>
+              </Pressable>
+              {classes.map((folder) => {
+                const on = classId === folder.id;
+                return (
+                  <Pressable
+                    key={folder.id}
+                    onPress={() => file_(folder.id)}
+                    style={[
+                      styles.chip,
+                      on && { backgroundColor: toneFor(folder.color).sleeve, borderColor: toneFor(folder.color).edge },
+                    ]}
+                  >
+                    <View style={[styles.chipDot, { backgroundColor: toneFor(folder.color).a }]} />
+                    <Text style={[styles.chipText, on && styles.chipTextOn]}>{folder.name}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </>
         )}
 
         <Text style={styles.label}>Notes</Text>
@@ -104,15 +148,18 @@ export default function DetailScreen({ recording, onBack, onChanged }) {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.page },
   body: { padding: 20, paddingBottom: 48, gap: 10 },
-  back: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center', paddingRight: 12 },
+  back: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    alignSelf: 'flex-start', minHeight: 44, paddingRight: 12,
+  },
   backText: { ...type.button, color: colors.accent },
-  title: { ...type.title, color: colors.ink, padding: 0, marginTop: 4 },
+  title: { ...type.title, fontSize: 27, color: colors.ink, padding: 0, marginTop: 4 },
   meta: { ...type.body, color: colors.faint },
   missing: { ...type.body, color: colors.danger, marginTop: 12 },
   player: {
     flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 10,
-    padding: 14, borderRadius: 14, backgroundColor: colors.card,
-    borderWidth: 1, borderColor: colors.line,
+    padding: 14, borderRadius: 16, backgroundColor: colors.card,
+    borderWidth: 1, borderColor: colors.glassBorder,
   },
   play: {
     width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center',
@@ -129,10 +176,20 @@ const styles = StyleSheet.create({
   trackBase: { height: 5, borderRadius: 3, backgroundColor: 'rgba(19,27,46,0.1)', overflow: 'hidden' },
   trackFill: { height: 5, borderRadius: 3, backgroundColor: colors.accent },
   time: { ...type.mono, color: colors.faint },
-  label: { ...type.label, color: colors.faint, marginTop: 18 },
+  label: { ...type.label, color: colors.soft, marginTop: 18 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chip: {
+    flexDirection: 'row', alignItems: 'center', gap: 7,
+    minHeight: 38, paddingHorizontal: 13, borderRadius: 19,
+    borderWidth: 1, borderColor: colors.edge, backgroundColor: 'rgba(255,255,255,.66)',
+  },
+  chipOn: { backgroundColor: colors.navy, borderColor: colors.navyDeep },
+  chipDot: { width: 9, height: 9, borderRadius: 5 },
+  chipText: { fontSize: 13.5, fontWeight: '600', color: colors.soft },
+  chipTextOn: { color: '#fff' },
   notes: {
-    minHeight: 180, padding: 14, borderRadius: 14, backgroundColor: colors.card,
-    borderWidth: 1, borderColor: colors.line, color: colors.ink, fontSize: 15, lineHeight: 22,
+    minHeight: 180, padding: 14, borderRadius: 16, backgroundColor: '#fff',
+    borderWidth: 1, borderColor: '#bdcce0', color: colors.ink, fontSize: 15, lineHeight: 22,
   },
   delete: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center', marginTop: 18 },
   deleteText: { ...type.button, color: colors.danger },
