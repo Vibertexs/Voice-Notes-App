@@ -23,6 +23,35 @@ export const BRIDGE_JS = String.raw`
   var seq = 0;
   var pending = {};
 
+  // Registered before the bundle runs, because the failure this catches is a
+  // blank page with nothing on it to read. The shell shows whatever arrives
+  // here rather than leaving the user staring at white.
+  function report(kind, detail) {
+    try {
+      window.ReactNativeWebView.postMessage(JSON.stringify({
+        channel: 'page.error', payload: { kind: kind, detail: String(detail) }
+      }));
+    } catch (ignored) { /* nothing left to report with */ }
+  }
+
+  window.addEventListener('error', function (event) {
+    report('error', (event && (event.message || (event.error && event.error.message))) || 'Script error')
+      ;
+  });
+  window.addEventListener('unhandledrejection', function (event) {
+    report('rejection', (event && event.reason && (event.reason.message || event.reason)) || 'Unhandled rejection');
+  });
+
+  // A bundle can also fail by simply never mounting - no throw, no output.
+  window.addEventListener('load', function () {
+    setTimeout(function () {
+      var root = document.getElementById('root');
+      if (!root || root.childNodes.length === 0) {
+        report('blank', 'The interface loaded but rendered nothing.');
+      }
+    }, 2500);
+  });
+
   function call(channel, payload) {
     return new Promise(function (resolve, reject) {
       var id = ++seq;
@@ -229,8 +258,22 @@ export const BRIDGE_JS = String.raw`
 
   // Tells the web app it is running inside the native shell, so it can hide
   // anything that has no meaning here.
+  //
+  // This script runs before the document is parsed, so documentElement may not
+  // exist yet. Throwing here would abort the whole bridge and leave the page
+  // talking to a server that is not there, so the flag is set now and the
+  // attribute waits for a document to put it on.
   window.__CN_NATIVE__ = true;
-  document.documentElement.setAttribute('data-native', 'true');
+  function markNative() {
+    if (document.documentElement) {
+      document.documentElement.setAttribute('data-native', 'true');
+      return true;
+    }
+    return false;
+  }
+  if (!markNative()) {
+    document.addEventListener('DOMContentLoaded', markNative);
+  }
 
   true;
 })();

@@ -19,10 +19,11 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "build:web": "node scripts/bundle-web.mjs",
-    "test": "node tests/local_api.test.mjs"
+    "test": "node tests/local_api.test.mjs && node tests/render.test.mjs"
   },
   "private": true,
   "devDependencies": {
+    "jsdom": "^29.1.1",
     "sql.js": "^1.14.2"
   }
 }

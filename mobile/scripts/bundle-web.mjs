@@ -27,6 +27,22 @@ const css = readFileSync(join(dist, 'assets', cssName), 'utf8');
 // The page is assembled rather than taken from dist/index.html because the
 // script and stylesheet have to become inline tags, and the viewport needs
 // to be pinned for a phone.
+//
+// The script tag is deliberately NOT type="module". The shell loads this HTML
+// with a file:// base origin so <audio> can reach recordings on disk, and a
+// WebView blocks module scripts on a file:// origin - the page renders white
+// with no error. Vite emits a single self-contained bundle with no import,
+// export or import.meta, so a classic script runs it correctly; the check
+// below fails the build if that ever stops being true.
+const needsModule = /(?:^|[;\n])\s*(?:import|export)[\s{*(]/.test(js) || js.includes('import.meta');
+if (needsModule) {
+  throw new Error(
+    'The bundle now uses ES module syntax, which a WebView will not load from a '
+    + 'file:// origin - the page renders white with no error. Give the WebView a '
+    + 'real origin before inlining it.',
+  );
+}
+
 const html = `<!doctype html>
 <html lang="en">
 <head>
@@ -45,7 +61,7 @@ input, textarea { font-size: 16px; } /* stops iOS zooming the page on focus */
 </head>
 <body>
 <div id="root"></div>
-<script type="module">
+<script>
 ${js}
 </script>
 </body>

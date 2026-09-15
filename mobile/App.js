@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator, Platform, SafeAreaView, StatusBar, StyleSheet, Text, View,
+  ActivityIndicator, Platform, Pressable, SafeAreaView, StatusBar, StyleSheet, Text, View,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import {
@@ -35,6 +35,7 @@ export default function App() {
   const active = useRef(null);
   const [ready, setReady] = useState(false);
   const [fatal, setFatal] = useState('');
+  const [pageError, setPageError] = useState('');
   const backgroundOk = useRef(true);
 
   useKeepAwake();
@@ -124,6 +125,14 @@ export default function App() {
     let message;
     try { message = JSON.parse(event.nativeEvent.data); } catch { return; }
     const { id, channel, payload } = message ?? {};
+
+    // Page failures carry no id: nothing is waiting on an answer, they just
+    // need to become visible. A WebView that fails to render is otherwise a
+    // white rectangle with no way to see why.
+    if (channel === 'page.error') {
+      setPageError((current) => current || `${payload?.kind}: ${payload?.detail}`);
+      return;
+    }
     if (!id) return;
 
     try {
@@ -205,6 +214,13 @@ export default function App() {
         onRenderProcessGone={() => setFatal('The interface stopped unexpectedly. Reopen the app.')}
         onError={(event) => setFatal(String(event.nativeEvent?.description ?? 'The interface failed to load.'))}
       />
+      {pageError ? (
+        <Pressable style={styles.pageError} onPress={() => setPageError('')}>
+          <Text style={styles.pageErrorTitle}>The page reported a problem</Text>
+          <Text style={styles.pageErrorBody}>{pageError}</Text>
+          <Text style={styles.pageErrorHint}>Tap to dismiss</Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -215,4 +231,12 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 28, backgroundColor: '#e8eef7' },
   errorTitle: { fontSize: 16, fontWeight: '700', color: '#131b2e' },
   errorBody: { fontSize: 13.5, lineHeight: 19, color: '#5b6a86', marginTop: 6, textAlign: 'center' },
+  pageError: {
+    position: 'absolute', left: 12, right: 12, bottom: 18,
+    padding: 14, borderRadius: 14, backgroundColor: '#2c071c',
+    borderWidth: 1, borderColor: '#a51b60',
+  },
+  pageErrorTitle: { fontSize: 13, fontWeight: '800', color: '#ff9dcc' },
+  pageErrorBody: { fontSize: 12.5, lineHeight: 18, color: '#ffe3f0', marginTop: 5 },
+  pageErrorHint: { fontSize: 11, color: 'rgba(255,227,240,.6)', marginTop: 8 },
 });
