@@ -28,10 +28,21 @@ import {
  * MediaRecorder is suspended the moment the screen locks, so audio is captured
  * natively and only a token naming the file ever crosses into the page.
  */
+/**
+ * Metering is opt-in: RecordingPresets.HIGH_QUALITY does not enable it, and
+ * without it status.metering is undefined and the page's waveform has nothing
+ * to draw. Declared once at module scope because a fresh object on every
+ * render would rebuild the recorder.
+ */
+const RECORDING_OPTIONS = { ...RecordingPresets.HIGH_QUALITY, isMeteringEnabled: true };
+
+/** Fast enough that the trace follows a voice rather than stepping. */
+const METERING_INTERVAL_MS = 80;
+
 export default function App() {
   const webRef = useRef(null);
-  const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
-  const state = useAudioRecorderState(recorder, 200);
+  const recorder = useAudioRecorder(RECORDING_OPTIONS);
+  const state = useAudioRecorderState(recorder, METERING_INTERVAL_MS);
   const active = useRef(null);
   const [ready, setReady] = useState(false);
   const [fatal, setFatal] = useState('');
@@ -56,9 +67,12 @@ export default function App() {
   // Feed the page's waveform from native metering. The browser has no audio
   // graph here, so the level is pushed in rather than measured in the page.
   useEffect(() => {
-    if (!webRef.current || state.metering === undefined) return;
+    if (!webRef.current) return;
+    // Metering is dBFS: roughly -60 in a silent room, 0 at the clipping point.
     const level = Math.max(0, Math.min(1, ((state.metering ?? -60) + 60) / 60));
-    webRef.current.injectJavaScript(`window.__cnSetLevel && window.__cnSetLevel(${level.toFixed(3)}); true;`);
+    webRef.current.injectJavaScript(
+      `window.__cnSetLevel && window.__cnSetLevel(${level.toFixed(3)}); true;`,
+    );
   }, [state.metering]);
 
   const reply = useCallback((id, okValue, data) => {

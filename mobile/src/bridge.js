@@ -173,27 +173,52 @@ export const BRIDGE_JS = String.raw`
   window.__cnLevel = 0;
   window.__cnSetLevel = function (value) { window.__cnLevel = Number(value) || 0; };
 
-  if (typeof AudioContext !== 'undefined') {
-    var realCreateSource = AudioContext.prototype.createMediaStreamSource;
-    AudioContext.prototype.createMediaStreamSource = function (stream) {
-      if (!stream || !stream.__cnFake) return realCreateSource.call(this, stream);
-      return { connect: function (node) { if (node) node.__cnSynthetic = true; return node; },
-               disconnect: function () {} };
-    };
+  // Both spellings: some WebViews expose only the prefixed constructor, and
+  // the page picks whichever it finds. Patching one and missing the other
+  // leaves the trace flat with nothing to show for it.
+  var audioCtors = [];
+  if (typeof AudioContext !== 'undefined') audioCtors.push(AudioContext);
+  if (typeof webkitAudioContext !== 'undefined' && webkitAudioContext !== AudioContext) {
+    audioCtors.push(webkitAudioContext);
+  }
 
-    if (typeof AnalyserNode !== 'undefined') {
-      var realGetFloat = AnalyserNode.prototype.getFloatTimeDomainData;
-      AnalyserNode.prototype.getFloatTimeDomainData = function (array) {
-        if (!this.__cnSynthetic) return realGetFloat.call(this, array);
-        // RMS of a sine of amplitude A is A/sqrt(2); invert so the level the
-        // user sees matches the level native measured.
-        var amplitude = Math.min(1, window.__cnLevel) * 1.414;
-        for (var i = 0; i < array.length; i++) {
-          array[i] = Math.sin(i / 7) * amplitude * (0.75 + Math.random() * 0.25);
-        }
-        return undefined;
+  for (var c = 0; c < audioCtors.length; c++) {
+    (function (Ctor) {
+      var realCreateSource = Ctor.prototype.createMediaStreamSource;
+      Ctor.prototype.createMediaStreamSource = function (stream) {
+        if (!stream || !stream.__cnFake) return realCreateSource.call(this, stream);
+        return {
+          connect: function (node) { if (node) node.__cnSynthetic = true; return node; },
+          disconnect: function () {}
+        };
       };
-    }
+    })(audioCtors[c]);
+  }
+
+  if (audioCtors.length && typeof AnalyserNode !== 'undefined') {
+    var realGetFloat = AnalyserNode.prototype.getFloatTimeDomainData;
+
+    // The page turns these samples into a bar height with
+    //     gated = (rms - 0.006) / 0.12,  height = min(1, gated ** 0.55)
+    // so the synthetic trace has to land in that window. Feeding it raw
+    // amplitude instead put the RMS an order of magnitude too high and pinned
+    // every bar at full height, which looked exactly like no animation at all.
+    // Solving for gated == the level native measured gives the target RMS,
+    // and the waveform below has RMS 0.621 x its amplitude.
+    var SILENCE_FLOOR = 0.006;
+    var GATE_SPAN = 0.12;
+    var WAVE_RMS_PER_AMPLITUDE = 0.621;
+
+    AnalyserNode.prototype.getFloatTimeDomainData = function (array) {
+      if (!this.__cnSynthetic) return realGetFloat.call(this, array);
+      var level = Math.max(0, Math.min(1, window.__cnLevel));
+      var targetRms = level * GATE_SPAN + SILENCE_FLOOR;
+      var amplitude = targetRms / WAVE_RMS_PER_AMPLITUDE;
+      for (var i = 0; i < array.length; i++) {
+        array[i] = Math.sin(i / 7) * amplitude * (0.75 + Math.random() * 0.25);
+      }
+      return undefined;
+    };
   }
 
   // --------------------------------------------------------- MediaRecorder --

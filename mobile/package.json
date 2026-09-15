@@ -19,7 +19,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "build:web": "node scripts/bundle-web.mjs",
-    "test": "node tests/bridge.test.mjs && node tests/local_api.test.mjs && node tests/render.test.mjs"
+    "test": "node tests/bridge.test.mjs && node tests/waveform.test.mjs && node tests/local_api.test.mjs && node tests/render.test.mjs"
   },
   "private": true,
   "devDependencies": {
