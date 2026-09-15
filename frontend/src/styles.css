@@ -1128,3 +1128,63 @@ body {
   .class-name { font-size: .84rem; }
   .class-meta { font-size: .66rem; }
 }
+
+/* ---- Neutral glass: keep the contrast and shape, lose the blue wash ----- */
+body {
+  background:
+    radial-gradient(circle at 12% 8%, rgba(255, 255, 255, .98), transparent 28rem),
+    radial-gradient(circle at 84% 82%, rgba(199, 205, 217, .38), transparent 31rem),
+    linear-gradient(145deg, #f2f3f6 0%, #e5e8ee 52%, #f0f1f4 100%);
+}
+.app-shell {
+  background: linear-gradient(145deg, rgba(255, 255, 255, .4), rgba(244, 245, 248, .18));
+  box-shadow: 0 1.6rem 4.8rem rgba(20, 25, 36, .12);
+}
+.topbar { background: rgba(250, 250, 252, .52); }
+.workspace-card {
+  border-color: rgba(255, 255, 255, .55);
+  color: #f5f6fa;
+  background:
+    radial-gradient(circle at 82% 4%, rgba(144, 151, 167, .38), transparent 37%),
+    linear-gradient(145deg, #252933, #101216 72%);
+}
+.workspace-card:hover {
+  border-color: rgba(255, 255, 255, .8);
+  background:
+    radial-gradient(circle at 82% 4%, rgba(169, 176, 191, .43), transparent 37%),
+    linear-gradient(145deg, #2b303b, #121418 72%);
+}
+.workspace-card-top, .workspace-card-footer, .workspace-card-copy { color: #bec3cc; }
+.workspace-card-footer strong { color: #f1f2f5; }
+.tab-list button.active { background: #15171c; }
+.session-list button.selected { box-shadow: inset 0 0 0 2px #313845; }
+.review-card audio { accent-color: #20242c; }
+.transcript time, .text-button { color: #343b49; }
+.capture-station {
+  border-color: rgba(255, 255, 255, .15);
+  background:
+    radial-gradient(130% 88% at 50% -18%, rgba(151, 156, 171, .25), transparent 60%),
+    linear-gradient(160deg, #1d2028, #0b0c10 72%);
+  box-shadow: inset 0 1px rgba(255, 255, 255, .08), 0 1.2rem 2.8rem rgba(18, 21, 29, .19);
+}
+
+/* Completion is a short, explicit state—not an unexplained screen change. */
+.save-veil {
+  background: rgba(10, 12, 17, .9);
+  animation: capture-veil-in .2s var(--ease-out);
+}
+.save-veil strong { margin-top: .1rem; }
+.save-symbol { display: grid; width: 4rem; height: 4rem; place-items: center; }
+.save-symbol svg { width: 100%; height: 100%; fill: none; stroke: #f2f4f8; stroke-width: 2.8; stroke-linecap: round; stroke-linejoin: round; }
+.saved-veil .save-symbol svg { stroke: #7ee2a8; animation: capture-success-pop .5s var(--ease-spring); }
+.discard-veil { background: rgba(31, 17, 19, .92); }
+.discard-veil .save-symbol svg { stroke: #ff8b80; animation: capture-discard-out .58s var(--ease-out); }
+.save-spinner circle { stroke: #f2f4f8; stroke-dasharray: 104 42; transform-origin: center; animation: capture-spinner .8s linear infinite; }
+@keyframes capture-veil-in { from { opacity: 0; backdrop-filter: blur(0); } }
+@keyframes capture-success-pop { 0% { opacity: 0; transform: scale(.55); } 65% { transform: scale(1.12); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes capture-discard-out { from { opacity: 0; transform: scale(.65) rotate(-12deg); } to { opacity: 1; transform: scale(1) rotate(0); } }
+@keyframes capture-spinner { to { transform: rotate(1turn); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .save-veil, .saved-veil .save-symbol svg, .discard-veil .save-symbol svg, .save-spinner circle { animation: none; }
+}

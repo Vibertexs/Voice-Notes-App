@@ -25,6 +25,7 @@ export default function CaptureView({ context, onSaved, onCancel, notify }) {
   const startedAtRef = useRef(0);
   const carriedMsRef = useRef(0);
   const timerRef = useRef(0);
+  const completionTimerRef = useRef(0);
   const fileInputRef = useRef(null);
 
   const location = context.workspace ? context.workspace.title : context.folder?.name ?? 'Library';
@@ -32,12 +33,16 @@ export default function CaptureView({ context, onSaved, onCancel, notify }) {
 
   useEffect(() => () => {
     window.clearInterval(timerRef.current);
+    window.clearTimeout(completionTimerRef.current);
     streamRef.current?.getTracks().forEach((track) => track.stop());
   }, []);
 
   function updateClock() { setElapsed(currentTime()); }
   function startClock() { window.clearInterval(timerRef.current); startedAtRef.current = performance.now(); timerRef.current = window.setInterval(updateClock, 100); }
   function pauseClock() { carriedMsRef.current = currentTime(); startedAtRef.current = 0; updateClock(); window.clearInterval(timerRef.current); }
+  function holdCompletion(milliseconds) {
+    return new Promise((resolve) => { completionTimerRef.current = window.setTimeout(resolve, milliseconds); });
+  }
 
   async function start() {
     setError('');
@@ -89,6 +94,9 @@ export default function CaptureView({ context, onSaved, onCancel, notify }) {
       await Promise.all(markers.map((marker) => libraryApi.addMarker(recording.id, marker)));
       await Promise.all(files.map((file) => libraryApi.uploadMaterial(file, { workspaceId: recording.workspace_id })));
       notify(`Lecture saved. High-accuracy transcription is now running for ${elapsedLabel(savedElapsed)} of audio.`);
+      setPhase('saved');
+      // A successful action should be visible before we take the student back to notes.
+      await holdCompletion(900);
       onSaved(recording.workspace_id);
     } catch (caught) {
       setError(caught.message);
@@ -97,28 +105,40 @@ export default function CaptureView({ context, onSaved, onCancel, notify }) {
   }
 
   function discard() {
+    setPhase('discarding');
     window.clearInterval(timerRef.current);
     recorderRef.current?.state !== 'inactive' && recorderRef.current?.stop();
     streamRef.current?.getTracks().forEach((track) => track.stop());
     setLiveStream(null);
-    onCancel();
+    // The slider is intentionally consequential; acknowledge it before leaving.
+    completionTimerRef.current = window.setTimeout(onCancel, 700);
   }
 
   const isRecording = phase === 'recording';
   const isPaused = phase === 'paused';
+  const isFinalizing = ['saving', 'saved', 'discarding'].includes(phase);
+  const completionCopy = phase === 'discarding'
+    ? ['Recording discarded', 'Nothing was saved.']
+    : phase === 'saved'
+      ? ['Recording saved', 'Transcribing with the high-accuracy model…']
+      : ['Finishing your recording', 'Saving your audio and notes…'];
   return <main className="page capture-page">
-    <header className="capture-heading"><button className="back-link" onClick={onCancel}>‹ Back</button><p className="eyebrow">{context.workspace ? 'Continuing lecture' : 'New lecture'}</p><h1>{context.workspace ? context.workspace.title : 'Capture a lecture'}</h1><p className="muted">Saves to <strong>{location}</strong></p>{!context.workspace && <label className="capture-title-field">Recording name <small>optional</small><input value={title} maxLength="180" onChange={(event) => setTitle(event.target.value)} placeholder="A timestamped lecture name is used if you leave this blank" /></label>}</header>
+    <header className="capture-heading"><button className="back-link" onClick={onCancel} disabled={isFinalizing}>‹ Back</button><p className="eyebrow">{context.workspace ? 'Continuing lecture' : 'New lecture'}</p><h1>{context.workspace ? context.workspace.title : 'Capture a lecture'}</h1><p className="muted">Saves to <strong>{location}</strong></p>{!context.workspace && <label className="capture-title-field">Recording name <small>optional</small><input value={title} maxLength="180" onChange={(event) => setTitle(event.target.value)} placeholder="A timestamped lecture name is used if you leave this blank" disabled={isFinalizing} /></label>}</header>
     <div className="capture-grid">
       <section className={`capture-station ${phase}`}>
-        {phase === 'saving' && <div className="save-veil" role="status" aria-live="polite">
-          <span className="save-check" aria-hidden="true">
-            <svg viewBox="0 0 52 52"><circle cx="26" cy="26" r="24" /><path d="M14 27l8 8 16-16" /></svg>
+        {isFinalizing && <div className={`save-veil ${phase === 'discarding' ? 'discard-veil' : ''} ${phase === 'saved' ? 'saved-veil' : ''}`} role="status" aria-live="polite">
+          <span className="save-symbol" aria-hidden="true">
+            {phase === 'discarding'
+              ? <svg viewBox="0 0 52 52"><path d="M17 18h18M22 18v-4h8v4M20 22v14m6-14v14m6-14v14M18 18l2 22h12l2-22" /></svg>
+              : phase === 'saved'
+                ? <svg viewBox="0 0 52 52"><circle cx="26" cy="26" r="22" /><path d="M14 27l8 8 16-16" /></svg>
+                : <svg className="save-spinner" viewBox="0 0 52 52"><circle cx="26" cy="26" r="22" /></svg>}
           </span>
-          <strong>Recording saved</strong>
-          <span>Transcribing with the high-accuracy model…</span>
+          <strong>{completionCopy[0]}</strong>
+          <span>{completionCopy[1]}</span>
         </div>}
         <div className="transport" data-phase={phase}>
-          <div className="phase-label">{phase === 'ready' ? 'Ready' : phase === 'recording' ? 'Recording' : phase === 'paused' ? 'Paused' : 'Saving'}</div>
+          <div className="phase-label">{phase === 'ready' ? 'Ready' : phase === 'recording' ? 'Recording' : phase === 'paused' ? 'Paused' : phase === 'discarding' ? 'Discarding' : phase === 'saved' ? 'Saved' : 'Saving'}</div>
           <div className="recording-timer">{elapsedLabel(elapsed)}</div>
           <Waveform stream={liveStream} phase={phase} />
         </div>
