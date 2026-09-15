@@ -72,6 +72,16 @@ for (const selector of ['.back-link', '.button', '.class-name', '.title-input'])
 }
 check('the page cannot scroll sideways', /overflow-x:\s*hidden/.test(css));
 
+console.log('\n== nothing needs a mouse ==');
+// draggable and dataTransfer are mouse-only APIs. A screen whose only path to
+// an action is a drag has no path at all on a phone.
+check('every draggable thing also has a tap path',
+  !/draggable/.test(library) || /setFiling/.test(library),
+  'filing a lecture was drag-only, which does nothing on touch');
+check('the instructions do not describe a gesture the device cannot perform',
+  !/Drag a lecture onto a class/.test(library),
+  'the copy told phone users to drag');
+
 console.log('\n== it is usable with a thumb ==');
 check('touch targets are raised on coarse pointers', /@media \(pointer: coarse\)/.test(css));
 check('focus is visible and consistent', /:focus-visible[^}]*outline:\s*2px solid var\(--brand\)/.test(css));

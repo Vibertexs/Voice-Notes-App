@@ -1819,3 +1819,45 @@ html, body { overflow-x: hidden; }
     scroll-behavior: auto !important;
   }
 }
+
+/* Filing a lecture by tap. Drag and drop is a mouse API - `draggable` and
+   dataTransfer do nothing on a touch screen - so the drag remains for pointer
+   devices and this is the path that works everywhere. */
+.workspace-slot { position: relative; display: flex; }
+.workspace-slot .workspace-card { flex: 1; min-width: 0; }
+.workspace-file {
+  position: absolute; right: .6rem; top: .6rem;
+  width: 2.25rem; height: 2.25rem;
+  display: grid; place-items: center;
+  border: 1px solid rgba(255, 255, 255, .18);
+  border-radius: 0.75rem;
+  background: rgba(255, 255, 255, .1);
+  color: rgba(226, 235, 252, .85);
+  transition: background 0.15s var(--ease-out), color 0.15s var(--ease-out);
+}
+.workspace-file svg { width: 1.05rem; height: 1.05rem; }
+.workspace-file:hover { background: rgba(255, 255, 255, .22); color: #fff; }
+@media (pointer: coarse) { .workspace-file { width: 2.75rem; height: 2.75rem; } }
+
+.class-picker { display: grid; gap: .4rem; margin-top: 1rem; }
+.class-picker-option {
+  display: flex; align-items: center; gap: .6rem;
+  min-height: 2.75rem; padding: .55rem .75rem;
+  border: 1px solid var(--edge-soft); border-radius: 0.75rem;
+  background: rgba(255, 255, 255, .7);
+  color: var(--ink); font-size: .92rem; font-weight: 600; text-align: left;
+  transition: border-color 0.15s var(--ease-out), background 0.15s var(--ease-out);
+}
+.class-picker-option:hover { border-color: var(--brand); background: #fff; }
+.class-picker-dot {
+  width: .7rem; height: .7rem; border-radius: 50%;
+  background: var(--tone-a, #6b46f5); flex: 0 0 auto;
+}
+.class-picker-option.violet { --tone-a: #a855f7; }
+.class-picker-option.rose   { --tone-a: #fb5c9b; }
+.class-picker-option.coral  { --tone-a: #fb7a4a; }
+.class-picker-option.amber  { --tone-a: #fbbf24; }
+.class-picker-option.lime   { --tone-a: #a3e635; }
+.class-picker-option.mint   { --tone-a: #34d3b5; }
+.class-picker-option.sky    { --tone-a: #38bdf8; }
+.class-picker-option.slate  { --tone-a: #94a3b8; }
