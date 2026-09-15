@@ -9,9 +9,12 @@ import { File } from 'expo-file-system';
 import { BRIDGE_JS } from './src/bridge';
 import { WEB_APP_HTML } from './src/webapp.generated';
 import {
-  AUDIO_DIR, audioFile, claimRecording, dropRecording, finishRecording,
-  handleApi, newId, openDatabase, recoverInterrupted, saveTranscript,
+  AUDIO_DIR, TRANSCRIPTION_ON_DEVICE, TRANSCRIPTION_SERVER, audioFile, claimRecording,
+  dropRecording, finishRecording, getSetting, handleApi, markTranscriptionPending,
+  markTranscriptionProgress, newId, openDatabase, pendingTranscriptions,
+  recoverInterrupted, saveTranscript,
 } from './src/localApi';
+import { probe, transcribeRemotely } from './src/remote';
 import {
   RECORDING_OPTIONS, SUPPORTS_PAUSE, TRANSCRIPTION_AVAILABLE,
   configureAudio, requestPermissions, startSpeechSession,
@@ -38,6 +41,7 @@ export default function App() {
   const state = useAudioRecorderState(recorder, METERING_INTERVAL_MS);
   const active = useRef(null);
   const session = useRef(null);
+  const draining = useRef(false);
   const [ready, setReady] = useState(false);
   const [fatal, setFatal] = useState('');
   const [pageError, setPageError] = useState('');
@@ -49,6 +53,7 @@ export default function App() {
     (async () => {
       try {
         await openDatabase();
+        TRANSCRIPTION_ON_DEVICE.value = TRANSCRIPTION_AVAILABLE;
         if (!AUDIO_DIR.exists) AUDIO_DIR.create({ intermediates: true });
         await recoverInterrupted();
         setReady(true);
@@ -74,6 +79,57 @@ export default function App() {
       `window.__cnSettle(${id}, ${okValue ? 'true' : 'false'}, ${JSON.stringify(data)}); true;`,
     );
   }, []);
+
+  /**
+   * Sends anything still waiting for a server transcript.
+   *
+   * Runs on launch and after each save, so a lecture recorded with no server
+   * in reach transcribes itself the next time one is. One at a time and
+   * guarded by a flag: two drains would upload the same lecture twice.
+   */
+  const drainTranscriptions = useCallback(async () => {
+    if (draining.current) return;
+    const server = await getSetting(TRANSCRIPTION_SERVER, '');
+    if (!server) return;
+
+    draining.current = true;
+    try {
+      const reachable = await probe(server);
+      if (!reachable.ok) return;
+
+      for (const lecture of await pendingTranscriptions()) {
+        const file = audioFile(lecture.file_name);
+        if (!file.exists) continue;
+        try {
+          const { transcript } = await transcribeRemotely({
+            baseUrl: server,
+            fileUri: file.uri,
+            fileName: lecture.file_name,
+            mimeType: lecture.file_name.endsWith('.wav') ? 'audio/wav' : 'audio/m4a',
+            title: lecture.title,
+            notes: lecture.note_body,
+            onProgress: ({ progress }) => markTranscriptionProgress(lecture.id, progress).catch(() => {}),
+          });
+          await saveTranscript(lecture.id, transcript);
+        } catch (caught) {
+          // Left pending on purpose: the audio is safe and the next drain
+          // will try again. Only a message surfaces, never a lost lecture.
+          setPageError((current) => current || `transcription: ${String(caught?.message ?? caught)}`);
+          break;
+        }
+      }
+    } finally {
+      draining.current = false;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!ready) return undefined;
+    drainTranscriptions();
+    // A server that was unreachable at launch usually is not for long.
+    const timer = setInterval(drainTranscriptions, 60_000);
+    return () => clearInterval(timer);
+  }, [ready, drainTranscriptions]);
 
   const startRecording = useCallback(async () => {
     const id = newId();
@@ -146,6 +202,12 @@ export default function App() {
         sizeBytes: destination.size ?? 0,
       });
       await saveTranscript(id, transcript);
+      // A server transcript is better than the on-device one, so queue the
+      // lecture for it. The device text stands in until it arrives.
+      if (await getSetting(TRANSCRIPTION_SERVER, '')) {
+        await markTranscriptionPending(id);
+        drainTranscriptions();
+      }
       active.current = null;
       return { id };
     }
@@ -161,9 +223,15 @@ export default function App() {
       durationMs: state.durationMillis || Date.now() - startedAt,
       sizeBytes: destination.size ?? 0,
     });
+    // Nothing heard it on this device, so a server is the only way this
+    // lecture gets a transcript at all.
+    if (await getSetting(TRANSCRIPTION_SERVER, '')) {
+      await markTranscriptionPending(id);
+      drainTranscriptions();
+    }
     active.current = null;
     return { id };
-  }, [recorder, state.durationMillis]);
+  }, [recorder, state.durationMillis, drainTranscriptions]);
 
   const onMessage = useCallback(async (event) => {
     let message;

@@ -1655,3 +1655,6 @@ body {
 }
 .live-transcript-body p { margin: 0; }
 .live-transcript-body em { color: var(--ink-faint); font-style: normal; }
+
+.settings-copy { margin-bottom: 1.1rem; }
+.settings-hint { margin: .55rem 0 0; color: var(--ink-faint); font-size: .78rem; line-height: 1.45; }

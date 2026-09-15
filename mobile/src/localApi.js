@@ -16,6 +16,9 @@ import { Directory, File, Paths } from 'expo-file-system';
  */
 
 const DB_NAME = 'classnotes-web.db';
+
+/** Set once by the shell at startup; localApi has no way to detect it itself. */
+export const TRANSCRIPTION_ON_DEVICE = { value: false };
 export const AUDIO_DIR = new Directory(Paths.document, 'recordings');
 
 let database = null;
@@ -99,12 +102,65 @@ export async function openDatabase() {
       extraction_message TEXT NOT NULL DEFAULT '',
       extracted_text TEXT NOT NULL DEFAULT ''
     );
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY NOT NULL,
+      value TEXT NOT NULL
+    );
     CREATE INDEX IF NOT EXISTS idx_flashcards_position
       ON workspace_flashcards (workspace_id, position);
     CREATE INDEX IF NOT EXISTS idx_markers_lecture
       ON session_markers (lecture_id, time_seconds);
   `);
   return database;
+}
+
+// --- settings --------------------------------------------------------------
+
+export async function getSetting(key, fallback = '') {
+  const db = await openDatabase();
+  const row = await db.getFirstAsync('SELECT value FROM settings WHERE key = ?', key);
+  return row?.value ?? fallback;
+}
+
+export async function setSetting(key, value) {
+  const db = await openDatabase();
+  await db.runAsync(
+    `INSERT INTO settings (key, value) VALUES (?, ?)
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
+    key, String(value ?? ''),
+  );
+}
+
+export const TRANSCRIPTION_SERVER = 'transcription_server_url';
+
+/**
+ * Lectures still waiting on a server transcript. Drained whenever one becomes
+ * reachable, which is what lets a recording be saved on a bus and transcribed
+ * an hour later without the user doing anything.
+ */
+export async function pendingTranscriptions() {
+  const db = await openDatabase();
+  return db.getAllAsync(
+    `SELECT * FROM lectures
+      WHERE transcription_status = 'pending' AND file_name != ''
+      ORDER BY created_at ASC LIMIT 20`,
+  );
+}
+
+export async function markTranscriptionPending(id) {
+  const db = await openDatabase();
+  await db.runAsync(
+    "UPDATE lectures SET transcription_status = 'pending', transcription_progress = 0 WHERE id = ?",
+    id,
+  );
+}
+
+export async function markTranscriptionProgress(id, progress) {
+  const db = await openDatabase();
+  await db.runAsync(
+    'UPDATE lectures SET transcription_progress = ? WHERE id = ?',
+    Math.max(0, Math.min(1, Number(progress) || 0)), id,
+  );
 }
 
 export function audioFile(fileName) {
@@ -428,10 +484,20 @@ export async function handleApi({ method, path, body }) {
       // Android will only read back 16kHz mono WAV, which is what the
       // recogniser itself writes. An m4a from the fallback recorder cannot be
       // re-read, and there is no transcoder on the device.
-      if (!row.file_name.endsWith('.wav')) {
-        return fail(503, 'This recording was captured without on-device transcription, and it cannot be transcribed after the fact. New recordings will be.');
+      const server = await getSetting(TRANSCRIPTION_SERVER, '');
+      if (server) {
+        // The server takes any format, so this works for recordings the
+        // on-device recogniser could never re-read.
+        await markTranscriptionPending(id);
+        return ok({ id, status: 'pending', via: 'server' });
       }
-      return ok({ id, status: 'queued', uri: file.uri });
+      if (!row.file_name.endsWith('.wav')) {
+        return fail(503, 'This recording was captured without on-device transcription, and there is no transcription server set. Add one in Settings to transcribe it.');
+      }
+      if (!TRANSCRIPTION_ON_DEVICE.value) {
+        return fail(503, 'This build has no on-device transcription and no server is configured.');
+      }
+      return ok({ id, status: 'queued', via: 'device', uri: file.uri });
     }
   }
 
@@ -497,6 +563,25 @@ export async function handleApi({ method, path, body }) {
         };
       }),
     });
+  }
+
+  // ---- settings ----
+  if (head === 'settings') {
+    if (method === 'GET') {
+      return ok({
+        transcription_server: await getSetting(TRANSCRIPTION_SERVER, ''),
+        transcription_on_device: TRANSCRIPTION_ON_DEVICE.value,
+      });
+    }
+    if (method === 'PUT' || method === 'PATCH') {
+      if (body?.transcription_server !== undefined) {
+        await setSetting(TRANSCRIPTION_SERVER, String(body.transcription_server ?? '').trim());
+      }
+      return ok({
+        transcription_server: await getSetting(TRANSCRIPTION_SERVER, ''),
+        transcription_on_device: TRANSCRIPTION_ON_DEVICE.value,
+      });
+    }
   }
 
   // ---- ai status ----

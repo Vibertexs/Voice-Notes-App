@@ -3,6 +3,7 @@ import CaptureView from './components/CaptureView';
 import FolderDialog from './components/FolderDialog';
 import LibraryView from './components/LibraryView';
 import SearchView from './components/SearchView';
+import SettingsDialog from './components/SettingsDialog';
 import WorkspaceView from './components/WorkspaceView';
 import { libraryApi } from './lib/api';
 
@@ -20,6 +21,7 @@ export default function App() {
   const [allFolders, setAllFolders] = useState([]);
   const [workspace, setWorkspace] = useState(null);
   const [folderDialog, setFolderDialog] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [captureContext, setCaptureContext] = useState(null);
   const [error, setError] = useState('');
   const [toast, setToast] = useState(null);
@@ -127,13 +129,14 @@ export default function App() {
   if (!library && screen.name !== 'workspace') return <Loading />;
 
   return <div className="app-shell">
-    <header className="topbar"><button className="brand" onClick={() => openLibrary(null)}><span>C</span><b>Class Notes</b></button><div className="topbar-copy"><button onClick={() => setScreen({ name: 'search' })}>Search</button><button onClick={() => openLibrary(null)}>Library</button></div></header>
+    <header className="topbar"><button className="brand" onClick={() => openLibrary(null)}><span>C</span><b>Class Notes</b></button><div className="topbar-copy"><button onClick={() => setScreen({ name: 'search' })}>Search</button><button onClick={() => openLibrary(null)}>Library</button><button onClick={() => setSettingsOpen(true)}>Settings</button></div></header>
     {error && <div className="inline-error"><span>{error}</span><button onClick={() => setError('')}>×</button></div>}
     {screen.name === 'library' && library && <LibraryView data={library} allFolders={allFolders} onOpenFolder={openLibrary} onOpenWorkspace={openWorkspace} onNewFolder={() => setFolderDialog(true)} onRecord={() => startCapture()} onUpload={uploadFiles} onDeleteMaterial={deleteMaterial} onMoveWorkspace={moveWorkspace} showArchived={showArchived} onToggleArchived={(next) => openLibrary(null, { archived: next })} onArchiveFolder={setFolderArchived} onRecolorFolder={recolorFolder} onDeleteFolder={deleteFolder} />}
     {screen.name === 'workspace' && (workspace ? <WorkspaceView workspace={workspace} onBack={() => openLibrary(workspace.folder_id)} onContinue={() => startCapture(workspace)} onReload={refreshWorkspace} onDelete={() => openLibrary(workspace.folder_id)} notify={notify} pendingSeek={pendingSeek} onSeekHandled={() => setPendingSeek(null)} /> : <Loading />)}
     {screen.name === 'search' && <SearchView onOpenResult={openSearchResult} onBack={() => openLibrary(screen.folderId ?? null)} />}
     {screen.name === 'capture' && <CaptureView context={captureContext ?? {}} onSaved={captureSaved} onCancel={cancelCapture} notify={notify} />}
     {folderDialog && <FolderDialog parent={library?.current_folder} onClose={() => setFolderDialog(false)} onCreate={createFolder} />}
+    {settingsOpen && <SettingsDialog onClose={() => setSettingsOpen(false)} notify={notify} />}
     <Toast toast={toast} />
   </div>;
 }

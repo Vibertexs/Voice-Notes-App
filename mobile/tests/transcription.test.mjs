@@ -144,15 +144,42 @@ res = await api.handleApi({ method: 'GET', path: `/api/workspaces/${res.body.wor
 check('silence stays unavailable rather than ready',
   res.body.sessions[0].transcription_status === 'unavailable', res.body.sessions[0].transcription_status);
 
-console.log('\n== re-transcribing is offered only where it can work ==');
-res = await api.handleApi({ method: 'POST', path: '/api/lectures/lec1/retranscribe', body: {} });
-check('a wav recording can be re-read', res.status === 200, res);
-
+console.log('\n== re-transcribing routes to whatever can actually do it ==');
 await api.claimRecording({ id: 'old1', title: 'Old m4a', fileName: 'old1.m4a' });
 disk.set('file:///doc/recordings/old1.m4a', 1000);
+
+// Nothing available: no server set, and this build has no recogniser.
+api.TRANSCRIPTION_ON_DEVICE.value = false;
+res = await api.handleApi({ method: 'POST', path: '/api/lectures/lec1/retranscribe', body: {} });
+check('with nothing available it says so rather than pretending', res.status === 503, res);
+
+// On-device only: a WAV can be re-read, an m4a cannot, and the message says why.
+api.TRANSCRIPTION_ON_DEVICE.value = true;
+res = await api.handleApi({ method: 'POST', path: '/api/lectures/lec1/retranscribe', body: {} });
+check('on device, a wav is re-read', res.status === 200 && res.body.via === 'device', res);
 res = await api.handleApi({ method: 'POST', path: '/api/lectures/old1/retranscribe', body: {} });
-check('an m4a says plainly that it cannot be', res.status === 503 && /cannot be transcribed/.test(res.body.detail),
-  res);
+check('on device, an m4a explains it cannot be', res.status === 503 && /server/i.test(res.body.detail), res);
+
+// With a server, format stops mattering - it takes anything.
+await api.setSetting(api.TRANSCRIPTION_SERVER, 'http://100.76.29.83:8000');
+res = await api.handleApi({ method: 'POST', path: '/api/lectures/old1/retranscribe', body: {} });
+check('a server takes the m4a the device could not', res.status === 200 && res.body.via === 'server', res);
+check('and the lecture is queued, not transcribed inline', res.body.status === 'pending', res.body);
+
+console.log('\n== the queue is what makes an unreachable server survivable ==');
+const queued = await api.pendingTranscriptions();
+check('the queued lecture is listed', queued.some((row) => row.id === 'old1'), queued.map((r) => r.id));
+check('only lectures with audio are queued', queued.every((row) => row.file_name), queued);
+
+console.log('\n== the server address is a setting, not a constant ==');
+res = await api.handleApi({ method: 'GET', path: '/api/settings', body: null });
+check('settings report the configured server',
+  res.body.transcription_server === 'http://100.76.29.83:8000', res.body);
+res = await api.handleApi({ method: 'PUT', path: '/api/settings',
+  body: { transcription_server: '  https://api.example.com/  ' } });
+check('a new address replaces it', res.body.transcription_server === 'https://api.example.com/', res.body);
+res = await api.handleApi({ method: 'PUT', path: '/api/settings', body: { transcription_server: '' } });
+check('and it can be cleared back to device-only', res.body.transcription_server === '', res.body);
 
 console.log('\n' + pass + '/' + total + ' passed');
 process.exit(pass === total ? 0 : 1);
