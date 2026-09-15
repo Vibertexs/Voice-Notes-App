@@ -21,7 +21,7 @@ function MaterialList({ materials, onDelete }) {
 }
 
 export default function LibraryView({
-  data, allFolders, onOpenFolder, onOpenWorkspace, onNewFolder, onRecord, onUpload,
+  data, allFolders, onOpenFolder, onOpenWorkspace, onNewFolder, onRecord, onUpload, onSearch, onSettings,
   onDeleteMaterial, onMoveWorkspace, showArchived, onToggleArchived, onArchiveFolder,
   onRecolorFolder, onDeleteFolder,
 }) {
@@ -52,6 +52,12 @@ export default function LibraryView({
         {folder && <p className="muted">{data.workspaces.length} lecture{data.workspaces.length === 1 ? '' : 's'} · {recordingCount} recording{recordingCount === 1 ? '' : 's'}</p>}
       </div>
       <div className="header-actions">
+        <button className="icon-button" onClick={onSearch} aria-label="Search every lecture" title="Search">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="9" cy="9" r="5.5" fill="none" stroke="currentColor" strokeWidth="1.9" /><path d="m13.2 13.2 3.3 3.3" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" /></svg>
+        </button>
+        <button className="icon-button" onClick={onSettings} aria-label="Settings" title="Settings">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="2.6" fill="none" stroke="currentColor" strokeWidth="1.9" /><path d="M10 2.6v2M10 15.4v2M17.4 10h-2M4.6 10h-2M15.2 4.8l-1.4 1.4M6.2 13.8l-1.4 1.4M15.2 15.2l-1.4-1.4M6.2 6.2 4.8 4.8" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" /></svg>
+        </button>
         {!folder && <button className="button ghost" onClick={onNewFolder}>＋ Class</button>}
         <button className="button primary capture-shortcut" onClick={onRecord}>Record &amp; note</button>
       </div>
