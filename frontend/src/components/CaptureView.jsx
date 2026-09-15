@@ -25,6 +25,7 @@ export default function CaptureView({ context, onSaved, onCancel, notify }) {
   // neither flag is set, so both default to the browser's own behaviour.
   const caps = (typeof window !== 'undefined' && window.__CN_CAPS__) || {};
   const canPause = caps.pause !== false;
+  const isNativeShell = typeof window !== 'undefined' && window.__CN_NATIVE__ === true;
   const hasLiveTranscript = caps.transcription === true;
 
   useEffect(() => {
@@ -213,7 +214,11 @@ export default function CaptureView({ context, onSaved, onCancel, notify }) {
         <p className="quality-note">
           {hasLiveTranscript
             ? <>Transcript: <strong>on this device</strong></>
-            : <>Final transcript: <strong>high accuracy</strong></>}
+            : isNativeShell
+              // Saying "high accuracy" here would promise a transcript this
+              // build cannot produce at all.
+              ? <>Transcript: <strong>not in this build</strong> — audio and notes are saved</>
+              : <>Final transcript: <strong>high accuracy</strong></>}
         </p>
       </aside>
     </div>
