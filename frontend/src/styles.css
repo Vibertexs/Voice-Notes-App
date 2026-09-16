@@ -95,6 +95,9 @@ h1, h2, h3, p { margin: 0; }
 /* ---------- Hero (yellow panel) --------------------------- */
 .hero {
   position: relative;
+  /* flow-root, so the carousel's negative bottom margin shortens the panel
+     instead of collapsing out of it — that is what makes the card overhang. */
+  display: flow-root;
   padding: calc(var(--top) + 1.25rem) var(--gut) 0;
   background: var(--accent);
   border-radius: 0 0 var(--r-2xl) var(--r-2xl);
@@ -110,6 +113,13 @@ h1, h2, h3, p { margin: 0; }
   max-width: 11ch;
 }
 .hero-sub { margin-top: .3rem; font-size: .82rem; font-weight: 500; color: rgba(10,10,13,.6); }
+.hero-link {
+  margin-left: .5rem; padding: .1rem .5rem; border-radius: var(--r-full);
+  background: rgba(10,10,13,.1); color: rgba(10,10,13,.7);
+  font-size: .72rem; font-weight: 650;
+  transition: background .15s var(--ease);
+}
+.hero-link:hover { background: rgba(10,10,13,.18); }
 .hero-menu {
   flex: 0 0 auto; display: grid; place-items: center;
   width: 2.35rem; height: 2.35rem; border-radius: 50%;
@@ -119,67 +129,101 @@ h1, h2, h3, p { margin: 0; }
 .hero-menu:hover { transform: scale(1.06); }
 .hero-menu svg { width: 1.05rem; height: 1.05rem; }
 
-/* the featured card hangs off the bottom edge of the yellow panel */
+.hero.pad { padding-bottom: 1.35rem; }
+
+/* The carousel hangs off the bottom edge of the yellow panel, and bleeds
+   past the right edge so the next class is clipped by the screen. */
 .hero-stage {
-  position: relative; display: flex; gap: .7rem;
-  margin: 1.1rem 0 calc(-1 * var(--hang, 3.25rem));
-  padding-bottom: 0;
+  position: relative; display: flex; gap: .6rem;
+  margin: 1.1rem 0 calc(-1 * var(--hang, 3.5rem));
 }
 .hero-rail {
-  flex: 0 0 auto; width: 1.1rem;
-  display: flex; align-items: flex-start; justify-content: center;
-  padding-top: .15rem;
+  flex: 0 0 auto; width: 1.15rem;
+  display: flex; flex-direction: column; align-items: center; gap: .45rem;
+  padding-top: .2rem; color: rgba(10,10,13,.55);
 }
+.hero-rail svg { width: .85rem; height: .85rem; }
 .hero-rail-label {
   writing-mode: vertical-rl; transform: rotate(180deg);
-  font-size: .62rem; font-weight: 700; letter-spacing: .12em;
+  font-size: .6rem; font-weight: 700; letter-spacing: .12em;
   text-transform: uppercase; color: rgba(10,10,13,.5); white-space: nowrap;
 }
 
-.feature {
-  position: relative; flex: 1 1 auto; min-width: 0;
-  aspect-ratio: 1 / 1; border-radius: var(--r-lg);
-  overflow: hidden; text-align: left; display: block;
-  box-shadow: 0 1rem 2.25rem rgba(0,0,0,.45);
+.hero-carousel {
+  /* flex-basis 0 gives the grid a definite width, without which the
+     percentage column sizing below has nothing to resolve against. */
+  flex: 1 1 0; min-width: 0;
+  display: grid; grid-auto-flow: column;
+  grid-auto-columns: calc(100% - 3.25rem);
+  gap: .7rem;
+  overflow-x: auto; overscroll-behavior-x: contain;
+  scrollbar-width: none; scroll-snap-type: x mandatory;
+  margin-right: calc(-1 * var(--gut)); padding-right: var(--gut);
 }
-.feature .cover { position: absolute; inset: 0; }
-.feature::after {
+.hero-carousel::-webkit-scrollbar { display: none; }
+.hero-carousel.single { grid-auto-columns: 100%; margin-right: 0; padding-right: 0; }
+
+.slide { position: relative; scroll-snap-align: start; }
+.slide-open {
+  position: relative; display: block; width: 100%; aspect-ratio: 1 / 1;
+  border-radius: var(--r-lg); overflow: hidden; text-align: left;
+  box-shadow: 0 1rem 2.25rem rgba(0,0,0,.4);
+}
+.slide-open::after {
   content: ''; position: absolute; inset: 0;
-  background: linear-gradient(180deg, transparent 38%, rgba(0,0,0,.62));
+  background: linear-gradient(180deg, transparent 40%, rgba(0,0,0,.64));
 }
-.feature-body {
+.slide-body {
   position: absolute; inset: auto 0 0 0; z-index: 1;
   display: flex; align-items: flex-end; justify-content: space-between;
-  gap: .75rem; padding: .9rem 1rem;
+  gap: .75rem; padding: .95rem 1rem;
 }
-.feature-copy { min-width: 0; }
-.feature-title {
-  display: block; color: #fff; font-size: 1.15rem; font-weight: 700;
-  letter-spacing: -.03em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+.slide-copy { min-width: 0; }
+.slide-name {
+  display: block; color: #fff; font-size: 1.3rem; font-weight: 700;
+  letter-spacing: -.035em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.feature-sub {
-  display: block; margin-top: .1rem; color: rgba(255,255,255,.72);
-  font-size: .76rem; font-weight: 500;
+.slide-sub {
+  display: block; margin-top: .12rem; color: rgba(255,255,255,.72);
+  font-size: .78rem; font-weight: 500;
 }
-.feature-play {
+.slide-go {
   flex: 0 0 auto; display: grid; place-items: center;
-  width: 2.6rem; height: 2.6rem; border-radius: 50%;
+  width: 2.7rem; height: 2.7rem; border-radius: 50%;
   background: #fff; color: #0A0A0D;
   transition: transform .18s var(--spring);
 }
-.feature:hover .feature-play { transform: scale(1.08); }
-.feature-play svg { width: 1.05rem; height: 1.05rem; margin-left: .1rem; }
+.slide-open:hover .slide-go { transform: scale(1.08); }
+.slide-go svg { width: 1.1rem; height: 1.1rem; }
 
-/* the next card peeking in from the right, as a carousel hint */
-.feature-peek {
-  flex: 0 0 2.4rem; align-self: stretch;
-  margin-bottom: 0; border-radius: var(--r-lg);
-  overflow: hidden; opacity: .55;
+.slide-menu {
+  position: absolute; top: .65rem; right: .65rem; z-index: 2;
+  display: grid; place-items: center; width: 2rem; height: 2rem;
+  border-radius: 50%; color: #fff; background: rgba(10,10,13,.4);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  transition: background .15s var(--ease);
 }
-.feature-peek .cover { height: 100%; }
+.slide-menu:hover { background: rgba(10,10,13,.7); }
+.slide-menu svg { width: 1rem; height: 1rem; }
+
+.slide.drop-active .slide-open { box-shadow: 0 0 0 2.5px var(--accent), 0 1rem 2.25rem rgba(0,0,0,.4); }
+.slide.drop-active .slide-sub { color: var(--accent); font-weight: 650; }
+
+/* The add card is solid dark so it reads the same on the yellow panel and
+   on the canvas it overhangs onto. */
+.slide-add {
+  display: grid; place-items: center; align-content: center; gap: .45rem;
+  width: 100%; aspect-ratio: 1 / 1; border-radius: var(--r-lg);
+  background: var(--surface); border: 1.5px dashed var(--line-2);
+  color: var(--text-3);
+  transition: border-color .18s var(--ease), color .18s var(--ease), background .18s var(--ease);
+}
+.slide-add:hover { border-color: var(--accent); color: var(--accent); background: var(--raised); }
+.slide-add svg { width: 1.5rem; height: 1.5rem; }
+.slide-add span { font-size: .85rem; font-weight: 620; }
 
 /* spacer that accounts for the overhang */
-.hero-spill { height: var(--hang, 3.25rem); }
+.hero-spill { height: var(--hang, 3.5rem); }
 
 /* ---------- Sheet (dark content under the hero) ----------- */
 .sheet { padding: 1.5rem var(--gut) 0; }
@@ -195,52 +239,11 @@ h1, h2, h3, p { margin: 0; }
   transition: color .15s var(--ease);
 }
 .row-link:hover { color: var(--accent); }
+.row-count { flex: 0 0 auto; color: var(--text-3); font-size: .8rem; font-variant-numeric: tabular-nums; }
 
-/* ---------- Cover row (classes) --------------------------- */
-.cover-row {
-  display: grid; grid-auto-flow: column; grid-auto-columns: 8.5rem;
-  gap: .75rem; overflow-x: auto; overflow-y: visible;
-  margin: 0 calc(-1 * var(--gut)); padding: 0 var(--gut) .35rem;
-  scrollbar-width: none; scroll-snap-type: x proximity;
-  /* without this the first tile snaps past the gutter on load */
-  scroll-padding-inline: var(--gut);
-}
-.cover-row::-webkit-scrollbar { display: none; }
-.cover-row.wrap {
-  grid-auto-flow: row; grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
-  grid-auto-columns: auto; overflow: visible; margin: 0; padding: 0;
-}
-
-.tile { position: relative; scroll-snap-align: start; }
-.tile-open { display: block; width: 100%; text-align: left; }
-.tile-art {
-  display: block; position: relative; width: 100%; aspect-ratio: 1 / 1;
-  border-radius: var(--r); overflow: hidden;
-  transition: transform .2s var(--ease);
-}
-.tile:hover .tile-art { transform: translateY(-3px); }
-.tile-name {
-  display: block; margin-top: .55rem; color: var(--text);
-  font-size: .86rem; font-weight: 650; letter-spacing: -.02em;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.tile-meta { display: block; margin-top: .08rem; color: var(--text-3); font-size: .74rem; }
-.tile.drop-active .tile-art { box-shadow: 0 0 0 2px var(--accent); }
-.tile.drop-active .tile-meta { color: var(--accent); font-weight: 600; }
-
-.tile-menu {
-  position: absolute; top: .4rem; right: .4rem; z-index: 2;
-  display: grid; place-items: center; width: 1.7rem; height: 1.7rem;
-  border-radius: 50%; color: #fff; background: rgba(10,10,13,.5);
-  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-  opacity: 0; transition: opacity .18s var(--ease), background .15s var(--ease);
-}
-.tile:hover .tile-menu, .tile.menu-open .tile-menu, .tile-menu:focus-visible { opacity: 1; }
-.tile-menu:hover { background: rgba(10,10,13,.75); }
-.tile-menu svg { width: .95rem; height: .95rem; }
-
+/* ---------- Context menu ---------------------------------- */
 .menu {
-  position: absolute; top: 2.3rem; right: .3rem; z-index: 20;
+  position: absolute; top: 2.9rem; right: .65rem; z-index: 20;
   width: 11.5rem; padding: .45rem;
   border: 1px solid var(--line-2); border-radius: var(--r);
   background: var(--chip); box-shadow: 0 1.25rem 2.5rem rgba(0,0,0,.6);
@@ -265,38 +268,34 @@ h1, h2, h3, p { margin: 0; }
 .menu-item.danger { color: var(--red); }
 .menu-item.danger:hover { background: rgba(255,90,82,.14); }
 
-/* add tile */
-.tile-add {
-  display: grid; place-items: center; gap: .3rem;
-  width: 100%; aspect-ratio: 1 / 1; border-radius: var(--r);
-  border: 1.5px dashed var(--line-2); color: var(--text-3);
-  transition: border-color .18s var(--ease), color .18s var(--ease), background .18s var(--ease);
-}
-.tile-add:hover { border-color: var(--accent); color: var(--accent); background: rgba(236,239,94,.07); }
-.tile-add svg { width: 1.3rem; height: 1.3rem; }
-.tile-add span { font-size: .78rem; font-weight: 600; }
-
-/* ---------- Track list (lectures) ------------------------- */
-.track-list { display: grid; gap: .15rem; }
+/* ---------- Track list (lectures) -------------------------
+   Laid out like a track listing: artwork, title over its class the way a
+   song sits over its artist, and the date where a duration would go. */
+.track-list { display: grid; gap: .1rem; }
 .track {
-  display: grid; grid-template-columns: 3rem minmax(0,1fr) auto;
-  align-items: center; gap: .8rem;
-  width: 100%; padding: .55rem .5rem; border-radius: var(--r);
+  display: grid; grid-template-columns: 3.1rem minmax(0,1fr) auto;
+  align-items: center; gap: .9rem;
+  width: 100%; padding: .5rem .4rem; border-radius: var(--r);
   text-align: left; transition: background .16s var(--ease);
 }
 .track:hover { background: rgba(255,255,255,.05); }
-.track-art { display: block; width: 3rem; height: 3rem; border-radius: .7rem; overflow: hidden; }
+.track-art {
+  display: block; width: 3.1rem; height: 3.1rem;
+  border-radius: .75rem; overflow: hidden;
+}
 .track-body { min-width: 0; }
 .track-title {
-  display: block; color: var(--text); font-size: .92rem; font-weight: 620;
-  letter-spacing: -.02em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  display: block; color: var(--text); font-size: .95rem; font-weight: 650;
+  letter-spacing: -.02em; line-height: 1.3;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .track-sub {
-  display: block; margin-top: .05rem; color: var(--text-3);
-  font-size: .76rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  display: block; margin-top: .06rem; color: var(--text-3);
+  font-size: .8rem; font-weight: 450; line-height: 1.3;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .track-time {
-  flex: 0 0 auto; color: var(--text-3); font-size: .78rem;
+  flex: 0 0 auto; color: var(--text-3); font-size: .8rem;
   font-variant-numeric: tabular-nums;
 }
 

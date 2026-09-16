@@ -7,13 +7,17 @@ import { colorForWorkspace } from '../lib/palette';
 const shortDate = (date) =>
   new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(new Date(date));
 
-const clock = (seconds) => {
-  if (!seconds && seconds !== 0) return '';
-  const total = Math.round(seconds);
-  const minutes = Math.floor(total / 60);
-  if (minutes >= 60) return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
-  return `${minutes}:${String(total % 60).padStart(2, '0')}`;
-};
+/**
+ * A lecture sits under its class the way a song sits under its artist. The
+ * take count only earns its place when there is more than one.
+ */
+function subtitleFor(workspace, folders, currentFolder) {
+  const className = currentFolder?.name
+    ?? folders.find((folder) => folder.id === workspace.folder_id)?.name
+    ?? 'Unfiled';
+  const takes = workspace.session_count ?? 0;
+  return takes > 1 ? `${className} · ${takes} recordings` : className;
+}
 
 function FileList({ materials, onDelete }) {
   if (!materials.length) return <p className="dim">No files here yet.</p>;
@@ -43,8 +47,10 @@ export default function LibraryView({
 
   const folder = data.current_folder;
   const lectures = data.workspaces;
-  const [featured, ...rest] = lectures;
-  const upNext = rest[0];
+  // The carousel is the way into a class, so it only appears at the top
+  // level. Inside a class there is nothing left to swipe between.
+  const showCarousel = !folder;
+  const classCount = data.folders.length;
 
   async function chooseFiles(files) {
     if (!files?.length) return;
@@ -62,7 +68,7 @@ export default function LibraryView({
 
   return <main className="screen">
     {/* ---- Yellow hero ------------------------------------ */}
-    <header className="hero" style={{ '--hang': featured ? '3.25rem' : '1.25rem' }}>
+    <header className={`hero ${showCarousel ? '' : 'pad'}`}>
       <div className="hero-top">
         <div>
           {folder
@@ -83,6 +89,11 @@ export default function LibraryView({
             {folder
               ? `${lectures.length} lecture${lectures.length === 1 ? '' : 's'} · ${totalTakes} recording${totalTakes === 1 ? '' : 's'}`
               : showArchived ? 'Archived classes' : 'Everything you have recorded'}
+            {!folder && (
+              <button className="hero-link" onClick={() => onToggleArchived(!showArchived)}>
+                {showArchived ? 'Show current' : 'View archived'}
+              </button>
+            )}
           </p>
         </div>
         <button className="hero-menu" onClick={onOpenSettings} aria-label="Settings">
@@ -90,48 +101,13 @@ export default function LibraryView({
         </button>
       </div>
 
-      {featured && (
+      {showCarousel && (
         <div className="hero-stage">
           <div className="hero-rail">
-            <span className="hero-rail-label">Latest</span>
+            <Icon name="library" />
+            <span className="hero-rail-label">{showArchived ? 'Archived' : 'Your classes'}</span>
           </div>
-          <button
-            className="feature"
-            onClick={() => onOpenWorkspace(featured.id)}
-            aria-label={`Open ${featured.title}`}
-          >
-            <CoverArt id={featured.id} color={colorForWorkspace(featured, data.folders, folder)} />
-            <span className="feature-body">
-              <span className="feature-copy">
-                <span className="feature-title">{featured.title}</span>
-                <span className="feature-sub">
-                  {featured.session_count} recording{featured.session_count === 1 ? '' : 's'} · {shortDate(featured.updated_at)}
-                </span>
-              </span>
-              <span className="feature-play"><Icon name="play" /></span>
-            </span>
-          </button>
-          {upNext && (
-            <span className="feature-peek" aria-hidden="true">
-              <CoverArt id={upNext.id} color={colorForWorkspace(upNext, data.folders, folder)} />
-            </span>
-          )}
-        </div>
-      )}
-    </header>
-    {featured && <div className="hero-spill" style={{ '--hang': '3.25rem' }} />}
-
-    {/* ---- Classes ---------------------------------------- */}
-    {!folder && (
-      <section className="sheet">
-        <div className="row-head">
-          <h2 className="row-title">{showArchived ? 'Archived' : 'Classes'}</h2>
-          <button className="row-link" onClick={() => onToggleArchived(!showArchived)}>
-            {showArchived ? 'Current classes' : 'See archived'}
-          </button>
-        </div>
-        {data.folders.length ? (
-          <div className="cover-row">
+          <div className={`hero-carousel ${classCount === 0 ? 'single' : ''}`}>
             {data.folders.map((child) => (
               <ClassCard
                 key={child.id}
@@ -144,35 +120,32 @@ export default function LibraryView({
               />
             ))}
             {!showArchived && (
-              <div className="tile">
-                <button className="tile-add" onClick={onNewFolder}>
-                  <Icon name="plus" /><span>New class</span>
+              <div className="slide">
+                <button className="slide-add" onClick={onNewFolder}>
+                  <Icon name="plus" />
+                  <span>{classCount === 0 ? 'Add your first class' : 'New class'}</span>
                 </button>
               </div>
             )}
+            {showArchived && classCount === 0 && (
+              <div className="slide">
+                <div className="slide-add" style={{ cursor: 'default' }}>
+                  <span>Nothing archived</span>
+                </div>
+              </div>
+            )}
           </div>
-        ) : showArchived ? (
-          <p className="dim">Nothing archived yet.</p>
-        ) : (
-          <button className="dropzone" onClick={onNewFolder}>
-            <Icon name="plus" />
-            <strong>Add your first class</strong>
-            <span>Biology, Algorithms, whatever you are taking</span>
-          </button>
-        )}
-      </section>
-    )}
+        </div>
+      )}
+    </header>
+    {showCarousel && <div className="hero-spill" />}
 
     {/* ---- Lectures --------------------------------------- */}
     {!showArchived && (
       <section className="sheet">
         <div className="row-head">
-          <h2 className="row-title">{featured ? 'All lectures' : 'Lectures'}</h2>
-          {lectures.length > 0 && (
-            <span className="row-link" style={{ pointerEvents: 'none' }}>
-              {lectures.length}
-            </span>
-          )}
+          <h2 className="row-title">All lectures</h2>
+          {lectures.length > 0 && <span className="row-count">{lectures.length}</span>}
         </div>
 
         {lectures.length ? (
@@ -191,11 +164,9 @@ export default function LibraryView({
                   </span>
                   <span className="track-body">
                     <span className="track-title">{workspace.title}</span>
-                    <span className="track-sub">
-                      {workspace.session_count} recording{workspace.session_count === 1 ? '' : 's'} · {shortDate(workspace.updated_at)}
-                    </span>
+                    <span className="track-sub">{subtitleFor(workspace, data.folders, folder)}</span>
                   </span>
-                  <span className="track-time">{clock(workspace.duration_seconds) || shortDate(workspace.updated_at)}</span>
+                  <span className="track-time">{shortDate(workspace.updated_at)}</span>
                 </button>
               </li>
             ))}

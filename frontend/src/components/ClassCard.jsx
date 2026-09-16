@@ -5,8 +5,9 @@ import { Icon } from './Icon';
 const COLORS = ['blue', 'violet', 'rose', 'coral', 'amber', 'lime', 'mint', 'sky', 'slate'];
 
 /**
- * A class, as cover art. Its actions stay behind the corner button so the
- * tile itself is one target: tap to open, drag a lecture onto it to file it.
+ * A class, as one slide of the library carousel: its artwork filling the
+ * card, its name over the bottom, and its actions behind the corner button.
+ * Dragging a lecture onto it files the lecture into the class.
  */
 export default function ClassCard({ folder, onOpen, onArchive, onRecolor, onDelete, onDropWorkspace }) {
   const [over, setOver] = useState(false);
@@ -26,30 +27,30 @@ export default function ClassCard({ folder, onOpen, onArchive, onRecolor, onDele
   }, [menu]);
 
   const lectures = folder.lecture_count ?? 0;
-  const summary = lectures === 0 ? 'Empty' : `${lectures} lecture${lectures === 1 ? '' : 's'}`;
+  const summary = lectures === 0 ? 'Nothing recorded yet' : `${lectures} lecture${lectures === 1 ? '' : 's'}`;
 
   return (
-    <div
-      ref={rootRef}
-      className={`tile ${over ? 'drop-active' : ''} ${menu ? 'menu-open' : ''}`}
-    >
+    <div ref={rootRef} className={`slide ${over ? 'drop-active' : ''} ${menu ? 'menu-open' : ''}`}>
       <button
-        className="tile-open"
+        className="slide-open"
         onClick={() => onOpen(folder.id)}
         onDragOver={(event) => { event.preventDefault(); setOver(true); }}
         onDragLeave={() => setOver(false)}
         onDrop={(event) => { event.preventDefault(); setOver(false); onDropWorkspace(event, folder.id); }}
         aria-label={`Open ${folder.name}`}
       >
-        <span className="tile-art">
-          <CoverArt id={folder.id} color={folder.color} label={folder.name} />
+        <CoverArt id={folder.id} color={folder.color} label={folder.name} />
+        <span className="slide-body">
+          <span className="slide-copy">
+            <span className="slide-name">{folder.name}</span>
+            <span className="slide-sub">{over ? 'Drop to file here' : summary}</span>
+          </span>
+          <span className="slide-go"><Icon name="arrow" /></span>
         </span>
-        <span className="tile-name">{folder.name}</span>
-        <span className="tile-meta">{over ? 'Drop to file here' : summary}</span>
       </button>
 
       <button
-        className="tile-menu"
+        className="slide-menu"
         onClick={() => setMenu((open) => !open)}
         aria-label={`Options for ${folder.name}`}
         aria-expanded={menu}
