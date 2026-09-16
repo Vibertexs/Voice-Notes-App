@@ -11,9 +11,26 @@ function Toast({ toast }) {
   return toast ? <div className={`toast ${toast.kind ?? ''}`} role="status">{toast.message}</div> : null;
 }
 
-function Loading() { return <main className="loading-screen"><div className="loader-orb"/><p>Opening your lecture library…</p></main>; }
+function Loading() {
+  return (
+    <main className="loading-screen">
+      <div className="loader-orb" />
+      <p>Opening your lecture library…</p>
+    </main>
+  );
+}
 
-function ErrorState({ error, retry }) { return <main className="loading-screen"><div><h1>Couldn’t open Class Notes</h1><p className="muted">{error}</p><button className="button primary" onClick={retry}>Try again</button></div></main>; }
+function ErrorState({ error, retry }) {
+  return (
+    <main className="loading-screen">
+      <div>
+        <h1>Couldn't open Class Notes</h1>
+        <p className="muted">{error}</p>
+        <button className="button primary" onClick={retry}>Try again</button>
+      </div>
+    </main>
+  );
+}
 
 export default function App() {
   const [screen, setScreen] = useState({ name: 'library', folderId: null });
@@ -93,17 +110,18 @@ export default function App() {
       await libraryApi.deleteFolder(folder.id);
       await openLibrary(null);
       notify('Class deleted.');
-    } catch (caught) {
-      // The server refuses to delete a class that still holds work.
-      notify(caught.message, 'error');
-    }
+    } catch (caught) { notify(caught.message, 'error'); }
   }
   async function recolorFolder(folderId, color) {
     try { await libraryApi.updateFolder(folderId, { color }); await openLibrary(null); }
     catch (caught) { notify(caught.message, 'error'); }
   }
   async function moveWorkspace(workspaceId, folderId) {
-    try { await libraryApi.updateWorkspace(workspaceId, { folder_id: folderId }); await openLibrary(screen.folderId); notify(folderId ? 'Lecture moved to the folder.' : 'Lecture moved back to Library.'); } catch (caught) { notify(caught.message, 'error'); }
+    try {
+      await libraryApi.updateWorkspace(workspaceId, { folder_id: folderId });
+      await openLibrary(screen.folderId);
+      notify(folderId ? 'Lecture moved to the folder.' : 'Lecture moved back to Library.');
+    } catch (caught) { notify(caught.message, 'error'); }
   }
   function startCapture(workspaceTarget = null) {
     setCaptureContext({ workspace: workspaceTarget, folder: workspaceTarget ? null : library?.current_folder ?? null });
@@ -118,7 +136,6 @@ export default function App() {
 
   async function openSearchResult(result) {
     if (!result.workspace_id) { notify('That result is no longer available.', 'error'); return; }
-    // The workspace view reads this on mount and seeks the player to the moment.
     setPendingSeek(result.kind === 'transcript'
       ? { lectureId: result.lecture_id, seconds: result.start_seconds }
       : null);
@@ -128,15 +145,81 @@ export default function App() {
   if (error && !library && !workspace) return <ErrorState error={error} retry={() => openLibrary(null)} />;
   if (!library && screen.name !== 'workspace') return <Loading />;
 
-  return <div className="app-shell">
-    <header className="topbar"><button className="brand" onClick={() => openLibrary(null)}><span>C</span><b>Class Notes</b></button><div className="topbar-copy"><button onClick={() => setScreen({ name: 'search' })}>Search</button><button onClick={() => openLibrary(null)}>Library</button><button onClick={() => setSettingsOpen(true)}>Settings</button></div></header>
-    {error && <div className="inline-error"><span>{error}</span><button onClick={() => setError('')}>×</button></div>}
-    {screen.name === 'library' && library && <LibraryView data={library} allFolders={allFolders} onOpenFolder={openLibrary} onOpenWorkspace={openWorkspace} onNewFolder={() => setFolderDialog(true)} onRecord={() => startCapture()} onUpload={uploadFiles} onDeleteMaterial={deleteMaterial} onMoveWorkspace={moveWorkspace} showArchived={showArchived} onToggleArchived={(next) => openLibrary(null, { archived: next })} onArchiveFolder={setFolderArchived} onRecolorFolder={recolorFolder} onDeleteFolder={deleteFolder} />}
-    {screen.name === 'workspace' && (workspace ? <WorkspaceView workspace={workspace} onBack={() => openLibrary(workspace.folder_id)} onContinue={() => startCapture(workspace)} onReload={refreshWorkspace} onDelete={() => openLibrary(workspace.folder_id)} notify={notify} pendingSeek={pendingSeek} onSeekHandled={() => setPendingSeek(null)} /> : <Loading />)}
-    {screen.name === 'search' && <SearchView onOpenResult={openSearchResult} onBack={() => openLibrary(screen.folderId ?? null)} />}
-    {screen.name === 'capture' && <CaptureView context={captureContext ?? {}} onSaved={captureSaved} onCancel={cancelCapture} notify={notify} />}
-    {folderDialog && <FolderDialog parent={library?.current_folder} onClose={() => setFolderDialog(false)} onCreate={createFolder} />}
-    {settingsOpen && <SettingsDialog onClose={() => setSettingsOpen(false)} notify={notify} />}
-    <Toast toast={toast} />
-  </div>;
+  const showNav = !['workspace', 'capture'].includes(screen.name);
+
+  return (
+    <div className="app-shell">
+      {error && <div className="inline-error"><span>{error}</span><button onClick={() => setError('')}>×</button></div>}
+
+      {screen.name === 'library' && library && (
+        <LibraryView
+          data={library}
+          allFolders={allFolders}
+          onOpenFolder={openLibrary}
+          onOpenWorkspace={openWorkspace}
+          onNewFolder={() => setFolderDialog(true)}
+          onRecord={() => startCapture()}
+          onUpload={uploadFiles}
+          onDeleteMaterial={deleteMaterial}
+          onMoveWorkspace={moveWorkspace}
+          showArchived={showArchived}
+          onToggleArchived={(next) => openLibrary(null, { archived: next })}
+          onArchiveFolder={setFolderArchived}
+          onRecolorFolder={recolorFolder}
+          onDeleteFolder={deleteFolder}
+          onOpenSettings={() => setSettingsOpen(true)}
+        />
+      )}
+      {screen.name === 'workspace' && (workspace
+        ? <WorkspaceView workspace={workspace} onBack={() => openLibrary(workspace.folder_id)} onContinue={() => startCapture(workspace)} onReload={refreshWorkspace} onDelete={() => openLibrary(workspace.folder_id)} notify={notify} pendingSeek={pendingSeek} onSeekHandled={() => setPendingSeek(null)} />
+        : <Loading />
+      )}
+      {screen.name === 'search' && (
+        <SearchView onOpenResult={openSearchResult} onBack={() => openLibrary(screen.folderId ?? null)} />
+      )}
+      {screen.name === 'capture' && (
+        <CaptureView context={captureContext ?? {}} onSaved={captureSaved} onCancel={cancelCapture} notify={notify} />
+      )}
+
+      {showNav && (
+        <nav className="bottom-nav" aria-label="Main navigation">
+          <button
+            className={`nav-item ${screen.name === 'library' ? 'active' : ''}`}
+            onClick={() => openLibrary(null)}
+            aria-label="Library"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 9.5 12 4l9 5.5" />
+              <path d="M19 13v6a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-6" />
+            </svg>
+            <span>Library</span>
+          </button>
+
+          <button className="nav-record" onClick={() => startCapture()} aria-label="Start recording">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2a3.5 3.5 0 0 0-3.5 3.5v5a3.5 3.5 0 0 0 7 0v-5A3.5 3.5 0 0 0 12 2Z" />
+              <path d="M19 10.5v.5a7 7 0 0 1-14 0v-.5" />
+              <line x1="12" y1="18" x2="12" y2="22" />
+            </svg>
+          </button>
+
+          <button
+            className={`nav-item ${screen.name === 'search' ? 'active' : ''}`}
+            onClick={() => setScreen({ name: 'search' })}
+            aria-label="Search"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="7" />
+              <path d="m20 20-3.5-3.5" />
+            </svg>
+            <span>Search</span>
+          </button>
+        </nav>
+      )}
+
+      {folderDialog && <FolderDialog parent={library?.current_folder} onClose={() => setFolderDialog(false)} onCreate={createFolder} />}
+      {settingsOpen && <SettingsDialog onClose={() => setSettingsOpen(false)} notify={notify} />}
+      <Toast toast={toast} />
+    </div>
+  );
 }

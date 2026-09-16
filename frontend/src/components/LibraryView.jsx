@@ -23,7 +23,7 @@ function MaterialList({ materials, onDelete }) {
 export default function LibraryView({
   data, allFolders, onOpenFolder, onOpenWorkspace, onNewFolder, onRecord, onUpload,
   onDeleteMaterial, onMoveWorkspace, showArchived, onToggleArchived, onArchiveFolder,
-  onRecolorFolder, onDeleteFolder,
+  onRecolorFolder, onDeleteFolder, onOpenSettings,
 }) {
   const inputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
@@ -53,7 +53,14 @@ export default function LibraryView({
       </div>
       <div className="header-actions">
         {!folder && <button className="button ghost" onClick={onNewFolder}>＋ Class</button>}
-        <button className="button primary capture-shortcut" onClick={onRecord}>Record &amp; note</button>
+        {onOpenSettings && (
+          <button className="icon-button" onClick={onOpenSettings} aria-label="Settings">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" />
+            </svg>
+          </button>
+        )}
       </div>
     </header>
 
@@ -102,7 +109,6 @@ export default function LibraryView({
           <p className="eyebrow">Lecture notes</p>
           <h2>{data.workspaces.length ? `${data.workspaces.length} lecture${data.workspaces.length === 1 ? '' : 's'}` : 'Start your first lecture'}</h2>
         </div>
-
       </div>
       <div className="workspace-grid">
         {data.workspaces.map((workspace) => <button
@@ -114,7 +120,11 @@ export default function LibraryView({
           onClick={() => onOpenWorkspace(workspace.id)}
           aria-label={`Open lecture ${workspace.title}`}
         >
-          <span className="workspace-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M6 10v4M10 7v10M14 9v6M18 5v14" /></svg></span>
+          <span className="workspace-card-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+              <path d="M6 10v4M10 7v10M14 9v6M18 5v14" />
+            </svg>
+          </span>
           <strong className="workspace-card-title">{workspace.title}</strong>
           <span className="workspace-card-copy">{workspace.session_count} recording{workspace.session_count === 1 ? '' : 's'} · {readableDate(workspace.updated_at)}</span>
         </button>)}
@@ -141,10 +151,6 @@ export default function LibraryView({
       <input ref={inputRef} hidden type="file" accept=".pdf,.txt,.md,.doc,.docx,.ppt,.pptx" multiple onChange={(event) => chooseFiles(event.target.files)} />
       <MaterialList materials={data.materials} onDelete={onDeleteMaterial} />
     </section>}
-
-    {allFolders.length > 0 && !folder && <p className="library-footnote">
-      Drag a lecture onto a class to file it. Archive a class when the term ends — nothing is deleted.
-    </p>}
   </main>;
 }
 

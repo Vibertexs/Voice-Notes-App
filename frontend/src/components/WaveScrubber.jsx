@@ -95,15 +95,16 @@ export default function WaveScrubber({
 
       // Past is solid, future is faint, and the very centre is the accent.
       const distance = Math.abs(x - centre);
-      if (distance < step) context.fillStyle = '#2a63dd';
-      else if (i < head) context.fillStyle = 'rgba(19,27,46,.38)';
-      else context.fillStyle = 'rgba(19,27,46,.15)';
+      const accentColor = getComputedStyle(canvas).getPropertyValue('--accent').trim() || '#E4F04E';
+      if (distance < step) context.fillStyle = accentColor;
+      else if (i < head) context.fillStyle = accentColor;
+      else context.fillStyle = 'rgba(255,255,255,.18)';
 
       context.fillRect(x, y, BAR_WIDTH, barHeight);
     }
 
     // The playhead itself.
-    context.fillStyle = '#131b2e';
+    context.fillStyle = '#FFFFFF';
     context.fillRect(centre - 1, 6, 2, height - 12);
     context.beginPath();
     context.arc(centre, 6, 3.5, 0, Math.PI * 2);
