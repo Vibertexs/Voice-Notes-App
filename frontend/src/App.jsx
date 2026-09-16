@@ -5,31 +5,24 @@ import LibraryView from './components/LibraryView';
 import SearchView from './components/SearchView';
 import SettingsDialog from './components/SettingsDialog';
 import WorkspaceView from './components/WorkspaceView';
+import { Icon } from './components/Icon';
 import { libraryApi } from './lib/api';
+import { colorForWorkspace } from './lib/palette';
 
 function Toast({ toast }) {
   return toast ? <div className={`toast ${toast.kind ?? ''}`} role="status">{toast.message}</div> : null;
 }
 
-function Loading() {
-  return (
-    <main className="loading-screen">
-      <div className="loader-orb" />
-      <p>Opening your lecture library…</p>
-    </main>
-  );
+function Boot() {
+  return <main className="boot"><div className="orb" /><p>Opening your library…</p></main>;
 }
 
-function ErrorState({ error, retry }) {
-  return (
-    <main className="loading-screen">
-      <div>
-        <h1>Couldn't open Class Notes</h1>
-        <p className="muted">{error}</p>
-        <button className="button primary" onClick={retry}>Try again</button>
-      </div>
-    </main>
-  );
+function BootError({ error, retry }) {
+  return <main className="boot">
+    <h1>Couldn’t open Class Notes</h1>
+    <p>{error}</p>
+    <button className="btn primary" onClick={retry}>Try again</button>
+  </main>;
 }
 
 export default function App() {
@@ -86,7 +79,7 @@ export default function App() {
   async function createFolder(folder) {
     await libraryApi.createFolder(folder);
     await openLibrary(screen.folderId);
-    notify('Folder created.');
+    notify('Class created.');
   }
   async function uploadFiles(files) {
     await Promise.all(files.map((file) => libraryApi.uploadMaterial(file, { folderId: library.current_folder?.id })));
@@ -113,14 +106,14 @@ export default function App() {
     } catch (caught) { notify(caught.message, 'error'); }
   }
   async function recolorFolder(folderId, color) {
-    try { await libraryApi.updateFolder(folderId, { color }); await openLibrary(null); }
+    try { await libraryApi.updateFolder(folderId, { color }); await openLibrary(screen.folderId); }
     catch (caught) { notify(caught.message, 'error'); }
   }
   async function moveWorkspace(workspaceId, folderId) {
     try {
       await libraryApi.updateWorkspace(workspaceId, { folder_id: folderId });
       await openLibrary(screen.folderId);
-      notify(folderId ? 'Lecture moved to the folder.' : 'Lecture moved back to Library.');
+      notify(folderId ? 'Lecture filed.' : 'Lecture moved out.');
     } catch (caught) { notify(caught.message, 'error'); }
   }
   function startCapture(workspaceTarget = null) {
@@ -142,19 +135,18 @@ export default function App() {
     await openWorkspace(result.workspace_id);
   }
 
-  if (error && !library && !workspace) return <ErrorState error={error} retry={() => openLibrary(null)} />;
-  if (!library && screen.name !== 'workspace') return <Loading />;
+  if (error && !library && !workspace) return <BootError error={error} retry={() => openLibrary(null)} />;
+  if (!library && screen.name !== 'workspace') return <Boot />;
 
-  const showNav = !['workspace', 'capture'].includes(screen.name);
+  const showDock = !['workspace', 'capture'].includes(screen.name);
 
   return (
     <div className="app-shell">
-      {error && <div className="inline-error"><span>{error}</span><button onClick={() => setError('')}>×</button></div>}
+      {error && <div className="banner"><span>{error}</span><button onClick={() => setError('')} aria-label="Dismiss">×</button></div>}
 
       {screen.name === 'library' && library && (
         <LibraryView
           data={library}
-          allFolders={allFolders}
           onOpenFolder={openLibrary}
           onOpenWorkspace={openWorkspace}
           onNewFolder={() => setFolderDialog(true)}
@@ -171,9 +163,18 @@ export default function App() {
         />
       )}
       {screen.name === 'workspace' && (workspace
-        ? <WorkspaceView workspace={workspace} onBack={() => openLibrary(workspace.folder_id)} onContinue={() => startCapture(workspace)} onReload={refreshWorkspace} onDelete={() => openLibrary(workspace.folder_id)} notify={notify} pendingSeek={pendingSeek} onSeekHandled={() => setPendingSeek(null)} />
-        : <Loading />
-      )}
+        ? <WorkspaceView
+            workspace={workspace}
+            color={colorForWorkspace(workspace, allFolders)}
+            onBack={() => openLibrary(workspace.folder_id)}
+            onContinue={() => startCapture(workspace)}
+            onReload={refreshWorkspace}
+            onDelete={() => openLibrary(workspace.folder_id)}
+            notify={notify}
+            pendingSeek={pendingSeek}
+            onSeekHandled={() => setPendingSeek(null)}
+          />
+        : <Boot />)}
       {screen.name === 'search' && (
         <SearchView onOpenResult={openSearchResult} onBack={() => openLibrary(screen.folderId ?? null)} />
       )}
@@ -181,39 +182,25 @@ export default function App() {
         <CaptureView context={captureContext ?? {}} onSaved={captureSaved} onCancel={cancelCapture} notify={notify} />
       )}
 
-      {showNav && (
-        <nav className="bottom-nav" aria-label="Main navigation">
+      {showDock && (
+        <nav className="dock" aria-label="Main">
           <button
-            className={`nav-item ${screen.name === 'library' ? 'active' : ''}`}
+            className={`dock-btn ${screen.name === 'library' ? 'active' : ''}`}
             onClick={() => openLibrary(null)}
             aria-label="Library"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 9.5 12 4l9 5.5" />
-              <path d="M19 13v6a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-6" />
-            </svg>
-            <span>Library</span>
-          </button>
+            aria-current={screen.name === 'library' ? 'page' : undefined}
+          ><Icon name="library" /></button>
 
-          <button className="nav-record" onClick={() => startCapture()} aria-label="Start recording">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 2a3.5 3.5 0 0 0-3.5 3.5v5a3.5 3.5 0 0 0 7 0v-5A3.5 3.5 0 0 0 12 2Z" />
-              <path d="M19 10.5v.5a7 7 0 0 1-14 0v-.5" />
-              <line x1="12" y1="18" x2="12" y2="22" />
-            </svg>
+          <button className="dock-btn rec" onClick={() => startCapture()} aria-label="Record a lecture">
+            <Icon name="mic" />
           </button>
 
           <button
-            className={`nav-item ${screen.name === 'search' ? 'active' : ''}`}
+            className={`dock-btn ${screen.name === 'search' ? 'active' : ''}`}
             onClick={() => setScreen({ name: 'search' })}
             aria-label="Search"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="7" />
-              <path d="m20 20-3.5-3.5" />
-            </svg>
-            <span>Search</span>
-          </button>
+            aria-current={screen.name === 'search' ? 'page' : undefined}
+          ><Icon name="search" /></button>
         </nav>
       )}
 

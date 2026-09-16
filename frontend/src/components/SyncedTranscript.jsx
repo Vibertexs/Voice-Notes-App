@@ -43,7 +43,7 @@ export default function SyncedTranscript({ segments, currentSeconds, onSeek, sta
 
   if (!segments?.length) {
     return (
-      <p className="empty-copy">
+      <p className="dim">
         {status === 'ready' ? 'No speech was recognised in this recording.' : 'Transcribing…'}
       </p>
     );
@@ -51,7 +51,7 @@ export default function SyncedTranscript({ segments, currentSeconds, onSeek, sta
 
   return (
     <div
-      className="synced-transcript"
+      className="lines"
       ref={listRef}
       onWheel={() => { userScrolledRef.current = true; }}
       onTouchMove={() => { userScrolledRef.current = true; }}
@@ -63,7 +63,7 @@ export default function SyncedTranscript({ segments, currentSeconds, onSeek, sta
           <button
             key={`${segment.start_seconds}-${index}`}
             ref={index === activeIndex ? activeRef : null}
-            className={`synced-line ${state}`}
+            className={`line ${state}`}
             onClick={() => onSeek?.(segment.start_seconds ?? 0)}
             aria-current={index === activeIndex ? 'true' : undefined}
           >

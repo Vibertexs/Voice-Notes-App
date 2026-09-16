@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { libraryApi, uploadRecording } from '../lib/api';
 import DiscardSlider from './DiscardSlider';
 import Waveform from './Waveform';
+import { Icon } from './Icon';
 
 function elapsedLabel(milliseconds) {
   const tenths = Math.floor(milliseconds / 100);
@@ -47,6 +48,7 @@ export default function CaptureView({ context, onSaved, onCancel, notify }) {
     window.addEventListener('cn:transcript', receive);
     return () => window.removeEventListener('cn:transcript', receive);
   }, [hasLiveTranscript]);
+
   const recorderRef = useRef(null);
   const streamRef = useRef(null);
   const chunksRef = useRef([]);
@@ -57,7 +59,6 @@ export default function CaptureView({ context, onSaved, onCancel, notify }) {
   const fileInputRef = useRef(null);
 
   const location = context.workspace ? context.workspace.title : context.folder?.name ?? 'Library';
-  const backLabel = context.workspace ? 'Back to lecture' : `Back to ${location}`;
   const currentTime = () => carriedMsRef.current + (startedAtRef.current ? performance.now() - startedAtRef.current : 0);
 
   useEffect(() => () => {
@@ -67,8 +68,17 @@ export default function CaptureView({ context, onSaved, onCancel, notify }) {
   }, []);
 
   function updateClock() { setElapsed(currentTime()); }
-  function startClock() { window.clearInterval(timerRef.current); startedAtRef.current = performance.now(); timerRef.current = window.setInterval(updateClock, 100); }
-  function pauseClock() { carriedMsRef.current = currentTime(); startedAtRef.current = 0; updateClock(); window.clearInterval(timerRef.current); }
+  function startClock() {
+    window.clearInterval(timerRef.current);
+    startedAtRef.current = performance.now();
+    timerRef.current = window.setInterval(updateClock, 100);
+  }
+  function pauseClock() {
+    carriedMsRef.current = currentTime();
+    startedAtRef.current = 0;
+    updateClock();
+    window.clearInterval(timerRef.current);
+  }
   function holdCompletion(milliseconds) {
     return new Promise((resolve) => { completionTimerRef.current = window.setTimeout(resolve, milliseconds); });
   }
@@ -88,7 +98,7 @@ export default function CaptureView({ context, onSaved, onCancel, notify }) {
       startClock();
       setPhase('recording');
     } catch {
-      setError('Microphone access was not granted. Allow it in your browser, then try again.');
+      setError('Microphone access was not granted. Allow it, then try again.');
     }
   }
 
@@ -145,12 +155,16 @@ export default function CaptureView({ context, onSaved, onCancel, notify }) {
     streamRef.current?.getTracks().forEach((track) => track.stop());
     setLiveStream(null);
     try {
-      const recording = await uploadRecording({ blob, title, captureNotes: notes, folderId: context.workspace ? undefined : context.folder?.id, workspaceId: context.workspace?.id });
+      const recording = await uploadRecording({
+        blob, title, captureNotes: notes,
+        folderId: context.workspace ? undefined : context.folder?.id,
+        workspaceId: context.workspace?.id,
+      });
       await Promise.all(markers.map((marker) => libraryApi.addMarker(recording.id, marker)));
       await Promise.all(files.map((file) => libraryApi.uploadMaterial(file, { workspaceId: recording.workspace_id })));
-      notify(`Lecture saved. High-accuracy transcription is now running for ${elapsedLabel(savedElapsed)} of audio.`);
+      notify(`Saved ${elapsedLabel(savedElapsed)} of audio.`);
       setPhase('saved');
-      // A successful action should be visible before we take the student back to notes.
+      // A successful action should be visible before we take the student back.
       await holdCompletion(900);
       onSaved(recording.workspace_id);
     } catch (caught) {
@@ -173,81 +187,184 @@ export default function CaptureView({ context, onSaved, onCancel, notify }) {
   const isPaused = phase === 'paused';
   const isFinalizing = ['saving', 'saved', 'discarding'].includes(phase);
   const completionCopy = phase === 'discarding'
-    ? ['Recording discarded', 'Nothing was saved.']
+    ? ['Discarded', 'Nothing was saved.']
     : phase === 'saved'
-      ? ['Recording saved', 'Transcribing with the high-accuracy model…']
-      : ['Finishing your recording', 'Saving your audio and notes…'];
-  return <main className="page capture-page">
-    <header className="capture-heading"><button className="capture-back-bar" onClick={onCancel} disabled={isFinalizing}><span aria-hidden="true">‹</span>{backLabel}<span className="capture-back-arrow" aria-hidden="true">›</span></button><p className="eyebrow">{context.workspace ? 'Continuing lecture' : `New lecture · ${location}`}</p><h1>{context.workspace ? context.workspace.title : 'Capture a lecture'}</h1>{!context.workspace && <label className="capture-title-field">Recording name <small>optional</small><input value={title} maxLength="180" onChange={(event) => setTitle(event.target.value)} placeholder="Leave blank for a dated lecture" disabled={isFinalizing} /></label>}</header>
-    <div className="capture-grid">
-      <section className={`capture-station ${phase}`}>
-        {isFinalizing && <div className={`save-veil ${phase === 'discarding' ? 'discard-veil' : ''} ${phase === 'saved' ? 'saved-veil' : ''}`} role="status" aria-live="polite">
-          <span className="save-symbol" aria-hidden="true">
+      ? ['Saved', 'Transcribing now…']
+      : ['Finishing', 'Saving your audio and notes…'];
+
+  return <main className="capture-screen">
+    <div className="capture-top">
+      <button className="blur-btn" onClick={onCancel} disabled={isFinalizing} aria-label="Cancel and go back">
+        <Icon name="back" />
+      </button>
+      <span className="kicker">{context.workspace ? 'Continuing' : location}</span>
+      <span style={{ width: '2.4rem' }} />
+    </div>
+
+    <header className="capture-heading">
+      <h1>{context.workspace ? context.workspace.title : 'New lecture'}</h1>
+    </header>
+
+    <section className={`rec-stage ${phase}`} data-phase={phase}>
+      {isFinalizing && (
+        <div
+          className={`veil ${phase === 'discarding' ? 'bad' : ''} ${phase === 'saved' ? 'ok' : ''}`}
+          role="status" aria-live="polite"
+        >
+          <span className="veil-mark">
             {phase === 'discarding'
               ? <svg viewBox="0 0 52 52"><path d="M17 18h18M22 18v-4h8v4M20 22v14m6-14v14m6-14v14M18 18l2 22h12l2-22" /></svg>
               : phase === 'saved'
                 ? <svg viewBox="0 0 52 52"><circle cx="26" cy="26" r="22" /><path d="M14 27l8 8 16-16" /></svg>
-                : <svg className="save-spinner" viewBox="0 0 52 52"><circle cx="26" cy="26" r="22" /></svg>}
+                : <svg className="spin" viewBox="0 0 52 52"><circle cx="26" cy="26" r="22" /></svg>}
           </span>
           <strong>{completionCopy[0]}</strong>
           <span>{completionCopy[1]}</span>
-        </div>}
-        <div className="transport" data-phase={phase}>
-          <div className="phase-label">{phase === 'ready' ? 'Ready' : phase === 'recording' ? 'Recording' : phase === 'paused' ? (canPause ? 'Paused' : 'Stopped') : phase === 'discarding' ? 'Discarding' : phase === 'saved' ? 'Saved' : 'Saving'}</div>
-          <div className="recording-timer">{elapsedLabel(elapsed)}</div>
-          <Waveform stream={liveStream} phase={phase} />
         </div>
-        <div className={`marker-slot ${isRecording ? 'active' : ''}`}>
-          {isRecording
-            ? <div className="marker-control"><input value={markerLabel} maxLength="120" onChange={(event) => setMarkerLabel(event.target.value)} onKeyDown={(event) => event.key === 'Enter' && addMarker()} placeholder="Mark an important moment…" /><button className="button ghost" onClick={addMarker}>Add marker</button></div>
-            : <span className="marker-slot-copy">{markers.length ? `${markers.length} marker${markers.length === 1 ? '' : 's'} saved to this recording` : 'Mark important moments while recording'}</span>}
-        </div>
-        <div className="capture-controls">
-          <div className="transport-controls">
-            <button
-              className="shutter"
-              data-phase={phase}
-              onClick={phase === 'ready' ? start : pauseOrResume}
-              disabled={phase === 'saving'}
-              aria-label={phase === 'ready' ? 'Start recording' : isPaused ? (canPause ? 'Resume recording' : 'Recording finished') : canPause ? 'Pause recording' : 'Stop recording'}
-            ><span className="shutter-glyph" aria-hidden="true" /></button>
-            <div className={`finish-group ${isPaused ? 'shown' : ''}`} inert={!isPaused}>
-              <button className="finish-button" onClick={done} aria-label="Done — save and transcribe">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
-              </button>
-              <span className="finish-caption" aria-hidden="true">Done</span>
+      )}
+
+      <div className="phase-label">
+        {phase === 'ready' ? 'Ready'
+          : phase === 'recording' ? 'Recording'
+          : phase === 'paused' ? (canPause ? 'Paused' : 'Stopped')
+          : phase === 'discarding' ? 'Discarding'
+          : phase === 'saved' ? 'Saved' : 'Saving'}
+      </div>
+      <div className="clock">{elapsedLabel(elapsed)}</div>
+      <Waveform stream={liveStream} phase={phase} />
+
+      <div className="marker-slot">
+        {isRecording
+          ? <div className="marker-control">
+              <input
+                value={markerLabel}
+                maxLength="120"
+                placeholder="Mark this moment…"
+                onChange={(event) => setMarkerLabel(event.target.value)}
+                onKeyDown={(event) => event.key === 'Enter' && addMarker()}
+              />
+              <button className="btn quiet" onClick={addMarker}>Mark</button>
             </div>
-          </div>
-          <p className="transport-hint">{phase === 'ready' ? 'Tap to record' : isRecording ? (canPause ? 'Tap to pause' : 'Tap to stop') : isPaused ? (canPause ? 'Tap to resume, or slide to discard' : 'Save it, or slide to discard') : 'Saving…'}</p>
-          <DiscardSlider open={isPaused} onDiscard={discard} />
+          : <span className="marker-slot-copy">
+              {markers.length
+                ? `${markers.length} marker${markers.length === 1 ? '' : 's'} saved`
+                : 'Mark important moments while recording'}
+            </span>}
+      </div>
+
+      <div className="shutter-row">
+        <button
+          className="shutter"
+          data-phase={phase}
+          onClick={phase === 'ready' ? start : pauseOrResume}
+          disabled={phase === 'saving'}
+          aria-label={phase === 'ready' ? 'Start recording'
+            : isPaused ? (canPause ? 'Resume recording' : 'Recording finished')
+            : canPause ? 'Pause recording' : 'Stop recording'}
+        ><span className="shutter-glyph" aria-hidden="true" /></button>
+
+        <div className={`finish-group ${isPaused ? 'shown' : ''}`} inert={!isPaused ? '' : undefined}>
+          <button className="finish-btn" onClick={done} aria-label="Save and transcribe">
+            <Icon name="check" />
+          </button>
+          <span className="finish-caption" aria-hidden="true">Done</span>
         </div>
-        {markers.length > 0 && <div className="marker-pills">{markers.map((marker, index) => <span key={`${marker.label}-${index}`}>● {elapsedLabel(marker.time_seconds * 1000)} · {marker.label}<button onClick={() => setMarkers((current) => current.filter((_, position) => position !== index))} aria-label={`Remove ${marker.label}`}>×</button></span>)}</div>}
-        {phase === 'ready' && <button className="text-button cancel-capture" onClick={onCancel}>Cancel</button>}
-        {error && <p className="form-error" role="alert">{error}</p>}
+      </div>
+
+      <p className="hint">
+        {phase === 'ready' ? 'Tap to record'
+          : isRecording ? (canPause ? 'Tap to pause' : 'Tap to stop')
+          : isPaused ? (canPause ? 'Tap to resume, or slide to discard' : 'Save it, or slide to discard')
+          : 'Saving…'}
+      </p>
+
+      <DiscardSlider open={isPaused} onDiscard={discard} />
+
+      {markers.length > 0 && (
+        <div className="chips">
+          {markers.map((marker, index) => (
+            <span key={`${marker.label}-${index}`}>
+              {elapsedLabel(marker.time_seconds * 1000)} · {marker.label}
+              <button
+                onClick={() => setMarkers((current) => current.filter((_, position) => position !== index))}
+                aria-label={`Remove ${marker.label}`}
+              >×</button>
+            </span>
+          ))}
+        </div>
+      )}
+
+      {error && <p className="err" role="alert">{error}</p>}
+    </section>
+
+    {!context.workspace && (
+      <section className="panel">
+        <label className="field-label" htmlFor="capture-title">Recording name <span className="dim">optional</span></label>
+        <input
+          id="capture-title"
+          className="field"
+          value={title}
+          maxLength="180"
+          placeholder="Leave blank for a dated lecture"
+          disabled={isFinalizing}
+          onChange={(event) => setTitle(event.target.value)}
+        />
       </section>
-      <aside className="capture-notes">
-        <div className="section-heading"><div><h2>Notes</h2></div></div>
-        <textarea value={notes} onChange={(event) => setNotes(event.target.value)} maxLength="100000" placeholder="Key idea, question, assignment, or something to revisit…" />
-        <div className="attachment-picker"><strong>Files</strong><button className="button ghost" onClick={() => fileInputRef.current?.click()}>＋ Add file</button><input ref={fileInputRef} hidden type="file" multiple accept=".pdf,.txt,.md,.doc,.docx,.ppt,.pptx" onChange={(event) => setFiles([...files, ...event.target.files])} /></div>
-        {files.length > 0 && <ul className="pending-files">{files.map((file, index) => <li key={`${file.name}-${index}`}>{file.name}<button onClick={() => setFiles((current) => current.filter((_, position) => position !== index))} aria-label={`Remove ${file.name}`}>×</button></li>)}</ul>}
-        {hasLiveTranscript && <div className="live-transcript">
-          <div className="section-heading"><div><h2>Transcript</h2></div></div>
-          <div className="live-transcript-body" aria-live="polite">
-            {transcript.text || transcript.interim
-              ? <p>{transcript.text}{transcript.interim && <em> {transcript.interim}</em>}</p>
-              : <p className="empty-copy">{isRecording ? 'Listening…' : 'Starts when you do.'}</p>}
-          </div>
-        </div>}
-        <p className="quality-note">
-          {hasLiveTranscript
-            ? <>Transcript: <strong>on this device</strong></>
-            : isNativeShell
-              // Saying "high accuracy" here would promise a transcript this
-              // build cannot produce at all.
-              ? <>Transcript: <strong>not in this build</strong> — audio and notes are saved</>
-              : <>Final transcript: <strong>high accuracy</strong></>}
-        </p>
-      </aside>
-    </div>
+    )}
+
+    <section className="panel">
+      <div className="panel-head">
+        <h2 className="panel-title">Notes</h2>
+        <button className="linkbtn" onClick={() => fileInputRef.current?.click()}>Add file</button>
+        <input
+          ref={fileInputRef} hidden type="file" multiple
+          accept=".pdf,.txt,.md,.doc,.docx,.ppt,.pptx"
+          onChange={(event) => setFiles([...files, ...event.target.files])}
+        />
+      </div>
+      <textarea
+        className="field"
+        value={notes}
+        maxLength="100000"
+        placeholder="Key idea, question, assignment, or something to revisit…"
+        onChange={(event) => setNotes(event.target.value)}
+      />
+      {files.length > 0 && (
+        <ul className="files">
+          {files.map((file, index) => (
+            <li key={`${file.name}-${index}`} className="file">
+              <span className="file-kind">{file.name.split('.').at(-1)?.slice(0, 4).toUpperCase()}</span>
+              <span><strong>{file.name}</strong></span>
+              <button
+                className="iconbtn ghost"
+                onClick={() => setFiles((current) => current.filter((_, position) => position !== index))}
+                aria-label={`Remove ${file.name}`}
+              ><Icon name="close" /></button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+
+    {hasLiveTranscript && (
+      <section className="panel">
+        <div className="panel-head"><h2 className="panel-title">Live transcript</h2></div>
+        <div className="live-body" aria-live="polite">
+          {transcript.text || transcript.interim
+            ? <p>{transcript.text}{transcript.interim && <em> {transcript.interim}</em>}</p>
+            : <p className="dim">{isRecording ? 'Listening…' : 'Starts when you do.'}</p>}
+        </div>
+      </section>
+    )}
+
+    <p className="capture-note">
+      {hasLiveTranscript
+        ? <>Transcript: <strong>on this device</strong></>
+        : isNativeShell
+          // Saying "high accuracy" here would promise a transcript this
+          // build cannot produce at all.
+          ? <>Transcript: <strong>not in this build</strong> — audio and notes are saved</>
+          : <>Final transcript: <strong>high accuracy</strong></>}
+    </p>
   </main>;
 }

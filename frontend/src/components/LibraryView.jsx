@@ -1,34 +1,50 @@
 import { useRef, useState } from 'react';
 import ClassCard from './ClassCard';
+import CoverArt from './CoverArt';
+import { Icon } from './Icon';
+import { colorForWorkspace } from '../lib/palette';
 
-const readableDate = (date) =>
+const shortDate = (date) =>
   new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(new Date(date));
 
-function MaterialList({ materials, onDelete }) {
-  if (!materials.length) return <p className="empty-copy">No imported files here yet.</p>;
-  return <ul className="material-list">
-    {materials.map((material) => <li key={material.id} className="material-item">
+const clock = (seconds) => {
+  if (!seconds && seconds !== 0) return '';
+  const total = Math.round(seconds);
+  const minutes = Math.floor(total / 60);
+  if (minutes >= 60) return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
+  return `${minutes}:${String(total % 60).padStart(2, '0')}`;
+};
+
+function FileList({ materials, onDelete }) {
+  if (!materials.length) return <p className="dim">No files here yet.</p>;
+  return <ul className="files">
+    {materials.map((material) => <li key={material.id} className="file">
+      <span className="file-kind">{material.original_filename.split('.').at(-1)?.slice(0, 4).toUpperCase()}</span>
       <a href={`/api/materials/${material.id}/file`} target="_blank" rel="noreferrer">
-        <span className="file-icon">{material.original_filename.split('.').at(-1)?.toUpperCase()}</span>
-        <span>
-          <strong>{material.original_filename}</strong>
-          <small>{Math.max(1, Math.round(material.size_bytes / 1024))} KB · {material.ai_status === 'ready' ? 'Ready for AI' : 'Needs extraction'}</small>
-        </span>
+        <strong>{material.original_filename}</strong>
+        <small>{Math.max(1, Math.round(material.size_bytes / 1024))} KB · {material.ai_status === 'ready' ? 'Ready' : 'Not extracted'}</small>
       </a>
-      <button className="icon-button subtle" onClick={() => onDelete(material)} aria-label={`Delete ${material.original_filename}`}>×</button>
+      <button className="iconbtn ghost" onClick={() => onDelete(material)} aria-label={`Delete ${material.original_filename}`}>
+        <Icon name="close" />
+      </button>
     </li>)}
   </ul>;
 }
 
 export default function LibraryView({
-  data, allFolders, onOpenFolder, onOpenWorkspace, onNewFolder, onRecord, onUpload,
-  onDeleteMaterial, onMoveWorkspace, showArchived, onToggleArchived, onArchiveFolder,
-  onRecolorFolder, onDeleteFolder, onOpenSettings,
+  data, onOpenFolder, onOpenWorkspace, onNewFolder, onRecord, onUpload,
+  onDeleteMaterial, onMoveWorkspace, showArchived, onToggleArchived,
+  onArchiveFolder, onRecolorFolder, onDeleteFolder, onOpenSettings,
 }) {
   const inputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
-  const [dropping, setDropping] = useState(false);
+  const [over, setOver] = useState(false);
+  const [backOver, setBackOver] = useState(false);
+
   const folder = data.current_folder;
+  const lectures = data.workspaces;
+  const [featured, ...rest] = lectures;
+  const upNext = rest[0];
 
   async function chooseFiles(files) {
     if (!files?.length) return;
@@ -42,116 +58,183 @@ export default function LibraryView({
     if (id) onMoveWorkspace(id, targetFolderId);
   }
 
-  const recordingCount = data.workspaces.reduce((sum, item) => sum + item.session_count, 0);
+  const totalTakes = lectures.reduce((sum, item) => sum + item.session_count, 0);
 
-  return <main className="page library-page">
-    <header className="page-header">
-      <div>
-        {folder && <p className="eyebrow">Class</p>}
-        <h1>{folder?.name ?? 'Your classes'}</h1>
-        {folder && <p className="muted">{data.workspaces.length} lecture{data.workspaces.length === 1 ? '' : 's'} · {recordingCount} recording{recordingCount === 1 ? '' : 's'}</p>}
-      </div>
-      <div className="header-actions">
-        {!folder && <button className="button ghost" onClick={onNewFolder}>＋ Class</button>}
-        {onOpenSettings && (
-          <button className="icon-button" onClick={onOpenSettings} aria-label="Settings">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="3" />
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" />
-            </svg>
-          </button>
-        )}
-      </div>
-    </header>
-
-    {folder && <button
-      className={`parent-target ${dropping ? 'drop-active' : ''}`}
-      onClick={() => onOpenFolder(null)}
-      onDragOver={(event) => { event.preventDefault(); setDropping(true); }}
-      onDragLeave={() => setDropping(false)}
-      onDrop={(event) => { event.preventDefault(); setDropping(false); receiveWorkspace(event, null); }}
-    >
-      <svg className="back-chevron" viewBox="0 0 20 20" aria-hidden="true"><path d="M12 4.5 6.5 10l5.5 5.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-      <span className="parent-copy">
-        <strong>All classes</strong>
-        <small>{dropping ? 'Drop to move here' : 'Drag a lecture here to take it out'}</small>
-      </span>
-    </button>}
-
-    {!folder && <section className="library-section">
-      <div className="section-heading">
-        <div><p className="eyebrow">Classes</p><h2>{showArchived ? 'Archived' : 'This term'}</h2></div>
-        <button className="text-button" onClick={() => onToggleArchived(!showArchived)}>
-          {showArchived ? 'Back to current classes' : 'View archived'}
+  return <main className="screen">
+    {/* ---- Yellow hero ------------------------------------ */}
+    <header className="hero" style={{ '--hang': featured ? '3.25rem' : '1.25rem' }}>
+      <div className="hero-top">
+        <div>
+          {folder
+            ? <button
+                className="hero-sub"
+                onClick={() => onOpenFolder(null)}
+                onDragOver={(event) => { event.preventDefault(); setBackOver(true); }}
+                onDragLeave={() => setBackOver(false)}
+                onDrop={(event) => { event.preventDefault(); setBackOver(false); receiveWorkspace(event, null); }}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '.25rem', marginBottom: '.2rem' }}
+              >
+                <Icon name="back" size={13} />
+                {backOver ? 'Drop to move out' : 'All classes'}
+              </button>
+            : null}
+          <h1 className="hero-title">{folder?.name ?? 'Your classes'}</h1>
+          <p className="hero-sub">
+            {folder
+              ? `${lectures.length} lecture${lectures.length === 1 ? '' : 's'} · ${totalTakes} recording${totalTakes === 1 ? '' : 's'}`
+              : showArchived ? 'Archived classes' : 'Everything you have recorded'}
+          </p>
+        </div>
+        <button className="hero-menu" onClick={onOpenSettings} aria-label="Settings">
+          <Icon name="gear" />
         </button>
       </div>
-      <div className="class-grid">
-        {data.folders.map((child) => <ClassCard
-          key={child.id}
-          folder={{ ...child, archived: showArchived || child.archived }}
-          onOpen={onOpenFolder}
-          onArchive={onArchiveFolder}
-          onRecolor={onRecolorFolder}
-          onDelete={onDeleteFolder}
-          onDropWorkspace={receiveWorkspace}
-        />)}
-        {!data.folders.length && (showArchived
-          ? <p className="empty-copy">Nothing archived yet.</p>
-          : <button className="add-card" onClick={onNewFolder}>
-            <span>＋</span><strong>Add a class</strong><small>Biology, Algorithms, whatever you are taking</small>
-          </button>)}
-      </div>
-    </section>}
 
-    {!showArchived && <section className="library-section">
-      <div className="section-heading">
-        <div>
-          <p className="eyebrow">Lecture notes</p>
-          <h2>{data.workspaces.length ? `${data.workspaces.length} lecture${data.workspaces.length === 1 ? '' : 's'}` : 'Start your first lecture'}</h2>
+      {featured && (
+        <div className="hero-stage">
+          <div className="hero-rail">
+            <span className="hero-rail-label">Latest</span>
+          </div>
+          <button
+            className="feature"
+            onClick={() => onOpenWorkspace(featured.id)}
+            aria-label={`Open ${featured.title}`}
+          >
+            <CoverArt id={featured.id} color={colorForWorkspace(featured, data.folders, folder)} />
+            <span className="feature-body">
+              <span className="feature-copy">
+                <span className="feature-title">{featured.title}</span>
+                <span className="feature-sub">
+                  {featured.session_count} recording{featured.session_count === 1 ? '' : 's'} · {shortDate(featured.updated_at)}
+                </span>
+              </span>
+              <span className="feature-play"><Icon name="play" /></span>
+            </span>
+          </button>
+          {upNext && (
+            <span className="feature-peek" aria-hidden="true">
+              <CoverArt id={upNext.id} color={colorForWorkspace(upNext, data.folders, folder)} />
+            </span>
+          )}
         </div>
-      </div>
-      <div className="workspace-grid">
-        {data.workspaces.map((workspace) => <button
-          type="button"
-          key={workspace.id}
-          className="workspace-card"
-          draggable
-          onDragStart={(event) => event.dataTransfer.setData('application/x-class-notes-workspace', workspace.id)}
-          onClick={() => onOpenWorkspace(workspace.id)}
-          aria-label={`Open lecture ${workspace.title}`}
-        >
-          <span className="workspace-card-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-              <path d="M6 10v4M10 7v10M14 9v6M18 5v14" />
-            </svg>
-          </span>
-          <strong className="workspace-card-title">{workspace.title}</strong>
-          <span className="workspace-card-copy">{workspace.session_count} recording{workspace.session_count === 1 ? '' : 's'} · {readableDate(workspace.updated_at)}</span>
-        </button>)}
-      </div>
-      {!data.workspaces.length && <div className="empty-state">
-        <span className="empty-orb">●</span>
-        <h3>No lectures here yet</h3>
-        <p>Record once, then keep adding to the same lecture whenever class picks back up.</p>
-        <button className="button primary" onClick={onRecord}>Record &amp; note</button>
-      </div>}
-    </section>}
+      )}
+    </header>
+    {featured && <div className="hero-spill" style={{ '--hang': '3.25rem' }} />}
 
-    {!showArchived && <section className="library-section files-section">
-      <div className="section-heading"><div><h2>Files</h2></div></div>
-      <button
-        className="drop-zone"
-        onClick={() => inputRef.current?.click()}
-        onDragOver={(event) => event.preventDefault()}
-        onDrop={(event) => { event.preventDefault(); chooseFiles(event.dataTransfer.files); }}
-      >
-        <strong>{uploading ? 'Adding files…' : 'Add files'}</strong>
-        <span>PDFs, slides, or notes</span>
-      </button>
-      <input ref={inputRef} hidden type="file" accept=".pdf,.txt,.md,.doc,.docx,.ppt,.pptx" multiple onChange={(event) => chooseFiles(event.target.files)} />
-      <MaterialList materials={data.materials} onDelete={onDeleteMaterial} />
-    </section>}
+    {/* ---- Classes ---------------------------------------- */}
+    {!folder && (
+      <section className="sheet">
+        <div className="row-head">
+          <h2 className="row-title">{showArchived ? 'Archived' : 'Classes'}</h2>
+          <button className="row-link" onClick={() => onToggleArchived(!showArchived)}>
+            {showArchived ? 'Current classes' : 'See archived'}
+          </button>
+        </div>
+        {data.folders.length ? (
+          <div className="cover-row">
+            {data.folders.map((child) => (
+              <ClassCard
+                key={child.id}
+                folder={{ ...child, archived: showArchived || child.archived }}
+                onOpen={onOpenFolder}
+                onArchive={onArchiveFolder}
+                onRecolor={onRecolorFolder}
+                onDelete={onDeleteFolder}
+                onDropWorkspace={receiveWorkspace}
+              />
+            ))}
+            {!showArchived && (
+              <div className="tile">
+                <button className="tile-add" onClick={onNewFolder}>
+                  <Icon name="plus" /><span>New class</span>
+                </button>
+              </div>
+            )}
+          </div>
+        ) : showArchived ? (
+          <p className="dim">Nothing archived yet.</p>
+        ) : (
+          <button className="dropzone" onClick={onNewFolder}>
+            <Icon name="plus" />
+            <strong>Add your first class</strong>
+            <span>Biology, Algorithms, whatever you are taking</span>
+          </button>
+        )}
+      </section>
+    )}
+
+    {/* ---- Lectures --------------------------------------- */}
+    {!showArchived && (
+      <section className="sheet">
+        <div className="row-head">
+          <h2 className="row-title">{featured ? 'All lectures' : 'Lectures'}</h2>
+          {lectures.length > 0 && (
+            <span className="row-link" style={{ pointerEvents: 'none' }}>
+              {lectures.length}
+            </span>
+          )}
+        </div>
+
+        {lectures.length ? (
+          <ul className="track-list">
+            {lectures.map((workspace) => (
+              <li key={workspace.id}>
+                <button
+                  className="track"
+                  draggable
+                  onDragStart={(event) => event.dataTransfer.setData('application/x-class-notes-workspace', workspace.id)}
+                  onClick={() => onOpenWorkspace(workspace.id)}
+                  aria-label={`Open ${workspace.title}`}
+                >
+                  <span className="track-art">
+                    <CoverArt id={workspace.id} color={colorForWorkspace(workspace, data.folders, folder)} />
+                  </span>
+                  <span className="track-body">
+                    <span className="track-title">{workspace.title}</span>
+                    <span className="track-sub">
+                      {workspace.session_count} recording{workspace.session_count === 1 ? '' : 's'} · {shortDate(workspace.updated_at)}
+                    </span>
+                  </span>
+                  <span className="track-time">{clock(workspace.duration_seconds) || shortDate(workspace.updated_at)}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div className="empty">
+            <span className="empty-orb"><Icon name="mic" /></span>
+            <h3>Nothing recorded yet</h3>
+            <p>Record once, then keep adding takes to the same lecture.</p>
+            <button className="btn primary" onClick={onRecord}>Start recording</button>
+          </div>
+        )}
+      </section>
+    )}
+
+    {/* ---- Files ------------------------------------------ */}
+    {!showArchived && (
+      <section className="sheet">
+        <div className="row-head"><h2 className="row-title">Files</h2></div>
+        <button
+          className={`dropzone ${over ? 'over' : ''}`}
+          onClick={() => inputRef.current?.click()}
+          onDragOver={(event) => { event.preventDefault(); setOver(true); }}
+          onDragLeave={() => setOver(false)}
+          onDrop={(event) => { event.preventDefault(); setOver(false); chooseFiles(event.dataTransfer.files); }}
+        >
+          <Icon name="upload" />
+          <strong>{uploading ? 'Adding…' : 'Add files'}</strong>
+          <span>PDF · Word · PowerPoint · Markdown</span>
+        </button>
+        <input
+          ref={inputRef} hidden type="file" multiple
+          accept=".pdf,.txt,.md,.doc,.docx,.ppt,.pptx"
+          onChange={(event) => chooseFiles(event.target.files)}
+        />
+        <FileList materials={data.materials} onDelete={onDeleteMaterial} />
+      </section>
+    )}
   </main>;
 }
 
-export { MaterialList };
+export { FileList };
