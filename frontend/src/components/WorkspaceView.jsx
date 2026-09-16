@@ -23,7 +23,8 @@ const remaining = (seconds) => {
 const SPEEDS = [1, 1.25, 1.5, 1.75, 2];
 
 export default function WorkspaceView({
-  workspace, color = 'slate', onBack, onContinue, onReload, onDelete, notify, pendingSeek, onSeekHandled,
+  workspace, color = 'slate', courseName = 'Unfiled',
+  onBack, onContinue, onReload, onDelete, notify, pendingSeek, onSeekHandled,
 }) {
   const [tab, setTab] = useState('recording');
   const [title, setTitle] = useState(workspace.title);
@@ -153,7 +154,7 @@ export default function WorkspaceView({
   return <main className="player-screen">
     {/* ---- Artwork stage with glass card ------------------ */}
     <section className="stage">
-      <CoverArt id={workspace.id} color={color} />
+      <CoverArt color={color} />
       <div className="stage-top">
         <button className="blur-btn" onClick={onBack} aria-label="Back to library"><Icon name="back" /></button>
         <div className="stage-actions">
@@ -165,77 +166,91 @@ export default function WorkspaceView({
         </div>
       </div>
 
-      <div className="glass">
-        <input
-          className="glass-title"
-          value={title}
-          title={title}
-          aria-label="Lecture title"
-          maxLength="180"
-          onChange={(event) => setTitle(event.target.value)}
-          onBlur={saveTitle}
-        />
-        <p className="glass-sub">
-          {workspace.sessions.length} recording{workspace.sessions.length === 1 ? '' : 's'}
-          {selected ? ` · ${shortDate(selected.created_at)}` : ''}
-        </p>
+      {/* The artwork names the class; the glass card below names the take. */}
+      <p className="stage-course">{courseName}</p>
 
-        {selected ? <>
-          <audio
-            ref={audioRef}
-            src={selected.audio_url}
-            preload="metadata"
-            onLoadedMetadata={(event) => {
-              const value = event.currentTarget.duration;
-              if (Number.isFinite(value) && value > 0) setDuration(value);
-            }}
-            onTimeUpdate={(event) => { if (!scrubbingRef.current) setPosition(event.currentTarget.currentTime); }}
-            onPlay={() => setPlaying(true)}
-            onPause={() => setPlaying(false)}
-            onEnded={() => setPlaying(false)}
+      <div className="stage-foot">
+        <div className="glass">
+          <input
+            className="glass-title"
+            value={title}
+            title={title}
+            aria-label="Lecture title"
+            maxLength="180"
+            onChange={(event) => setTitle(event.target.value)}
+            onBlur={saveTitle}
           />
-          <div className="glass-wave">
-            <WaveScrubber
-              durationSeconds={duration}
-              currentSeconds={position}
-              segments={selected.segments}
-              playing={playing}
-              onScrub={(seconds) => { scrubbingRef.current = true; setPosition(seconds); }}
-              onScrubEnd={() => {
-                if (audioRef.current) audioRef.current.currentTime = position;
-                scrubbingRef.current = false;
+          <p className="glass-sub">
+            {workspace.sessions.length} recording{workspace.sessions.length === 1 ? '' : 's'}
+            {selected ? ` · ${shortDate(selected.created_at)}` : ''}
+          </p>
+
+          {selected ? <>
+            <audio
+              ref={audioRef}
+              src={selected.audio_url}
+              preload="metadata"
+              onLoadedMetadata={(event) => {
+                const value = event.currentTarget.duration;
+                if (Number.isFinite(value) && value > 0) setDuration(value);
               }}
+              onTimeUpdate={(event) => { if (!scrubbingRef.current) setPosition(event.currentTarget.currentTime); }}
+              onPlay={() => setPlaying(true)}
+              onPause={() => setPlaying(false)}
+              onEnded={() => setPlaying(false)}
             />
+            <div className="glass-wave">
+              <WaveScrubber
+                durationSeconds={duration}
+                currentSeconds={position}
+                segments={selected.segments}
+                playing={playing}
+                onScrub={(seconds) => { scrubbingRef.current = true; setPosition(seconds); }}
+                onScrubEnd={() => {
+                  if (audioRef.current) audioRef.current.currentTime = position;
+                  scrubbingRef.current = false;
+                }}
+              />
+            </div>
+            <div className="glass-meta">
+              <span>{mmss(position)} / {mmss(duration)}</span>
+              <span className={`state ${statusTone}`}>
+                {statusCopy}
+                {status !== 'ready' && status !== 'failed' && selected.transcription_eta_seconds != null
+                  ? ` · ${remaining(selected.transcription_eta_seconds)}` : ''}
+              </span>
+            </div>
+          </> : (
+            <p className="glass-meta"><span>No audio in this lecture yet.</span></p>
+          )}
+        </div>
+
+        {/* Transport sits on the artwork beneath the card: three circles with
+            the accent on play. Speed is secondary, so it sits off the row
+            rather than competing with the primary controls. */}
+        {selected && (
+          <div className="transport">
+            <span className="transport-pad" />
+            <div className="transport-row">
+              <button className="tbtn" onClick={() => seek(position - 15)} aria-label="Back 15 seconds">
+                <Icon name="back15" />
+              </button>
+              <button className="tbtn play" onClick={togglePlay} aria-label={playing ? 'Pause' : 'Play'}>
+                <Icon name={playing ? 'pause' : 'play'} />
+              </button>
+              <button className="tbtn" onClick={() => seek(position + 15)} aria-label="Forward 15 seconds">
+                <Icon name="fwd15" />
+              </button>
+            </div>
+            <button
+              className="speed"
+              onClick={() => setSpeedIndex((current) => (current + 1) % SPEEDS.length)}
+              aria-label={`Playback speed ${SPEEDS[speedIndex]}x`}
+            >{SPEEDS[speedIndex]}×</button>
           </div>
-          <div className="glass-meta">
-            <span>{mmss(position)} / {mmss(duration)}</span>
-            <span className={`state ${statusTone}`}>
-              {statusCopy}
-              {status !== 'ready' && status !== 'failed' && selected.transcription_eta_seconds != null
-                ? ` · ${remaining(selected.transcription_eta_seconds)}` : ''}
-            </span>
-          </div>
-        </> : (
-          <p className="glass-meta"><span>No audio in this lecture yet.</span></p>
         )}
       </div>
     </section>
-
-    {/* ---- Transport -------------------------------------- */}
-    {selected && (
-      <div className="transport-dock">
-        <button className="tbtn" onClick={() => seek(position - 15)} aria-label="Back 15 seconds">15</button>
-        <button className="tbtn play" onClick={togglePlay} aria-label={playing ? 'Pause' : 'Play'}>
-          <Icon name={playing ? 'pause' : 'play'} />
-        </button>
-        <button className="tbtn" onClick={() => seek(position + 15)} aria-label="Forward 15 seconds">15</button>
-        <button
-          className="tbtn"
-          onClick={() => setSpeedIndex((current) => (current + 1) % SPEEDS.length)}
-          aria-label={`Playback speed ${SPEEDS[speedIndex]}x`}
-        >{SPEEDS[speedIndex]}×</button>
-      </div>
-    )}
 
     <div className="stage-cta">
       <button className="btn primary block" onClick={onContinue}>

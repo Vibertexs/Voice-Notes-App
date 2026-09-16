@@ -9,14 +9,21 @@ const shortDate = (date) =>
 
 /**
  * A lecture sits under its class the way a song sits under its artist. The
- * take count only earns its place when there is more than one.
+ * take count only earns its place when there is more than one, and a lecture
+ * with no class at all is the one case worth flagging rather than describing
+ * - it is the thing the reader may want to act on.
  */
-function subtitleFor(workspace, folders, currentFolder) {
+function TrackSub({ workspace, folders, currentFolder }) {
   const className = currentFolder?.name
     ?? folders.find((folder) => folder.id === workspace.folder_id)?.name
-    ?? 'Unfiled';
+    ?? null;
   const takes = workspace.session_count ?? 0;
-  return takes > 1 ? `${className} · ${takes} recordings` : className;
+  return <span className="track-sub">
+    {className
+      ? <span className="track-class">{className}</span>
+      : <span className="track-tag">Unfiled</span>}
+    {takes > 1 && <span>· {takes} recordings</span>}
+  </span>;
 }
 
 function FileList({ materials, onDelete }) {
@@ -103,11 +110,7 @@ export default function LibraryView({
 
       {showCarousel && (
         <div className="hero-stage">
-          <div className="hero-rail">
-            <Icon name="library" />
-            <span className="hero-rail-label">{showArchived ? 'Archived' : 'Your classes'}</span>
-          </div>
-          <div className={`hero-carousel ${classCount === 0 ? 'single' : ''}`}>
+          <div className="hero-carousel">
             {data.folders.map((child) => (
               <ClassCard
                 key={child.id}
@@ -160,11 +163,11 @@ export default function LibraryView({
                   aria-label={`Open ${workspace.title}`}
                 >
                   <span className="track-art">
-                    <CoverArt id={workspace.id} color={colorForWorkspace(workspace, data.folders, folder)} />
+                    <CoverArt color={colorForWorkspace(workspace, data.folders, folder)} />
                   </span>
                   <span className="track-body">
                     <span className="track-title">{workspace.title}</span>
-                    <span className="track-sub">{subtitleFor(workspace, data.folders, folder)}</span>
+                    <TrackSub workspace={workspace} folders={data.folders} currentFolder={folder} />
                   </span>
                   <span className="track-time">{shortDate(workspace.updated_at)}</span>
                 </button>

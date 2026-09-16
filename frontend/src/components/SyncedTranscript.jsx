@@ -3,14 +3,69 @@ import { useEffect, useRef } from 'react';
 /**
  * The transcript, following playback the way lyrics do.
  *
- * The line being spoken is the one in focus; everything else recedes. It
- * scrolls itself so the current line stays near the middle, and any line can
- * be tapped to jump there.
+ * Three things carry the position. The line being spoken is the one in
+ * focus and everything else recedes; inside that line the words already
+ * spoken take the accent, so the eye lands on the exact phrase rather than
+ * somewhere in a paragraph; and the panel scrolls itself to keep that line
+ * near the middle.
+ *
+ * Word timing is interpolated across the segment rather than measured. The
+ * recogniser gives a start and an end for each segment and nothing finer, so
+ * the fill advances evenly through the words in between — close enough to
+ * read along with, and it never drifts, because every segment re-anchors it.
  *
  * Auto-scroll stops as soon as the reader scrolls by hand, because dragging
  * someone back to the playhead while they are reading ahead is worse than not
  * following at all. It resumes when playback moves to a new line.
  */
+
+const clamp = (value, low, high) => Math.min(high, Math.max(low, value));
+
+/** Words and the whitespace between them, so the original spacing survives. */
+const splitWords = (text) => String(text ?? '').split(/(\s+)/);
+
+/**
+ * How far through a segment the playhead is, 0 to 1.
+ *
+ * A segment with no usable end falls back to reading speed, which is the same
+ * assumption the scrubber makes when it sizes a segment's bars.
+ */
+function progressThrough(segment, seconds) {
+  const start = segment.start_seconds ?? 0;
+  const end = segment.end_seconds ?? 0;
+  const words = splitWords(segment.text).filter((part) => part.trim()).length;
+  const span = end > start ? end - start : Math.max(0.6, words * 0.4);
+  return clamp((seconds - start) / span, 0, 1);
+}
+
+function Line({ segment, state, seconds, onSeek, innerRef }) {
+  const common = {
+    ref: innerRef,
+    className: `line ${state}`,
+    onClick: () => onSeek?.(segment.start_seconds ?? 0),
+    'aria-current': state === 'active' ? 'true' : undefined,
+  };
+
+  if (state !== 'active') return <button {...common}>{segment.text}</button>;
+
+  const parts = splitWords(segment.text);
+  const total = parts.filter((part) => part.trim()).length;
+  const spoken = Math.round(progressThrough(segment, seconds) * total);
+  let index = 0;
+
+  return (
+    <button {...common}>
+      {parts.map((part, position) => {
+        if (!part.trim()) return part;
+        index += 1;
+        return (
+          <span key={position} className={`w ${index <= spoken ? 'on' : ''}`}>{part}</span>
+        );
+      })}
+    </button>
+  );
+}
+
 export default function SyncedTranscript({ segments, currentSeconds, onSeek, status }) {
   const listRef = useRef(null);
   const activeRef = useRef(null);
@@ -56,21 +111,16 @@ export default function SyncedTranscript({ segments, currentSeconds, onSeek, sta
       onWheel={() => { userScrolledRef.current = true; }}
       onTouchMove={() => { userScrolledRef.current = true; }}
     >
-      {segments.map((segment, index) => {
-        const state = index === activeIndex ? 'active'
-          : index < activeIndex ? 'past' : 'future';
-        return (
-          <button
-            key={`${segment.start_seconds}-${index}`}
-            ref={index === activeIndex ? activeRef : null}
-            className={`line ${state}`}
-            onClick={() => onSeek?.(segment.start_seconds ?? 0)}
-            aria-current={index === activeIndex ? 'true' : undefined}
-          >
-            {segment.text}
-          </button>
-        );
-      })}
+      {segments.map((segment, index) => (
+        <Line
+          key={`${segment.start_seconds}-${index}`}
+          segment={segment}
+          seconds={currentSeconds ?? 0}
+          state={index === activeIndex ? 'active' : index < activeIndex ? 'past' : 'future'}
+          innerRef={index === activeIndex ? activeRef : null}
+          onSeek={onSeek}
+        />
+      ))}
     </div>
   );
 }

@@ -166,6 +166,7 @@ export default function App() {
         ? <WorkspaceView
             workspace={workspace}
             color={colorForWorkspace(workspace, allFolders)}
+            courseName={allFolders.find((folder) => folder.id === workspace.folder_id)?.name ?? 'Unfiled'}
             onBack={() => openLibrary(workspace.folder_id)}
             onContinue={() => startCapture(workspace)}
             onReload={refreshWorkspace}

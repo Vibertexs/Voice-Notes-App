@@ -24,6 +24,10 @@ const PATHS = {
   check: <><path d="m5 12.5 4.5 4.5L19 7.5" /></>,
   play: <><path d="M8 5.2v13.6L19 12Z" fill="currentColor" stroke="none" /></>,
   pause: <><rect x="7" y="5" width="3.5" height="14" rx="1.2" fill="currentColor" stroke="none" /><rect x="13.5" y="5" width="3.5" height="14" rx="1.2" fill="currentColor" stroke="none" /></>,
+  /* Skip glyphs carry their own number: the arc says which way, the
+     numeral says how far. Drawn large in the transport so it stays legible. */
+  back15: <><path d="M9.4 5A7.5 7.5 0 1 0 14.6 5" /><path d="M12.2 2.4 9.2 5l3 2.6" /><text x="12" y="15.6" textAnchor="middle" fontSize="8.4" fontWeight="700" letterSpacing="-.4" fill="currentColor" stroke="none">15</text></>,
+  fwd15: <><path d="M14.6 5A7.5 7.5 0 1 1 9.4 5" /><path d="M11.8 2.4 14.8 5l-3 2.6" /><text x="12" y="15.6" textAnchor="middle" fontSize="8.4" fontWeight="700" letterSpacing="-.4" fill="currentColor" stroke="none">15</text></>,
   headphones: <><path d="M4.5 14v-2a7.5 7.5 0 0 1 15 0v2" /><path d="M4.5 14.5A1.5 1.5 0 0 1 6 13h.5A1.5 1.5 0 0 1 8 14.5v3A1.5 1.5 0 0 1 6.5 19H6a1.5 1.5 0 0 1-1.5-1.5ZM16 14.5A1.5 1.5 0 0 1 17.5 13h.5a1.5 1.5 0 0 1 1.5 1.5v3A1.5 1.5 0 0 1 18 19h-.5a1.5 1.5 0 0 1-1.5-1.5Z" /></>,
   bookmark: <><path d="M6.5 4.5h11v15l-5.5-3.8L6.5 19.5Z" /></>,
 };

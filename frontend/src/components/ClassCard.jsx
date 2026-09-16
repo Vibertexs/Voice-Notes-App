@@ -5,8 +5,9 @@ import { Icon } from './Icon';
 const COLORS = ['blue', 'violet', 'rose', 'coral', 'amber', 'lime', 'mint', 'sky', 'slate'];
 
 /**
- * A class, as one slide of the library carousel: its artwork filling the
- * card, its name over the bottom, and its actions behind the corner button.
+ * A class, as one sleeve of the library carousel: a portrait card with its
+ * artwork filling it, its name at the foot, and its actions behind the
+ * corner button.
  * Dragging a lecture onto it files the lecture into the class.
  */
 export default function ClassCard({ folder, onOpen, onArchive, onRecolor, onDelete, onDropWorkspace }) {
@@ -39,10 +40,10 @@ export default function ClassCard({ folder, onOpen, onArchive, onRecolor, onDele
         onDrop={(event) => { event.preventDefault(); setOver(false); onDropWorkspace(event, folder.id); }}
         aria-label={`Open ${folder.name}`}
       >
-        <CoverArt id={folder.id} color={folder.color} label={folder.name} />
-        <span className="slide-body">
+        <CoverArt color={folder.color} />
+        <span className="slide-foot">
           <span className="slide-copy">
-            <span className="slide-name">{folder.name}</span>
+            <span className="slide-title">{folder.name}</span>
             <span className="slide-sub">{over ? 'Drop to file here' : summary}</span>
           </span>
           <span className="slide-go"><Icon name="arrow" /></span>
