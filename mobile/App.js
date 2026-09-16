@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator, Pressable, SafeAreaView, StatusBar, StyleSheet, Text, View,
+  ActivityIndicator, Platform, Pressable, SafeAreaView, StatusBar, StyleSheet, Text, View,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useAudioRecorder, useAudioRecorderState } from 'expo-audio';
@@ -358,7 +358,7 @@ export default function App() {
 
   return (
     <View style={styles.screen}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle="dark-content" translucent backgroundColor="transparent" />
       <WebView
         ref={webRef}
         // A file:// base origin lets an <audio> tag load a recording straight
@@ -372,6 +372,7 @@ export default function App() {
           `window.__CN_CAPS__ = ${JSON.stringify({
             transcription: TRANSCRIPTION_AVAILABLE, pause: SUPPORTS_PAUSE,
           })};
+${INSET_JS}
 ${BRIDGE_JS}`
         }
         onMessage={onMessage}
@@ -401,12 +402,35 @@ ${BRIDGE_JS}`
   );
 }
 
+/**
+ * The page draws under the status bar, so the yellow panel reaches the top
+ * edge of the screen rather than starting below a bar of shell background.
+ * That means the page has to reserve the status bar's height itself.
+ *
+ * iOS reports it through env(safe-area-inset-top), which the page already
+ * reads and the viewport is already set to cover. Android's WebView does not
+ * report it reliably, so the shell measures it and sets --top directly; an
+ * inline custom property on :root outranks the stylesheet's env() default.
+ */
+const STATUS_INSET = Platform.OS === 'android' ? StatusBar.currentHeight ?? 0 : null;
+
+const INSET_JS = STATUS_INSET == null ? '' : `
+(function () {
+  var apply = function () {
+    try { document.documentElement.style.setProperty('--top', '${STATUS_INSET}px'); }
+    catch (error) { /* documentElement not up yet; the listener below retries */ }
+  };
+  apply();
+  document.addEventListener('DOMContentLoaded', apply);
+})();
+`;
+
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#e8eef7' },
-  web: { flex: 1, backgroundColor: '#e8eef7' },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 28, backgroundColor: '#e8eef7' },
-  errorTitle: { fontSize: 16, fontWeight: '700', color: '#131b2e' },
-  errorBody: { fontSize: 13.5, lineHeight: 19, color: '#5b6a86', marginTop: 6, textAlign: 'center' },
+  screen: { flex: 1, backgroundColor: '#08080C' },
+  web: { flex: 1, backgroundColor: '#08080C' },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 28, backgroundColor: '#08080C' },
+  errorTitle: { fontSize: 16, fontWeight: '700', color: '#FFFFFF' },
+  errorBody: { fontSize: 13.5, lineHeight: 19, color: 'rgba(255,255,255,.62)', marginTop: 6, textAlign: 'center' },
   pageError: {
     position: 'absolute', left: 12, right: 12, bottom: 18,
     padding: 14, borderRadius: 14, backgroundColor: '#2c071c',

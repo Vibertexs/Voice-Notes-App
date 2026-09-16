@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import CoverArt from './CoverArt';
+import { TONES } from './CoverArt';
 import { Icon } from './Icon';
 
 const COLORS = ['blue', 'violet', 'rose', 'coral', 'amber', 'lime', 'mint', 'sky', 'slate'];
@@ -31,7 +31,12 @@ export default function ClassCard({ folder, onOpen, onArchive, onRecolor, onDele
   const summary = lectures === 0 ? 'Nothing recorded yet' : `${lectures} lecture${lectures === 1 ? '' : 's'}`;
 
   return (
-    <div ref={rootRef} className={`slide ${over ? 'drop-active' : ''} ${menu ? 'menu-open' : ''}`}>
+    <div
+      ref={rootRef}
+      className={`slide ${over ? 'drop-active' : ''} ${menu ? 'menu-open' : ''}`}
+      style={{ '--class-tone': TONES[folder.color] ?? TONES.blue }}
+    >
+      <span className="slide-colour" aria-hidden="true" />
       <button
         className="slide-open"
         onClick={() => onOpen(folder.id)}
@@ -40,7 +45,6 @@ export default function ClassCard({ folder, onOpen, onArchive, onRecolor, onDele
         onDrop={(event) => { event.preventDefault(); setOver(false); onDropWorkspace(event, folder.id); }}
         aria-label={`Open ${folder.name}`}
       >
-        <CoverArt color={folder.color} />
         <span className="slide-foot">
           <span className="slide-copy">
             <span className="slide-title">{folder.name}</span>

@@ -41,7 +41,7 @@ export default function FlashcardDeck({ workspace, onReload, notify }) {
           {generating ? 'Making…' : 'Create'}
         </button>
       </div>
-      <p className="dim">Turn this lecture's notes and transcript into a short review deck.</p>
+      <p className="dim">Turn this lecture&apos;s notes and transcript into a short review deck.</p>
     </section>;
   }
 

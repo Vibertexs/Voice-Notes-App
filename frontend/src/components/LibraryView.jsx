@@ -1,11 +1,32 @@
 import { useRef, useState } from 'react';
 import ClassCard from './ClassCard';
-import CoverArt from './CoverArt';
+import { TONES } from './CoverArt';
 import { Icon } from './Icon';
-import { colorForWorkspace } from '../lib/palette';
 
 const shortDate = (date) =>
   new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(new Date(date));
+
+function rgbFor(hex) {
+  const value = String(hex).replace('#', '');
+  return [0, 2, 4].map((offset) => Number.parseInt(value.slice(offset, offset + 2), 16));
+}
+
+function heroPalette(from, to = from, amount = 0) {
+  const start = rgbFor(from);
+  const end = rgbFor(to);
+  const rgb = start.map((channel, index) => Math.round(channel + (end[index] - channel) * amount));
+  // Perceived brightness, not a simple RGB average: yellow needs dark type,
+  // while red and blue need white. Keeping this in the same calculation as
+  // the blended background prevents text from flipping at the wrong time.
+  const brightness = (rgb[0] * 299 + rgb[1] * 587 + rgb[2] * 114) / 1000;
+  const darkInk = brightness > 156;
+  return {
+    tone: `rgb(${rgb.join(' ')})`,
+    ink: darkInk ? '#0A0A0D' : '#FFFFFF',
+    muted: darkInk ? 'rgba(10,10,13,.64)' : 'rgba(255,255,255,.78)',
+    chip: darkInk ? 'rgba(10,10,13,.14)' : 'rgba(255,255,255,.18)',
+  };
+}
 
 /**
  * A lecture sits under its class the way a song sits under its artist. The
@@ -48,6 +69,7 @@ export default function LibraryView({
   onArchiveFolder, onRecolorFolder, onDeleteFolder, onOpenSettings,
 }) {
   const inputRef = useRef(null);
+  const screenRef = useRef(null);
   const [uploading, setUploading] = useState(false);
   const [over, setOver] = useState(false);
   const [backOver, setBackOver] = useState(false);
@@ -71,11 +93,54 @@ export default function LibraryView({
     if (id) onMoveWorkspace(id, targetFolderId);
   }
 
-  const totalTakes = lectures.reduce((sum, item) => sum + item.session_count, 0);
+  function updateHeroTone(event) {
+    if (folder || data.folders.length === 0 || !screenRef.current) return;
+    const rail = event.currentTarget;
+    const cards = Array.from(rail.children).slice(0, data.folders.length);
+    const centre = rail.scrollLeft + rail.clientWidth / 2;
+    const centres = cards.map((card) => card.offsetLeft + card.offsetWidth / 2);
+    let index = centres.findIndex((point) => centre <= point);
+    if (index < 0) index = centres.length - 1;
 
-  return <main className="screen">
+    const right = Math.max(0, index);
+    const left = Math.max(0, right - 1);
+    const span = Math.max(1, centres[right] - centres[left]);
+    const progress = left === right ? 0 : Math.min(1, Math.max(0, (centre - centres[left]) / span));
+    const palette = heroPalette(
+      TONES[data.folders[left].color] ?? TONES.blue,
+      TONES[data.folders[right].color] ?? TONES.blue,
+      progress,
+    );
+    const root = screenRef.current;
+    root.style.setProperty('--hero-tone', palette.tone);
+    root.style.setProperty('--hero-ink', palette.ink);
+    root.style.setProperty('--hero-muted', palette.muted);
+    root.style.setProperty('--hero-chip', palette.chip);
+  }
+
+  const totalTakes = lectures.reduce((sum, item) => sum + item.session_count, 0);
+  // A class earns a colour on its own page. Letting the home screen change
+  // colour while its carousel moves makes the library feel unstable.
+  const classTone = folder ? (TONES[folder.color] ?? TONES.blue) : null;
+  const firstHomeTone = data.folders.length ? (TONES[data.folders[0].color] ?? TONES.blue) : null;
+  const initialPalette = heroPalette(classTone ?? firstHomeTone ?? '#ECEF5E');
+  const hasHeroTone = Boolean(classTone ?? firstHomeTone);
+
+  return <main
+    ref={screenRef}
+    className={`screen ${folder ? 'class-screen' : ''}`}
+    style={{
+      '--class-tone': classTone ?? firstHomeTone ?? '#ECEF5E',
+      '--hero-tone': initialPalette.tone,
+      '--hero-ink': initialPalette.ink,
+      '--hero-muted': initialPalette.muted,
+      '--hero-chip': initialPalette.chip,
+    }}
+  >
     {/* ---- Yellow hero ------------------------------------ */}
-    <header className={`hero ${showCarousel ? '' : 'pad'}`}>
+    <header
+      className={`hero ${showCarousel ? '' : 'pad'} ${hasHeroTone ? 'class-hero' : ''}`}
+    >
       <div className="hero-top">
         <div>
           {folder
@@ -110,7 +175,7 @@ export default function LibraryView({
 
       {showCarousel && (
         <div className="hero-stage">
-          <div className="hero-carousel">
+          <div className="hero-carousel" onScroll={updateHeroTone}>
             {data.folders.map((child) => (
               <ClassCard
                 key={child.id}
@@ -162,9 +227,7 @@ export default function LibraryView({
                   onClick={() => onOpenWorkspace(workspace.id)}
                   aria-label={`Open ${workspace.title}`}
                 >
-                  <span className="track-art">
-                    <CoverArt color={colorForWorkspace(workspace, data.folders, folder)} />
-                  </span>
+                  <span className="track-art"><Icon name="wave" /></span>
                   <span className="track-body">
                     <span className="track-title">{workspace.title}</span>
                     <TrackSub workspace={workspace} folders={data.folders} currentFolder={folder} />

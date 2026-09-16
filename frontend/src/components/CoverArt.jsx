@@ -23,7 +23,14 @@ const TONES = {
   slate:  '#445264',
 };
 
-export default function CoverArt({ color = 'blue', className = '' }) {
+/**
+ * `glass` puts a frosted pane over the tone, which is how every object that
+ * carries a user-chosen colour presents it: the colour is the ground, the
+ * face is glass. The player's stage opts out - a full-bleed artwork is the
+ * backdrop for the glass card on top of it, so frosting it as well would
+ * leave nothing for that card to sit against.
+ */
+export default function CoverArt({ color = 'blue', className = '', glass = false }) {
   return (
     <span
       className={`cover ${className}`}
@@ -31,6 +38,7 @@ export default function CoverArt({ color = 'blue', className = '' }) {
       aria-hidden="true"
     >
       <span className="cover-grain" />
+      {glass && <span className="cover-glass" />}
     </span>
   );
 }

@@ -51,10 +51,14 @@ const html = `<!doctype html>
 <title>Class Notes</title>
 <style>
 ${css}
-/* Native shell adjustments: the WebView has no browser chrome, and a phone
-   needs the safe-area inset the browser would otherwise provide. */
+/* Native shell adjustments: the WebView has no browser chrome.
+
+   The insets are deliberately NOT padded onto the body. Every screen already
+   reserves them itself (--top on the library, search, player and capture
+   headers, --bot on their footers), so padding the body as well counted them
+   twice and left a strip of body background above the yellow panel. Letting
+   the screens own it is what lets their colour reach the top edge. */
 html, body { overscroll-behavior: none; }
-body { padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
 * { -webkit-tap-highlight-color: transparent; }
 input, textarea { font-size: 16px; } /* stops iOS zooming the page on focus */
 </style>
