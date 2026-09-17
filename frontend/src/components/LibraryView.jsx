@@ -28,7 +28,7 @@ function FolderTile({ folder, compact = false, onOpen, onMenu, menuOpen, onClose
         <strong>{folder.name}</strong>
         <small>{recordingCopy(folder)}</small>
       </span>
-      {!compact && <span className="folder-open-arrow"><Icon name="arrow" /></span>}
+      <span className="folder-open-arrow"><Icon name="arrow" /></span>
     </button>
     <button
       className="folder-tile-more"
@@ -146,9 +146,9 @@ function FolderDetailView({ data, onOpenFolders, onOpenWorkspace, onRecord, onUp
   return <main className="reference-screen folder-detail-screen" style={{ '--folder-tone': TONES[folder.color] ?? TONES.blue }}>
     <header className="folder-detail-top">
       <button className="reference-back" onClick={onOpenFolders}><Icon name="back" />Folders</button>
-      <button className="reference-icon-button" onClick={() => inputRef.current?.click()} aria-label="Add file"><Icon name="file" /></button>
+      <button className="reference-icon-button" onClick={() => inputRef.current?.click()} aria-label="Add file"><Icon name="more" /></button>
     </header>
-    <section className="folder-detail-art"><FolderGlyph /><div><h1>{folder.name}</h1><p>{recordingCount} recording{recordingCount === 1 ? '' : 's'}</p></div></section>
+    <section className="folder-detail-art"><FolderGlyph /><span className="folder-detail-card-more"><Icon name="more" /></span><div><h1>{folder.name}</h1><p>{recordingCount} recording{recordingCount === 1 ? '' : 's'}</p></div></section>
     <button className="primary-record-button" onClick={() => onRecord()}><Icon name="plus" />New recording</button>
     <section className="reference-section folder-recordings">
       <div className="reference-section-head"><h2>Recordings</h2><span>{lectures.length}</span></div>

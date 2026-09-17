@@ -1213,6 +1213,11 @@ textarea.field { resize: vertical; min-height: 9rem; line-height: 1.65; }
   border-radius: 50%; background: conic-gradient(from 180deg, transparent, #8a2dff, transparent 55%);
   opacity: .42; filter: blur(1rem);
 }
+.home-record-card::after {
+  content: ''; position: absolute; inset: auto -3rem -5rem auto; width: 13rem; height: 13rem;
+  clip-path: polygon(42% 0, 100% 0, 100% 100%, 0 100%);
+  background: linear-gradient(135deg, rgba(74,91,255,.06), rgba(117,29,255,.46));
+}
 .home-record-card > * { position: relative; z-index: 1; }
 .home-record-glow {
   display: grid; place-items: center; width: 4.5rem; height: 4.5rem; margin-bottom: .45rem;
@@ -1242,25 +1247,35 @@ textarea.field { resize: vertical; min-height: 9rem; line-height: 1.65; }
   border: 1px solid color-mix(in srgb, var(--folder-tone) 60%, #b5c7ff);
   box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 .7rem 1.3rem rgba(0,0,0,.2);
 }
-.folder-tile-main { display: flex; align-items: center; gap: .9rem; width: 100%; height: 100%; min-height: 5.75rem; padding: .9rem 3.25rem .85rem 1rem; text-align: left; }
+.folder-tile-main { display: flex; align-items: flex-end; gap: .9rem; width: 100%; height: 100%; min-height: 5.75rem; padding: .9rem 3.25rem .85rem 1rem; text-align: left; }
 .folder-tile-copy { display: grid; gap: .08rem; min-width: 0; }
 .folder-tile-copy strong { overflow: hidden; color: #fff; font-size: 1rem; font-weight: 700; letter-spacing: -.027em; text-overflow: ellipsis; white-space: nowrap; }
 .folder-tile-copy small { color: rgba(255,255,255,.73); font-size: .72rem; font-weight: 530; }
-.folder-glyph { position: relative; display: block; flex: 0 0 auto; width: 3.05rem; height: 2.3rem; border-radius: .38rem .38rem .55rem .55rem; background: linear-gradient(145deg, rgba(255,255,255,.8), rgba(220,232,255,.38)); box-shadow: inset 0 1px 0 rgba(255,255,255,.62), 0 .42rem .7rem rgba(4,9,23,.23); }
+.folder-glyph { position: absolute; top: .85rem; left: 50%; display: block; flex: 0 0 auto; width: 3.7rem; height: 2.72rem; border-radius: .42rem .42rem .62rem .62rem; background: linear-gradient(145deg, rgba(255,255,255,.82), rgba(220,232,255,.38)); box-shadow: -1.5rem .48rem 0 rgba(225,238,255,.25), 1.5rem .48rem 0 rgba(226,236,255,.25), inset 0 1px 0 rgba(255,255,255,.62), 0 .42rem .7rem rgba(4,9,23,.23); transform: translateX(-50%); }
 .folder-glyph::before { content: ''; position: absolute; top: -.35rem; left: .22rem; width: 1.3rem; height: .58rem; border-radius: .4rem .4rem 0 0; background: rgba(240,247,255,.74); }
 .folder-glyph span { position: absolute; inset: .32rem .18rem .18rem; border-radius: .3rem .3rem .45rem .45rem; background: linear-gradient(180deg, rgba(255,255,255,.35), transparent); }
-.folder-tile-more { position: absolute; z-index: 3; top: .68rem; right: .62rem; display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: 50%; color: #fff; background: rgba(8,11,25,.22); border: 1px solid rgba(255,255,255,.2); }
+.folder-tile-more { position: absolute; z-index: 3; top: .68rem; right: .62rem; display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: 50%; color: #fff; background: transparent; border: 0; }
 .folder-tile-more svg { width: 1rem; height: 1rem; }
 .folder-open-arrow { position: absolute; right: 1rem; display: grid; place-items: center; color: rgba(255,255,255,.9); }
 .folder-open-arrow svg { width: 1rem; height: 1rem; }
+.folder-grid .folder-open-arrow { display: none; }
 .folder-tile.compact { min-height: 3.7rem; border-radius: .8rem; }
 .folder-tile.compact .folder-tile-main { min-height: 3.7rem; gap: .7rem; padding: .6rem 3rem .6rem .72rem; }
-.folder-tile.compact .folder-glyph { width: 2.1rem; height: 1.62rem; border-radius: .28rem .28rem .42rem .42rem; }
+.folder-tile.compact .folder-glyph { position: relative; top: auto; left: auto; width: 2.1rem; height: 1.62rem; border-radius: .28rem .28rem .42rem .42rem; box-shadow: inset 0 1px 0 rgba(255,255,255,.62), 0 .25rem .45rem rgba(4,9,23,.18); transform: none; }
 .folder-tile.compact .folder-glyph::before { top: -.24rem; width: .86rem; height: .38rem; left: .16rem; border-radius: .25rem .25rem 0 0; }
 .folder-tile.compact .folder-glyph span { inset: .2rem .12rem .1rem; }
 .folder-tile.compact .folder-tile-copy strong { font-size: .82rem; }
 .folder-tile.compact .folder-tile-copy small { font-size: .64rem; }
 .folder-tile.compact .folder-tile-more { top: .43rem; right: .38rem; width: 1.75rem; height: 1.75rem; }
+.home-folder-list .folder-tile-more, .other-folder-list .folder-tile-more { display: none; }
+.home-folder-list .folder-tile-main, .other-folder-list .folder-tile-main { padding-right: 2.75rem; }
+.folder-tile.compact .folder-open-arrow { right: .72rem; }
+.home-folder-list .folder-glyph {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--folder-tone) 40%, #fff), color-mix(in srgb, var(--folder-tone) 74%, #d8e6ff));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.5), 0 .25rem .45rem rgba(4,9,23,.22);
+}
+.home-folder-list .folder-glyph::before { background: color-mix(in srgb, var(--folder-tone) 32%, #fff); }
+.home-folder-list .folder-glyph span { background: linear-gradient(180deg, rgba(255,255,255,.24), transparent); }
 .folder-popover { position: absolute; z-index: 10; right: .5rem; top: 2.95rem; width: 12rem; padding: .42rem; border-radius: .78rem; color: #eef2ff; background: rgba(12,16,27,.96); border: 1px solid rgba(174,191,234,.2); box-shadow: 0 1rem 2rem rgba(0,0,0,.5); }
 .folder-popover > button { width: 100%; padding: .5rem .55rem; border-radius: .5rem; color: #c4cce4; text-align: left; font-size: .74rem; }
 .folder-popover > button:hover { background: rgba(255,255,255,.08); color: #fff; }
@@ -1286,7 +1301,9 @@ textarea.field { resize: vertical; min-height: 9rem; line-height: 1.65; }
 .reference-back svg { width: 1.05rem; height: 1.05rem; }
 .folder-detail-art { position: relative; display: grid; align-content: end; min-height: 8.6rem; margin-top: 1.15rem; padding: 1rem; overflow: hidden; border-radius: 1.45rem; background: linear-gradient(162deg, color-mix(in srgb, var(--folder-tone) 92%, #fff), var(--folder-tone) 56%, color-mix(in srgb, var(--folder-tone) 72%, #100812)); border: 1px solid color-mix(in srgb, var(--folder-tone) 58%, #c4d2ff); }
 .folder-detail-art::after { content: ''; position: absolute; inset: auto -2rem -4.5rem auto; width: 12rem; height: 12rem; border-radius: 50%; background: rgba(0,0,0,.2); filter: blur(1.5rem); }
-.folder-detail-art .folder-glyph { position: absolute; top: 1.2rem; left: 1rem; width: 3.8rem; height: 2.8rem; }
+.folder-detail-art .folder-glyph { position: absolute; top: 1.2rem; left: 50%; width: 4.3rem; height: 3.15rem; opacity: .7; transform: translateX(-50%); }
+.folder-detail-card-more { position: absolute; z-index: 2; top: .8rem; right: .75rem; display: grid; place-items: center; width: 2rem; height: 2rem; color: #fff; }
+.folder-detail-card-more svg { width: 1rem; height: 1rem; }
 .folder-detail-art > div { position: relative; z-index: 1; }
 .folder-detail-art h1 { color: #fff; font-size: 1.55rem; line-height: 1; font-weight: 750; letter-spacing: -.055em; }
 .folder-detail-art p { margin-top: .3rem; color: rgba(255,255,255,.76); font-size: .76rem; }
@@ -1394,7 +1411,7 @@ textarea.field { resize: vertical; min-height: 9rem; line-height: 1.65; }
 .reference-capture-screen .blur-btn svg { width: 1.12rem; height: 1.12rem; }
 .reference-capture-screen .rec-stage {
   display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: center;
-  min-height: calc(100dvh - 4rem - var(--top) - var(--bot)); margin: 0; padding: 1.5rem 1rem 1rem;
+  min-height: calc(100dvh - 4rem - var(--top) - var(--bot)); margin: 0; padding: 5.25rem 1rem 1rem;
   border: 0; border-radius: 0; background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none;
 }
 .reference-capture-screen .phase-label { color: #ff3d65; font-size: .85rem; font-weight: 650; }
