@@ -40,7 +40,7 @@ function buildBars(count, durationSeconds, segments) {
 }
 
 export default function WaveScrubber({
-  durationSeconds, currentSeconds, segments, playing, onScrub, onScrubEnd,
+  durationSeconds, currentSeconds, segments, playing, onScrub, onScrubEnd, variant = 'default',
 }) {
   const canvasRef = useRef(null);
   const cacheRef = useRef(null);
@@ -79,17 +79,29 @@ export default function WaveScrubber({
     const played = Math.min(1, Math.max(0, (currentSeconds || 0) / duration));
     const headIndex = played * count;
     const mid = height / 2;
+    const spectrum = variant === 'spectrum'
+      ? (() => {
+        const gradient = context.createLinearGradient(0, 0, width, 0);
+        gradient.addColorStop(0, '#b533ff');
+        gradient.addColorStop(.3, '#ff3ebd');
+        gradient.addColorStop(.63, '#346eff');
+        gradient.addColorStop(1, '#b533ff');
+        return gradient;
+      })()
+      : null;
 
     for (let i = 0; i < count; i += 1) {
       const barHeight = Math.max(2, bars[i] * height);
       const x = i * step;
       const y = mid - barHeight / 2;
-      context.fillStyle = i <= headIndex ? accent : idle;
+      context.globalAlpha = spectrum ? (i <= headIndex ? 1 : .56) : 1;
+      context.fillStyle = spectrum || (i <= headIndex ? accent : idle);
       context.beginPath();
       if (context.roundRect) context.roundRect(x, y, BAR, barHeight, BAR / 2);
       else context.rect(x, y, BAR, barHeight);
       context.fill();
     }
+    context.globalAlpha = 1;
   }, [currentSeconds, duration, segments]);
 
   useEffect(() => { draw(); }, [draw, playing]);
@@ -156,7 +168,7 @@ export default function WaveScrubber({
       aria-valuenow={Math.round(currentSeconds || 0)}
       aria-valuetext={`${Math.floor((currentSeconds || 0) / 60)} minutes ${Math.floor((currentSeconds || 0) % 60)} seconds`}
     >
-      <canvas ref={canvasRef} className="wave-canvas" />
+      <canvas ref={canvasRef} className={`wave-canvas ${variant === 'spectrum' ? 'spectrum' : ''}`} />
     </div>
   );
 }

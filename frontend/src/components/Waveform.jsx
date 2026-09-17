@@ -12,7 +12,7 @@ const MAX_BARS = 900;
  * `stream` supplies audio; `phase` only decides the colour, so the trace stays
  * on screen while paused instead of blanking.
  */
-export default function Waveform({ stream, phase }) {
+export default function Waveform({ stream, phase, variant = 'default' }) {
   const canvasRef = useRef(null);
   const levelsRef = useRef([]);
   const frameRef = useRef(0);
@@ -76,7 +76,17 @@ export default function Waveform({ stream, phase }) {
       const visible = levelsRef.current.slice(-capacity);
       context.clearRect(0, 0, canvas.width, canvas.height);
       const styles = getComputedStyle(canvas);
-      context.fillStyle = (phaseRef.current === 'recording'
+      const spectrum = variant === 'spectrum' && phaseRef.current === 'recording'
+        ? (() => {
+          const gradient = context.createLinearGradient(0, 0, canvas.width, 0);
+          gradient.addColorStop(0, '#ff3cbc');
+          gradient.addColorStop(.45, '#a535ff');
+          gradient.addColorStop(.72, '#2f86ff');
+          gradient.addColorStop(1, '#ff3cbc');
+          return gradient;
+        })()
+        : null;
+      context.fillStyle = spectrum || (phaseRef.current === 'recording'
         ? styles.getPropertyValue('--rec')
         : styles.getPropertyValue('--wave-idle')).trim() || '#a9b5c6';
       for (let index = 0; index < capacity; index += 1) {

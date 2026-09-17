@@ -192,18 +192,14 @@ export default function CaptureView({ context, onSaved, onCancel, notify }) {
       ? ['Saved', 'Transcribing now…']
       : ['Finishing', 'Saving your audio and notes…'];
 
-  return <main className="capture-screen">
+  return <main className="capture-screen reference-capture-screen" data-phase={phase}>
     <div className="capture-top">
       <button className="blur-btn" onClick={onCancel} disabled={isFinalizing} aria-label="Cancel and go back">
-        <Icon name="back" />
+        <Icon name="close" />
       </button>
       <span className="kicker">{context.workspace ? 'Continuing' : location}</span>
       <span style={{ width: '2.4rem' }} />
     </div>
-
-    <header className="capture-heading">
-      <h1>{context.workspace ? context.workspace.title : 'New lecture'}</h1>
-    </header>
 
     <section className={`rec-stage ${phase}`} data-phase={phase}>
       {isFinalizing && (
@@ -225,13 +221,13 @@ export default function CaptureView({ context, onSaved, onCancel, notify }) {
 
       <div className="phase-label">
         {phase === 'ready' ? 'Ready'
-          : phase === 'recording' ? 'Recording'
+          : phase === 'recording' ? 'Recording…'
           : phase === 'paused' ? (canPause ? 'Paused' : 'Stopped')
           : phase === 'discarding' ? 'Discarding'
           : phase === 'saved' ? 'Saved' : 'Saving'}
       </div>
-      <div className="clock">{elapsedLabel(elapsed)}</div>
-      <Waveform stream={liveStream} phase={phase} />
+      <div className="clock">{elapsedLabel(elapsed).replace(/\.\d$/, '')}</div>
+      <Waveform stream={liveStream} phase={phase} variant="spectrum" />
 
       <div className="marker-slot">
         {isRecording
@@ -297,7 +293,7 @@ export default function CaptureView({ context, onSaved, onCancel, notify }) {
       {error && <p className="err" role="alert">{error}</p>}
     </section>
 
-    {!context.workspace && (
+    {isPaused && !isFinalizing && !context.workspace && (
       <section className="panel">
         <label className="field-label" htmlFor="capture-title">Recording name <span className="dim">optional</span></label>
         <input
@@ -312,7 +308,7 @@ export default function CaptureView({ context, onSaved, onCancel, notify }) {
       </section>
     )}
 
-    <section className="panel">
+    {isPaused && !isFinalizing && <section className="panel">
       <div className="panel-head">
         <h2 className="panel-title">Notes</h2>
         <button className="linkbtn" onClick={() => fileInputRef.current?.click()}>Add file</button>
@@ -344,9 +340,9 @@ export default function CaptureView({ context, onSaved, onCancel, notify }) {
           ))}
         </ul>
       )}
-    </section>
+    </section>}
 
-    {hasLiveTranscript && (
+    {isPaused && !isFinalizing && hasLiveTranscript && (
       <section className="panel">
         <div className="panel-head"><h2 className="panel-title">Live transcript</h2></div>
         <div className="live-body" aria-live="polite">

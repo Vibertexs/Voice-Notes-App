@@ -1,277 +1,171 @@
 import { useRef, useState } from 'react';
-import ClassCard from './ClassCard';
 import { TONES } from './CoverArt';
 import { Icon } from './Icon';
+
+const COLORS = ['blue', 'violet', 'rose', 'coral', 'amber', 'lime', 'mint', 'sky', 'slate'];
+const FEATURED_COUNT = 3;
 
 const shortDate = (date) =>
   new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(new Date(date));
 
-function rgbFor(hex) {
-  const value = String(hex).replace('#', '');
-  return [0, 2, 4].map((offset) => Number.parseInt(value.slice(offset, offset + 2), 16));
+function recordingCopy(folder) {
+  const count = folder.lecture_count ?? 0;
+  return `${count} recording${count === 1 ? '' : 's'}`;
 }
 
-function heroPalette(from, to = from, amount = 0) {
-  const start = rgbFor(from);
-  const end = rgbFor(to);
-  const rgb = start.map((channel, index) => Math.round(channel + (end[index] - channel) * amount));
-  // Perceived brightness, not a simple RGB average: yellow needs dark type,
-  // while red and blue need white. Keeping this in the same calculation as
-  // the blended background prevents text from flipping at the wrong time.
-  const brightness = (rgb[0] * 299 + rgb[1] * 587 + rgb[2] * 114) / 1000;
-  const darkInk = brightness > 156;
-  return {
-    tone: `rgb(${rgb.join(' ')})`,
-    ink: darkInk ? '#0A0A0D' : '#FFFFFF',
-    muted: darkInk ? 'rgba(10,10,13,.64)' : 'rgba(255,255,255,.78)',
-    chip: darkInk ? 'rgba(10,10,13,.14)' : 'rgba(255,255,255,.18)',
-  };
+function FolderGlyph() {
+  return <span className="folder-glyph" aria-hidden="true"><span /></span>;
 }
 
-/**
- * A lecture sits under its class the way a song sits under its artist. The
- * take count only earns its place when there is more than one, and a lecture
- * with no class at all is the one case worth flagging rather than describing
- * - it is the thing the reader may want to act on.
- */
-function TrackSub({ workspace, folders, currentFolder }) {
-  const className = currentFolder?.name
-    ?? folders.find((folder) => folder.id === workspace.folder_id)?.name
-    ?? null;
-  const takes = workspace.session_count ?? 0;
-  return <span className="track-sub">
-    {className
-      ? <span className="track-class">{className}</span>
-      : <span className="track-tag">Unfiled</span>}
-    {takes > 1 && <span>· {takes} recordings</span>}
-  </span>;
+function FolderTile({ folder, compact = false, onOpen, onMenu, menuOpen, onCloseMenu, onArchive, onRecolor, onDelete }) {
+  return <article
+    className={`folder-tile ${compact ? 'compact' : ''}`}
+    style={{ '--folder-tone': TONES[folder.color] ?? TONES.blue }}
+  >
+    <button className="folder-tile-main" onClick={() => onOpen(folder.id)} aria-label={`Open ${folder.name}`}>
+      <FolderGlyph />
+      <span className="folder-tile-copy">
+        <strong>{folder.name}</strong>
+        <small>{recordingCopy(folder)}</small>
+      </span>
+      {!compact && <span className="folder-open-arrow"><Icon name="arrow" /></span>}
+    </button>
+    <button
+      className="folder-tile-more"
+      onClick={() => onMenu(folder.id)}
+      aria-label={`Options for ${folder.name}`}
+      aria-expanded={menuOpen}
+    ><Icon name="more" /></button>
+    {menuOpen && (
+      <div className="folder-popover" role="menu">
+        <div className="folder-popover-swatches" aria-label="Class colour">
+          {COLORS.map((color) => (
+            <button
+              key={color}
+              className={`swatch ${color} ${color === folder.color ? 'current' : ''}`}
+              onClick={() => { onRecolor(folder.id, color); onCloseMenu(); }}
+              aria-label={`Change ${folder.name} to ${color}`}
+              role="menuitem"
+            />
+          ))}
+        </div>
+        <button role="menuitem" onClick={() => { onArchive(folder.id, !folder.archived); onCloseMenu(); }}>
+          {folder.archived ? 'Restore class' : 'Archive class'}
+        </button>
+        <button className="danger" role="menuitem" onClick={() => { onDelete(folder); onCloseMenu(); }}>Delete class</button>
+      </div>
+    )}
+  </article>;
 }
 
-function FileList({ materials, onDelete }) {
-  if (!materials.length) return <p className="dim">No files here yet.</p>;
-  return <ul className="files">
-    {materials.map((material) => <li key={material.id} className="file">
+function RecordingRow({ workspace, folder, folders, onOpen }) {
+  const folderName = folder?.name ?? folders.find((item) => item.id === workspace.folder_id)?.name;
+  const takeCount = workspace.session_count ?? 0;
+  return <li>
+    <button className="recording-row" onClick={() => onOpen(workspace.id)} aria-label={`Open ${workspace.title}`}>
+      <span className="recording-play"><Icon name="play" /></span>
+      <span className="recording-row-copy">
+        <strong>{workspace.title}</strong>
+        <small>{folderName ?? 'Unfiled'} · {shortDate(workspace.updated_at)}</small>
+      </span>
+      <span className="recording-duration">{takeCount > 1 ? `${takeCount} takes` : 'Open'}</span>
+    </button>
+  </li>;
+}
+
+export function FileList({ materials, onDelete }) {
+  if (!materials.length) return <p className="reference-empty">No files here yet.</p>;
+  return <ul className="reference-files">
+    {materials.map((material) => <li key={material.id} className="reference-file">
       <span className="file-kind">{material.original_filename.split('.').at(-1)?.slice(0, 4).toUpperCase()}</span>
       <a href={`/api/materials/${material.id}/file`} target="_blank" rel="noreferrer">
         <strong>{material.original_filename}</strong>
-        <small>{Math.max(1, Math.round(material.size_bytes / 1024))} KB · {material.ai_status === 'ready' ? 'Ready' : 'Not extracted'}</small>
+        <small>{Math.max(1, Math.round(material.size_bytes / 1024))} KB · {material.ai_status === 'ready' ? 'Ready' : 'Processing'}</small>
       </a>
-      <button className="iconbtn ghost" onClick={() => onDelete(material)} aria-label={`Delete ${material.original_filename}`}>
-        <Icon name="close" />
-      </button>
-    </li>)}
-  </ul>;
+      <button onClick={() => onDelete(material)} aria-label={`Delete ${material.original_filename}`}><Icon name="close" /></button>
+    </li>)}</ul>;
 }
 
-export default function LibraryView({
-  data, onOpenFolder, onOpenWorkspace, onNewFolder, onRecord, onUpload,
-  onDeleteMaterial, onMoveWorkspace, showArchived, onToggleArchived,
-  onArchiveFolder, onRecolorFolder, onDeleteFolder, onOpenSettings,
-}) {
-  const inputRef = useRef(null);
-  const screenRef = useRef(null);
-  const [uploading, setUploading] = useState(false);
-  const [over, setOver] = useState(false);
-  const [backOver, setBackOver] = useState(false);
+function HomeView({ data, onOpenFolder, onOpenFolders, onRecord, onOpenSettings, onMenu, menuId, onCloseMenu, onArchiveFolder, onRecolorFolder, onDeleteFolder }) {
+  const folders = data.folders.slice(0, FEATURED_COUNT);
+  return <main className="reference-screen home-screen">
+    <header className="reference-home-head">
+      <div><p className="reference-wordmark">VoiceFlow</p><p>Record. Organize. Remember.</p></div>
+      <button className="reference-icon-button" onClick={onOpenSettings} aria-label="Settings"><Icon name="gear" /></button>
+    </header>
+    <button className="home-record-card" onClick={() => onRecord()}>
+      <span className="home-record-glow" aria-hidden="true"><Icon name="mic" /></span>
+      <strong>Tap to record</strong><small>Start a new recording</small>
+    </button>
+    <section className="reference-section home-folders">
+      <div className="reference-section-head"><h2>Your folders</h2><button onClick={onOpenFolders}>View all <Icon name="arrow" /></button></div>
+      <div className="home-folder-list">
+        {folders.map((folder) => <FolderTile key={folder.id} folder={folder} compact onOpen={onOpenFolder} onMenu={onMenu} menuOpen={menuId === folder.id} onCloseMenu={onCloseMenu} onArchive={onArchiveFolder} onRecolor={onRecolorFolder} onDelete={onDeleteFolder} />)}
+        {folders.length === 0 && <p className="reference-empty">Add a class to keep recordings together.</p>}
+      </div>
+    </section>
+  </main>;
+}
 
+function FoldersView({ data, onOpenFolder, onNewFolder, onMenu, menuId, onCloseMenu, onArchiveFolder, onRecolorFolder, onDeleteFolder, showArchived, onToggleArchived }) {
+  const [query, setQuery] = useState('');
+  const visible = data.folders.filter((folder) => folder.name.toLowerCase().includes(query.trim().toLowerCase()));
+  const featured = visible.slice(0, FEATURED_COUNT);
+  const remaining = visible.slice(FEATURED_COUNT);
+  return <main className="reference-screen folders-screen">
+    <header className="reference-view-head">
+      <div><h1>Folders</h1><p>{showArchived ? 'Archived folders' : 'Keep every class in one place.'}</p></div>
+      <button className="reference-icon-button" onClick={onNewFolder} aria-label="New folder"><Icon name="plus" /></button>
+    </header>
+    <label className="folder-search"><Icon name="search" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search folders…" aria-label="Search folders" /></label>
+    <section className="folder-grid" aria-label="Folders">
+      {featured.map((folder) => <FolderTile key={folder.id} folder={folder} onOpen={onOpenFolder} onMenu={onMenu} menuOpen={menuId === folder.id} onCloseMenu={onCloseMenu} onArchive={onArchiveFolder} onRecolor={onRecolorFolder} onDelete={onDeleteFolder} />)}
+    </section>
+    <section className="reference-section other-folders">
+      <div className="reference-section-head"><h2>{featured.length ? 'Other' : 'Your folders'}</h2><button onClick={() => onToggleArchived(!showArchived)}>{showArchived ? 'Current' : 'Archived'}</button></div>
+      <div className="other-folder-list">
+        {remaining.map((folder) => <FolderTile key={folder.id} folder={folder} compact onOpen={onOpenFolder} onMenu={onMenu} menuOpen={menuId === folder.id} onCloseMenu={onCloseMenu} onArchive={onArchiveFolder} onRecolor={onRecolorFolder} onDelete={onDeleteFolder} />)}
+        {!visible.length && <p className="reference-empty">No folders found.</p>}
+      </div>
+    </section>
+  </main>;
+}
+
+function FolderDetailView({ data, onOpenFolders, onOpenWorkspace, onRecord, onUpload, onDeleteMaterial }) {
   const folder = data.current_folder;
+  const inputRef = useRef(null);
+  const [uploading, setUploading] = useState(false);
   const lectures = data.workspaces;
-  // The carousel is the way into a class, so it only appears at the top
-  // level. Inside a class there is nothing left to swipe between.
-  const showCarousel = !folder;
-  const classCount = data.folders.length;
-
+  const recordingCount = lectures.reduce((total, lecture) => total + (lecture.session_count ?? 0), 0);
   async function chooseFiles(files) {
     if (!files?.length) return;
     setUploading(true);
     try { await onUpload([...files]); }
     finally { setUploading(false); if (inputRef.current) inputRef.current.value = ''; }
   }
-
-  function receiveWorkspace(event, targetFolderId) {
-    const id = event.dataTransfer.getData('application/x-class-notes-workspace');
-    if (id) onMoveWorkspace(id, targetFolderId);
-  }
-
-  function updateHeroTone(event) {
-    if (folder || data.folders.length === 0 || !screenRef.current) return;
-    const rail = event.currentTarget;
-    const cards = Array.from(rail.children).slice(0, data.folders.length);
-    const centre = rail.scrollLeft + rail.clientWidth / 2;
-    const centres = cards.map((card) => card.offsetLeft + card.offsetWidth / 2);
-    let index = centres.findIndex((point) => centre <= point);
-    if (index < 0) index = centres.length - 1;
-
-    const right = Math.max(0, index);
-    const left = Math.max(0, right - 1);
-    const span = Math.max(1, centres[right] - centres[left]);
-    const progress = left === right ? 0 : Math.min(1, Math.max(0, (centre - centres[left]) / span));
-    const palette = heroPalette(
-      TONES[data.folders[left].color] ?? TONES.blue,
-      TONES[data.folders[right].color] ?? TONES.blue,
-      progress,
-    );
-    const root = screenRef.current;
-    root.style.setProperty('--hero-tone', palette.tone);
-    root.style.setProperty('--hero-ink', palette.ink);
-    root.style.setProperty('--hero-muted', palette.muted);
-    root.style.setProperty('--hero-chip', palette.chip);
-  }
-
-  const totalTakes = lectures.reduce((sum, item) => sum + item.session_count, 0);
-  // A class earns a colour on its own page. Letting the home screen change
-  // colour while its carousel moves makes the library feel unstable.
-  const classTone = folder ? (TONES[folder.color] ?? TONES.blue) : null;
-  const firstHomeTone = data.folders.length ? (TONES[data.folders[0].color] ?? TONES.blue) : null;
-  const initialPalette = heroPalette(classTone ?? firstHomeTone ?? '#ECEF5E');
-  const hasHeroTone = Boolean(classTone ?? firstHomeTone);
-
-  return <main
-    ref={screenRef}
-    className={`screen ${folder ? 'class-screen' : ''}`}
-    style={{
-      '--class-tone': classTone ?? firstHomeTone ?? '#ECEF5E',
-      '--hero-tone': initialPalette.tone,
-      '--hero-ink': initialPalette.ink,
-      '--hero-muted': initialPalette.muted,
-      '--hero-chip': initialPalette.chip,
-    }}
-  >
-    {/* ---- Yellow hero ------------------------------------ */}
-    <header
-      className={`hero ${showCarousel ? '' : 'pad'} ${hasHeroTone ? 'class-hero' : ''}`}
-    >
-      <div className="hero-top">
-        <div>
-          {folder
-            ? <button
-                className="hero-sub"
-                onClick={() => onOpenFolder(null)}
-                onDragOver={(event) => { event.preventDefault(); setBackOver(true); }}
-                onDragLeave={() => setBackOver(false)}
-                onDrop={(event) => { event.preventDefault(); setBackOver(false); receiveWorkspace(event, null); }}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '.25rem', marginBottom: '.2rem' }}
-              >
-                <Icon name="back" size={13} />
-                {backOver ? 'Drop to move out' : 'All classes'}
-              </button>
-            : null}
-          <h1 className="hero-title">{folder?.name ?? 'Your classes'}</h1>
-          <p className="hero-sub">
-            {folder
-              ? `${lectures.length} lecture${lectures.length === 1 ? '' : 's'} · ${totalTakes} recording${totalTakes === 1 ? '' : 's'}`
-              : showArchived ? 'Archived classes' : 'Everything you have recorded'}
-            {!folder && (
-              <button className="hero-link" onClick={() => onToggleArchived(!showArchived)}>
-                {showArchived ? 'Show current' : 'View archived'}
-              </button>
-            )}
-          </p>
-        </div>
-        <button className="hero-menu" onClick={onOpenSettings} aria-label="Settings">
-          <Icon name="gear" />
-        </button>
-      </div>
-
-      {showCarousel && (
-        <div className="hero-stage">
-          <div className="hero-carousel" onScroll={updateHeroTone}>
-            {data.folders.map((child) => (
-              <ClassCard
-                key={child.id}
-                folder={{ ...child, archived: showArchived || child.archived }}
-                onOpen={onOpenFolder}
-                onArchive={onArchiveFolder}
-                onRecolor={onRecolorFolder}
-                onDelete={onDeleteFolder}
-                onDropWorkspace={receiveWorkspace}
-              />
-            ))}
-            {!showArchived && (
-              <div className="slide">
-                <button className="slide-add" onClick={onNewFolder}>
-                  <Icon name="plus" />
-                  <span>{classCount === 0 ? 'Add your first class' : 'New class'}</span>
-                </button>
-              </div>
-            )}
-            {showArchived && classCount === 0 && (
-              <div className="slide">
-                <div className="slide-add" style={{ cursor: 'default' }}>
-                  <span>Nothing archived</span>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+  return <main className="reference-screen folder-detail-screen" style={{ '--folder-tone': TONES[folder.color] ?? TONES.blue }}>
+    <header className="folder-detail-top">
+      <button className="reference-back" onClick={onOpenFolders}><Icon name="back" />Folders</button>
+      <button className="reference-icon-button" onClick={() => inputRef.current?.click()} aria-label="Add file"><Icon name="file" /></button>
     </header>
-    {showCarousel && <div className="hero-spill" />}
-
-    {/* ---- Lectures --------------------------------------- */}
-    {!showArchived && (
-      <section className="sheet">
-        <div className="row-head">
-          <h2 className="row-title">All lectures</h2>
-          {lectures.length > 0 && <span className="row-count">{lectures.length}</span>}
-        </div>
-
-        {lectures.length ? (
-          <ul className="track-list">
-            {lectures.map((workspace) => (
-              <li key={workspace.id}>
-                <button
-                  className="track"
-                  draggable
-                  onDragStart={(event) => event.dataTransfer.setData('application/x-class-notes-workspace', workspace.id)}
-                  onClick={() => onOpenWorkspace(workspace.id)}
-                  aria-label={`Open ${workspace.title}`}
-                >
-                  <span className="track-art"><Icon name="wave" /></span>
-                  <span className="track-body">
-                    <span className="track-title">{workspace.title}</span>
-                    <TrackSub workspace={workspace} folders={data.folders} currentFolder={folder} />
-                  </span>
-                  <span className="track-time">{shortDate(workspace.updated_at)}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <div className="empty">
-            <span className="empty-orb"><Icon name="mic" /></span>
-            <h3>Nothing recorded yet</h3>
-            <p>Record once, then keep adding takes to the same lecture.</p>
-            <button className="btn primary" onClick={onRecord}>Start recording</button>
-          </div>
-        )}
-      </section>
-    )}
-
-    {/* ---- Files ------------------------------------------ */}
-    {!showArchived && (
-      <section className="sheet">
-        <div className="row-head"><h2 className="row-title">Files</h2></div>
-        <button
-          className={`dropzone ${over ? 'over' : ''}`}
-          onClick={() => inputRef.current?.click()}
-          onDragOver={(event) => { event.preventDefault(); setOver(true); }}
-          onDragLeave={() => setOver(false)}
-          onDrop={(event) => { event.preventDefault(); setOver(false); chooseFiles(event.dataTransfer.files); }}
-        >
-          <Icon name="upload" />
-          <strong>{uploading ? 'Adding…' : 'Add files'}</strong>
-          <span>PDF · Word · PowerPoint · Markdown</span>
-        </button>
-        <input
-          ref={inputRef} hidden type="file" multiple
-          accept=".pdf,.txt,.md,.doc,.docx,.ppt,.pptx"
-          onChange={(event) => chooseFiles(event.target.files)}
-        />
-        <FileList materials={data.materials} onDelete={onDeleteMaterial} />
-      </section>
-    )}
+    <section className="folder-detail-art"><FolderGlyph /><div><h1>{folder.name}</h1><p>{recordingCount} recording{recordingCount === 1 ? '' : 's'}</p></div></section>
+    <button className="primary-record-button" onClick={() => onRecord()}><Icon name="plus" />New recording</button>
+    <section className="reference-section folder-recordings">
+      <div className="reference-section-head"><h2>Recordings</h2><span>{lectures.length}</span></div>
+      {lectures.length ? <ul className="reference-recording-list">{lectures.map((workspace) => <RecordingRow key={workspace.id} workspace={workspace} folder={folder} folders={data.folders} onOpen={onOpenWorkspace} />)}</ul> : <p className="reference-empty">Start recording to add the first lecture.</p>}
+    </section>
+    <section className="reference-section folder-files-section">
+      <div className="reference-section-head"><h2>Files</h2><button onClick={() => inputRef.current?.click()}>{uploading ? 'Adding…' : 'Add file'}</button></div>
+      <FileList materials={data.materials} onDelete={onDeleteMaterial} />
+      <input ref={inputRef} hidden type="file" multiple accept=".pdf,.txt,.md,.doc,.docx,.ppt,.pptx" onChange={(event) => chooseFiles(event.target.files)} />
+    </section>
   </main>;
 }
 
-export { FileList };
+export default function LibraryView({ mode, data, onOpenFolder, onOpenFolders, onOpenWorkspace, onNewFolder, onRecord, onUpload, onDeleteMaterial, showArchived, onToggleArchived, onArchiveFolder, onRecolorFolder, onDeleteFolder, onOpenSettings }) {
+  const [menuId, setMenuId] = useState(null);
+  const folderProps = { data, onOpenFolder, onNewFolder, onMenu: setMenuId, menuId, onCloseMenu: () => setMenuId(null), onArchiveFolder, onRecolorFolder, onDeleteFolder };
+  if (mode === 'folders') return <FoldersView {...folderProps} showArchived={showArchived} onToggleArchived={onToggleArchived} />;
+  if (mode === 'folder' && data.current_folder) return <FolderDetailView data={data} onOpenFolders={onOpenFolders} onOpenWorkspace={onOpenWorkspace} onRecord={onRecord} onUpload={onUpload} onDeleteMaterial={onDeleteMaterial} />;
+  return <HomeView {...folderProps} onOpenFolders={onOpenFolders} onRecord={onRecord} onOpenSettings={onOpenSettings} />;
+}

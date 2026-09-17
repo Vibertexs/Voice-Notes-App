@@ -26,7 +26,7 @@ function BootError({ error, retry }) {
 }
 
 export default function App() {
-  const [screen, setScreen] = useState({ name: 'library', folderId: null });
+  const [screen, setScreen] = useState({ name: 'home', folderId: null });
   const [library, setLibrary] = useState(null);
   const [allFolders, setAllFolders] = useState([]);
   const [workspace, setWorkspace] = useState(null);
@@ -48,12 +48,12 @@ export default function App() {
     setAllFolders(result.folders);
   }, []);
 
-  const openLibrary = useCallback(async (folderId = null, { archived } = {}) => {
+  const openLibrary = useCallback(async (folderId = null, { archived, view } = {}) => {
     setError('');
     setWorkspace(null);
     const wantArchived = archived ?? (folderId ? false : showArchived);
     if (!folderId) setShowArchived(wantArchived);
-    setScreen({ name: 'library', folderId });
+    setScreen({ name: view ?? (folderId ? 'folder' : 'home'), folderId });
     try {
       const [nextLibrary] = await Promise.all([
         libraryApi.library(folderId, { archived: folderId ? false : wantArchived }),
@@ -62,6 +62,10 @@ export default function App() {
       setLibrary(nextLibrary);
     } catch (caught) { setError(caught.message); }
   }, [loadFolders, showArchived]);
+
+  const openHome = useCallback(() => openLibrary(null, { archived: false, view: 'home' }), [openLibrary]);
+  const openFolders = useCallback((archived = false) => openLibrary(null, { archived, view: 'folders' }), [openLibrary]);
+  const openFolder = useCallback((folderId) => openLibrary(folderId, { view: 'folder' }), [openLibrary]);
 
   const openWorkspace = useCallback(async (workspaceId) => {
     setError('');
@@ -74,26 +78,26 @@ export default function App() {
     try { setWorkspace(await libraryApi.workspace(workspace.id)); } catch (caught) { notify(caught.message, 'error'); }
   }, [notify, workspace?.id]);
 
-  useEffect(() => { openLibrary(null); }, [openLibrary]);
+  useEffect(() => { openHome(); }, [openHome]);
 
   async function createFolder(folder) {
     await libraryApi.createFolder(folder);
-    await openLibrary(screen.folderId);
+    await openFolders();
     notify('Class created.');
   }
   async function uploadFiles(files) {
     await Promise.all(files.map((file) => libraryApi.uploadMaterial(file, { folderId: library.current_folder?.id })));
-    await openLibrary(screen.folderId);
+    await openLibrary(screen.folderId, { view: screen.name });
     notify(`${files.length} file${files.length === 1 ? '' : 's'} added.`);
   }
   async function deleteMaterial(material) {
     if (!window.confirm(`Delete ${material.original_filename}?`)) return;
-    try { await libraryApi.deleteMaterial(material.id); await openLibrary(screen.folderId); } catch (caught) { notify(caught.message, 'error'); }
+    try { await libraryApi.deleteMaterial(material.id); await openLibrary(screen.folderId, { view: screen.name }); } catch (caught) { notify(caught.message, 'error'); }
   }
   async function setFolderArchived(folderId, archived) {
     try {
       await libraryApi.archiveFolder(folderId, archived);
-      await openLibrary(null, { archived: false });
+      await openFolders(false);
       notify(archived ? 'Class archived.' : 'Class is back in your library.');
     } catch (caught) { notify(caught.message, 'error'); }
   }
@@ -101,18 +105,18 @@ export default function App() {
     if (!window.confirm(`Delete the class "${folder.name}"?`)) return;
     try {
       await libraryApi.deleteFolder(folder.id);
-      await openLibrary(null);
+      await openFolders();
       notify('Class deleted.');
     } catch (caught) { notify(caught.message, 'error'); }
   }
   async function recolorFolder(folderId, color) {
-    try { await libraryApi.updateFolder(folderId, { color }); await openLibrary(screen.folderId); }
+    try { await libraryApi.updateFolder(folderId, { color }); await openLibrary(screen.folderId, { view: screen.name }); }
     catch (caught) { notify(caught.message, 'error'); }
   }
   async function moveWorkspace(workspaceId, folderId) {
     try {
       await libraryApi.updateWorkspace(workspaceId, { folder_id: folderId });
-      await openLibrary(screen.folderId);
+      await openLibrary(screen.folderId, { view: screen.name });
       notify(folderId ? 'Lecture filed.' : 'Lecture moved out.');
     } catch (caught) { notify(caught.message, 'error'); }
   }
@@ -122,7 +126,8 @@ export default function App() {
   }
   function cancelCapture() {
     if (captureContext?.workspace) openWorkspace(captureContext.workspace.id);
-    else openLibrary(captureContext?.folder?.id ?? screen.folderId ?? null);
+    else if (captureContext?.folder?.id ?? screen.folderId) openFolder(captureContext?.folder?.id ?? screen.folderId);
+    else openHome();
     setCaptureContext(null);
   }
   function captureSaved(workspaceId) { setCaptureContext(null); openWorkspace(workspaceId); }
@@ -135,7 +140,7 @@ export default function App() {
     await openWorkspace(result.workspace_id);
   }
 
-  if (error && !library && !workspace) return <BootError error={error} retry={() => openLibrary(null)} />;
+  if (error && !library && !workspace) return <BootError error={error} retry={openHome} />;
   if (!library && screen.name !== 'workspace') return <Boot />;
 
   const showDock = !['workspace', 'capture'].includes(screen.name);
@@ -144,10 +149,12 @@ export default function App() {
     <div className="app-shell">
       {error && <div className="banner"><span>{error}</span><button onClick={() => setError('')} aria-label="Dismiss">×</button></div>}
 
-      {screen.name === 'library' && library && (
+      {['home', 'folders', 'folder'].includes(screen.name) && library && (
         <LibraryView
+          mode={screen.name}
           data={library}
-          onOpenFolder={openLibrary}
+          onOpenFolder={openFolder}
+          onOpenFolders={openFolders}
           onOpenWorkspace={openWorkspace}
           onNewFolder={() => setFolderDialog(true)}
           onRecord={() => startCapture()}
@@ -155,7 +162,7 @@ export default function App() {
           onDeleteMaterial={deleteMaterial}
           onMoveWorkspace={moveWorkspace}
           showArchived={showArchived}
-          onToggleArchived={(next) => openLibrary(null, { archived: next })}
+          onToggleArchived={openFolders}
           onArchiveFolder={setFolderArchived}
           onRecolorFolder={recolorFolder}
           onDeleteFolder={deleteFolder}
@@ -167,7 +174,7 @@ export default function App() {
             workspace={workspace}
             color={colorForWorkspace(workspace, allFolders)}
             courseName={allFolders.find((folder) => folder.id === workspace.folder_id)?.name ?? 'Unfiled'}
-            onBack={() => openLibrary(workspace.folder_id)}
+            onBack={() => workspace.folder_id ? openFolder(workspace.folder_id) : openHome()}
             onContinue={() => startCapture(workspace)}
             onReload={refreshWorkspace}
             onDelete={() => openLibrary(workspace.folder_id)}
@@ -177,7 +184,7 @@ export default function App() {
           />
         : <Boot />)}
       {screen.name === 'search' && (
-        <SearchView onOpenResult={openSearchResult} onBack={() => openLibrary(screen.folderId ?? null)} />
+        <SearchView onOpenResult={openSearchResult} onBack={openHome} />
       )}
       {screen.name === 'capture' && (
         <CaptureView context={captureContext ?? {}} onSaved={captureSaved} onCancel={cancelCapture} notify={notify} />
@@ -186,22 +193,22 @@ export default function App() {
       {showDock && (
         <nav className="dock" aria-label="Main">
           <button
-            className={`dock-btn ${screen.name === 'library' ? 'active' : ''}`}
-            onClick={() => openLibrary(null)}
-            aria-label="Library"
-            aria-current={screen.name === 'library' ? 'page' : undefined}
-          ><Icon name="library" /></button>
-
-          <button className="dock-btn rec" onClick={() => startCapture()} aria-label="Record a lecture">
-            <Icon name="mic" />
-          </button>
+            className={`dock-btn ${screen.name === 'home' ? 'active' : ''}`}
+            onClick={openHome}
+            aria-label="Home"
+            aria-current={screen.name === 'home' ? 'page' : undefined}
+          ><Icon name="home" /><span>Home</span></button>
 
           <button
-            className={`dock-btn ${screen.name === 'search' ? 'active' : ''}`}
-            onClick={() => setScreen({ name: 'search' })}
-            aria-label="Search"
-            aria-current={screen.name === 'search' ? 'page' : undefined}
-          ><Icon name="search" /></button>
+            className={`dock-btn ${screen.name === 'folders' || screen.name === 'folder' ? 'active' : ''}`}
+            onClick={() => openFolders()}
+            aria-label="Folders"
+            aria-current={screen.name === 'folders' ? 'page' : undefined}
+          ><Icon name="folder" /><span>Folders</span></button>
+
+          <button className={`dock-btn ${screen.name === 'search' ? 'active' : ''}`} onClick={() => setScreen({ name: 'search' })} aria-label="Library" aria-current={screen.name === 'search' ? 'page' : undefined}>
+            <Icon name="library" /><span>Library</span>
+          </button>
         </nav>
       )}
 

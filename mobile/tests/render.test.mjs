@@ -107,11 +107,11 @@ const dom = new JSDOM(WEB_APP_HTML, {
 const settle = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const document_ = dom.window.document;
 
-// Wait for the library's actual landmarks rather than sampling at a fixed
+// Wait for the app's actual home landmark rather than sampling at a fixed
 // moment. An earlier version slept and then matched loose text, so it passed
-// while the page was still on its loading screen. The library deliberately
-// uses the shared .screen class now; its hero is the stable page landmark.
-const librarySelector = 'main.screen > header.hero';
+// while the page was still on its loading screen. VoiceFlow starts on its
+// purpose-built Home screen; its quick-record card is the stable landmark.
+const librarySelector = 'main.reference-screen.home-screen .home-record-card';
 let waited = 0;
 while (waited < 8000 && !document_.querySelector(librarySelector) && !pageErrors.length) {
   await settle(100);
@@ -133,7 +133,7 @@ check('React mounted something into it', root && root.childNodes.length > 0,
 console.log('\n== and gets past loading, to the real library ==');
 check('not stuck on the loading screen', !onLoadingScreen, text.slice(0, 160));
 check('not showing the error screen', !onErrorScreen, text.slice(0, 220));
-check('the library page rendered', Boolean(document_.querySelector(librarySelector)),
+check('the home page rendered', Boolean(document_.querySelector(librarySelector)),
   `waited ${waited}ms; body: ${text.slice(0, 160)}`);
 check('the classes section is present', /class/i.test(text), text.slice(0, 160));
 check('the record button is present', Boolean(
