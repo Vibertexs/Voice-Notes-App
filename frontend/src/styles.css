@@ -6,9 +6,9 @@
 
 :root {
   --bg:        #08080C;
-  --pane:            rgba(255,255,255,.055);
-  --pane-hi:         rgba(255,255,255,.095);
-  --pane-line:       rgba(255,255,255,.10);
+  --pane:            rgba(255,255,255,.075);
+  --pane-hi:         rgba(255,255,255,.125);
+  --pane-line:       rgba(255,255,255,.16);
   /* Surfaces are translucent rather than mixed: at these weights they land
      on the same colours the solid hex values used to produce against the
      canvas, but they now layer, and they pick up whatever sits behind them -
@@ -61,15 +61,19 @@
      The ACCENT is never either one. Yellow is the only opaque thing in the
      interface, which is what makes a primary action and an active state
      unmistakable against everything else.                              */
-  --glass:           rgba(30,30,38,.42);
-  --glass-line:      rgba(255,255,255,.14);
-  --glass-tint:      rgba(255,255,255,.15);
-  --glass-tint-line: rgba(255,255,255,.26);
+  --glass:           rgba(22,22,30,.58);
+  --glass-line:      rgba(255,255,255,.24);
+  --glass-tint:      rgba(255,255,255,.22);
+  --glass-tint-line: rgba(255,255,255,.38);
   /* the specular every real pane has: bright at one shoulder, gone by the
      middle, with a little bounce returning at the far edge */
-  --sheen: linear-gradient(158deg, rgba(255,255,255,.20), rgba(255,255,255,.03) 44%, rgba(255,255,255,.08));
-  --blur:    blur(24px) saturate(150%);
-  --blur-sm: blur(14px) saturate(130%);
+  --sheen: linear-gradient(158deg, rgba(255,255,255,.29), rgba(255,255,255,.06) 44%, rgba(255,255,255,.12));
+  --blur:    blur(30px) saturate(165%);
+  --blur-sm: blur(18px) saturate(145%);
+  /* Fine, low-contrast grain. The larger seamless tile prevents the
+     repeating, low-resolution pattern that was noticeable on phone cards. */
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='256' height='256'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.92' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='256' height='256' filter='url(%23g)' opacity='.18'/%3E%3C/svg%3E");
+  --grain-size: 256px 256px;
 
   --ease:   cubic-bezier(.22,.61,.36,1);
   --spring: cubic-bezier(.34,1.3,.64,1);
@@ -104,23 +108,13 @@ h1, h2, h3, p { margin: 0; }
 
 .app-shell { position: relative; min-height: 100vh; }
 .screen { position: relative; padding-bottom: calc(var(--dock) + var(--bot) + 1.5rem); }
-/* The class colour extends below its header as a diffuse atmosphere. Glass
-   needs something behind it to refract; this keeps the hue present without
-   turning every lecture into a solid coloured card. */
-.screen.class-screen { position: relative; isolation: isolate; overflow: hidden; }
-.screen.class-screen::before {
-  content: ''; position: absolute; z-index: 0; inset: 8rem -48% -14rem;
-  border-radius: 46% 54% 34% 66% / 22% 31% 69% 78%;
-  background: var(--class-tone); opacity: .48; filter: blur(6.5rem) saturate(1.3);
-  pointer-events: none;
+/* An opened class owns the entire canvas, not just the content behind its
+   first few cards. This keeps its chosen colour continuous all the way to
+   the bottom safe area and behind the floating dock. */
+.screen.class-screen {
+  min-height: 100dvh;
+  background: var(--class-tone);
 }
-.screen.class-screen::after {
-  content: ''; position: absolute; z-index: 0; top: 15rem; right: -36%;
-  width: 82%; aspect-ratio: 1; border-radius: 50%;
-  background: rgba(255,255,255,.34); filter: blur(5.5rem); opacity: .3;
-  pointer-events: none;
-}
-.screen.class-screen > * { position: relative; z-index: 1; }
 
 /* ---------- Cover art ------------------------------------ */
 /* Artwork is always a fill layer: every wrapper below is position:relative
@@ -146,19 +140,22 @@ h1, h2, h3, p { margin: 0; }
    as a surface - a blur on its own just reads as a lighter fill. */
 .cover-glass {
   position: absolute; inset: 0;
-  background: var(--sheen), var(--glass-tint);
+  background-color: var(--glass-tint);
+  background-image: var(--grain), var(--sheen);
+  background-size: var(--grain-size), auto;
+  background-blend-mode: soft-light, normal;
   backdrop-filter: var(--blur);
   -webkit-backdrop-filter: var(--blur);
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.34),
-    inset 0 0 0 1px rgba(255,255,255,.12);
+    inset 0 1px 0 rgba(255,255,255,.46),
+    inset 0 0 0 1px rgba(255,255,255,.2);
 }
 .track-art, .slide-open, .stage { position: relative; }
 .cover-grain {
   position: absolute; inset: 0;
-  opacity: .38; mix-blend-mode: overlay;
-  background-size: 160px 160px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23g)'/%3E%3C/svg%3E");
+  opacity: .28; mix-blend-mode: overlay;
+  background-size: var(--grain-size);
+  background-image: var(--grain);
 }
 
 /* ---------- Hero (yellow panel) --------------------------- */
@@ -255,22 +252,15 @@ h1, h2, h3, p { margin: 0; }
      Android WebView composited the two blurred backdrops as visible vertical
      bands instead of one continuous glow. */
   position: absolute; z-index: 0; inset: 0; overflow: hidden;
-  border-radius: inherit; background: transparent;
+  /* `.slide` is intentionally not clipped because its menu may overflow.
+     The art still needs the exact sleeve radius; inheriting here gave it a
+     zero radius and created the rectangular seam visible on Android. */
+  border-radius: var(--r-lg); background: var(--class-tone, #445264);
+  clip-path: inset(0 round var(--r-lg));
 }
-.slide-colour::before {
-  content: ''; position: absolute; inset: 0;
-  background:
-    radial-gradient(44% 37% at 22% 17%, var(--class-tone, #445264), transparent 74%),
-    radial-gradient(52% 47% at 88% 84%, var(--class-tone, #445264), transparent 76%),
-    radial-gradient(35% 31% at 15% 12%, rgba(255,255,255,.78), transparent 74%);
-  filter: blur(1.25rem) saturate(1.2);
-}
-/* A contained specular bloom gives the glass depth without creating a second
-   rectangular layer that can leak through a neighbouring frosted card. */
-.slide-colour::after {
-  content: ''; position: absolute; inset: 18% 15% auto 35%; height: 34%;
-  border-radius: 50%; background: rgba(255,255,255,.28); filter: blur(1.4rem);
-}
+/* Class colours are deliberately flat. The frosted face can provide texture,
+   but artwork-like blooms made the cards feel uneven and fought each colour's
+   identity as the carousel moved between classes. */
 
 /* A portrait sleeve. The artwork fills it, the class name sits at the foot
    over a scrim, and the open control faces it across the bottom. */
@@ -280,13 +270,16 @@ h1, h2, h3, p { margin: 0; }
   width: 100%; aspect-ratio: 3 / 4;
   padding: 1.05rem; border-radius: var(--r-lg);
   overflow: hidden; text-align: left;
-  background: linear-gradient(142deg, rgba(255,255,255,.31), rgba(255,255,255,.09) 45%, rgba(10,12,18,.14));
-  border: 1px solid rgba(255,255,255,.46);
-  backdrop-filter: blur(30px) saturate(130%);
-  -webkit-backdrop-filter: blur(30px) saturate(130%);
+  background-color: rgba(255,255,255,.14);
+  background-image: var(--grain);
+  background-size: var(--grain-size);
+  background-blend-mode: soft-light;
+  border: 1px solid rgba(255,255,255,.58);
+  backdrop-filter: blur(34px) saturate(150%);
+  -webkit-backdrop-filter: blur(34px) saturate(150%);
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.5),
-    inset 0 -1px 0 rgba(0,0,0,.16),
+    inset 0 1px 0 rgba(255,255,255,.62),
+    inset 0 -1px 0 rgba(0,0,0,.24),
     0 .65rem 1.6rem rgba(0,0,0,.18);
 }
 /* The face is glass end to end, so the only shading left is a short one at
@@ -373,7 +366,10 @@ h1, h2, h3, p { margin: 0; }
   position: absolute; top: 2.9rem; right: .65rem; z-index: 20;
   width: 11.5rem; padding: .45rem;
   border: 1px solid var(--glass-line); border-radius: var(--r);
-  background: rgba(26,26,34,.72);
+  background-color: rgba(21,21,29,.8);
+  background-image: var(--grain), var(--sheen);
+  background-size: var(--grain-size), auto;
+  background-blend-mode: soft-light, normal;
   backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
   box-shadow: 0 1.25rem 2.5rem rgba(0,0,0,.6);
   animation: pop .16s var(--ease);
@@ -404,16 +400,19 @@ h1, h2, h3, p { margin: 0; }
   display: grid; grid-template-columns: 2.8rem minmax(0,1fr) auto;
   align-items: center; gap: .85rem;
   width: 100%; padding: .68rem .72rem; border-radius: var(--r);
-  background: linear-gradient(142deg, rgba(255,255,255,.11), rgba(255,255,255,.045));
-  border: 1px solid rgba(255,255,255,.18);
-  backdrop-filter: blur(26px) saturate(125%);
-  -webkit-backdrop-filter: blur(26px) saturate(125%);
+  background-color: rgba(24,24,31,.56);
+  background-image: var(--grain), linear-gradient(142deg, rgba(255,255,255,.19), rgba(255,255,255,.07));
+  background-size: var(--grain-size), auto;
+  background-blend-mode: soft-light, normal;
+  border: 1px solid rgba(255,255,255,.24);
+  backdrop-filter: blur(28px) saturate(140%);
+  -webkit-backdrop-filter: blur(28px) saturate(140%);
   text-align: left;
   transition: background .16s var(--ease), transform .16s var(--ease);
 }
-.track:hover { background: linear-gradient(142deg, rgba(255,255,255,.17), rgba(255,255,255,.07)); }
+.track:hover { background-color: rgba(255,255,255,.16); }
 /* Phones have no hover, so the press has to be the feedback. */
-.track:active { background: linear-gradient(142deg, rgba(255,255,255,.22), rgba(255,255,255,.1)); transform: scale(.988); }
+.track:active { background-color: rgba(255,255,255,.22); transform: scale(.988); }
 .track-art {
   position: relative; z-index: 1;
   display: grid; place-items: center; width: 2.8rem; height: 2.8rem;
@@ -510,7 +509,10 @@ h1, h2, h3, p { margin: 0; }
   display: flex; align-items: center; justify-content: space-around;
   height: 4.15rem; padding: 0 .6rem;
   border-radius: var(--r-full);
-  background: rgba(20,20,27,.64);
+  background-color: rgba(17,17,24,.76);
+  background-image: var(--grain), var(--sheen);
+  background-size: var(--grain-size), auto;
+  background-blend-mode: soft-light, normal;
   border: 1px solid var(--glass-line);
   backdrop-filter: var(--blur);
   -webkit-backdrop-filter: var(--blur);
@@ -585,7 +587,10 @@ h1, h2, h3, p { margin: 0; }
 /* glass card over the artwork */
 .glass {
   padding: 1rem 1.1rem 1.1rem; border-radius: var(--r-lg);
-  background: var(--glass);
+  background-color: var(--glass);
+  background-image: var(--grain), var(--sheen);
+  background-size: var(--grain-size), auto;
+  background-blend-mode: soft-light, normal;
   border: 1px solid var(--glass-line);
   backdrop-filter: var(--blur);
   -webkit-backdrop-filter: var(--blur);
@@ -619,7 +624,10 @@ h1, h2, h3, p { margin: 0; }
 .transport {
   display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
   padding: .7rem .8rem; border-radius: var(--r-xl);
-  background: var(--glass);
+  background-color: var(--glass);
+  background-image: var(--grain), var(--sheen);
+  background-size: var(--grain-size), auto;
+  background-blend-mode: soft-light, normal;
   border: 1px solid var(--glass-line);
   backdrop-filter: var(--blur);
   -webkit-backdrop-filter: var(--blur);
@@ -668,8 +676,12 @@ h1, h2, h3, p { margin: 0; }
 /* ---------- Panels ---------------------------------------- */
 .panel {
   margin: 1rem var(--gut) 0; padding: 1.05rem;
-  border-radius: var(--r-lg);
-  background: var(--pane); border: 1px solid var(--pane-line);
+  border-radius: var(--r-lg); background-color: rgba(255,255,255,.075);
+  background-image: var(--grain), linear-gradient(145deg, rgba(255,255,255,.08), rgba(255,255,255,.025));
+  background-size: var(--grain-size), auto;
+  background-blend-mode: soft-light, normal;
+  border: 1px solid var(--pane-line);
+  backdrop-filter: var(--blur-sm); -webkit-backdrop-filter: var(--blur-sm);
 }
 .panel-head {
   display: flex; align-items: center; justify-content: space-between;
@@ -848,9 +860,15 @@ textarea.field { resize: vertical; min-height: 9rem; line-height: 1.65; }
 .rec-stage {
   position: relative; margin: 1.1rem var(--gut) 0; padding: 1.5rem 1.15rem 1.35rem;
   border-radius: var(--r-xl); text-align: center;
-  background:
-    radial-gradient(120% 80% at 50% -12%, rgba(236,239,94,.09), transparent 58%),
-    var(--surface);
+  background-color: rgba(24,24,31,.58);
+  background-image:
+    var(--grain),
+    radial-gradient(120% 80% at 50% -12%, rgba(236,239,94,.13), transparent 58%),
+    linear-gradient(145deg, rgba(255,255,255,.1), rgba(255,255,255,.025));
+  background-size: var(--grain-size), auto, auto;
+  background-blend-mode: soft-light, normal, normal;
+  border: 1px solid var(--glass-line);
+  backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
 }
 .phase-label { color: var(--text-3); font-size: .8rem; font-weight: 640; transition: color .25s var(--ease); }
 .phase-label::before {
@@ -1049,7 +1067,10 @@ textarea.field { resize: vertical; min-height: 9rem; line-height: 1.65; }
 .modal {
   width: min(26rem, 100%); margin-bottom: var(--bot);
   padding: 1.35rem 1.25rem calc(1.25rem + var(--bot));
-  border-radius: var(--r-xl); background: rgba(23,23,31,.86);
+  border-radius: var(--r-xl); background-color: rgba(20,20,28,.9);
+  background-image: var(--grain), var(--sheen);
+  background-size: var(--grain-size), auto;
+  background-blend-mode: soft-light, normal;
   border: 1px solid var(--glass-line);
   backdrop-filter: var(--blur-sm); -webkit-backdrop-filter: var(--blur-sm);
   box-shadow: 0 -1rem 3rem rgba(0,0,0,.5);
