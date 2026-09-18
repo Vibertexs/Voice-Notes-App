@@ -39,11 +39,12 @@ def update_workspace(workspace_id: str, update: WorkspaceUpdate) -> dict[str, ob
         folder_id = values["folder_id"] or None
         if folder_id:
             get_folder(folder_id)
+    favorite = int(values["favorite"]) if "favorite" in values else int(current["favorite"])
     updated_at = datetime.now(timezone.utc).isoformat()
     with connect_database() as connection:
         connection.execute(
-            "UPDATE workspaces SET title = ?, folder_id = ?, updated_at = ? WHERE id = ?",
-            (title, folder_id, updated_at, workspace_id),
+            "UPDATE workspaces SET title = ?, folder_id = ?, favorite = ?, updated_at = ? WHERE id = ?",
+            (title, folder_id, favorite, updated_at, workspace_id),
         )
         destination = get_folder(folder_id) if folder_id else None
         course = destination["name"] if destination else "Unfiled recordings"

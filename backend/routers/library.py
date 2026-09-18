@@ -30,7 +30,8 @@ def list_library(
             folders = []
             workspaces = connection.execute(
                 """
-                SELECT workspaces.*, COUNT(lectures.id) AS session_count
+                SELECT workspaces.*, COUNT(lectures.id) AS session_count,
+                       SUM(lectures.duration_seconds) AS duration_seconds
                 FROM workspaces
                 LEFT JOIN lectures ON lectures.workspace_id = workspaces.id
                 WHERE workspaces.folder_id = ?
@@ -61,7 +62,8 @@ def list_library(
             ).fetchall()
             workspaces = connection.execute(
                 """
-                SELECT workspaces.*, COUNT(lectures.id) AS session_count
+                SELECT workspaces.*, COUNT(lectures.id) AS session_count,
+                       SUM(lectures.duration_seconds) AS duration_seconds
                 FROM workspaces
                 LEFT JOIN lectures ON lectures.workspace_id = workspaces.id
                 WHERE workspaces.folder_id IS NULL

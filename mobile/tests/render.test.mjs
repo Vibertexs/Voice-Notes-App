@@ -110,8 +110,10 @@ const document_ = dom.window.document;
 // Wait for the app's actual home landmark rather than sampling at a fixed
 // moment. An earlier version slept and then matched loose text, so it passed
 // while the page was still on its loading screen. VoiceFlow starts on its
-// purpose-built Home screen; its quick-record card is the stable landmark.
-const librarySelector = 'main.reference-screen.home-screen .home-record-card';
+// The folder index is the Home screen's stable landmark: its search field.
+// Recording intentionally lives in the navigation rather than being duplicated
+// as a button on the screen itself.
+const librarySelector = 'main.screen .search-bar';
 let waited = 0;
 while (waited < 8000 && !document_.querySelector(librarySelector) && !pageErrors.length) {
   await settle(100);
@@ -135,7 +137,7 @@ check('not stuck on the loading screen', !onLoadingScreen, text.slice(0, 160));
 check('not showing the error screen', !onErrorScreen, text.slice(0, 220));
 check('the home page rendered', Boolean(document_.querySelector(librarySelector)),
   `waited ${waited}ms; body: ${text.slice(0, 160)}`);
-check('the classes section is present', /class/i.test(text), text.slice(0, 160));
+check('the folders section is present', /folder/i.test(text), text.slice(0, 160));
 check('the record button is present', Boolean(
   [...document_.querySelectorAll('button')].find((b) => /record/i.test(b.textContent))),
   [...document_.querySelectorAll('button')].map((b) => b.textContent).slice(0, 8).join(' | '));

@@ -1,12 +1,19 @@
-import { useId, useState } from 'react';
-import { Icon } from './Icon';
+import { useState } from 'react';
+import { FOLDER_COLORS } from './FolderCard';
+import { FOLDER_ICONS, Icon } from './Icon';
 
-const COLORS = ['blue', 'violet', 'rose', 'coral', 'amber', 'lime', 'mint', 'sky', 'slate'];
-
+/**
+ * Making a folder.
+ *
+ * A full-screen sheet rather than a dialog, because a phone has no room for a
+ * box floating over another box. Everything on it is optional except the name:
+ * the preview shows what the card will look like as the colour and icon are
+ * chosen, so the choice is made against the real thing.
+ */
 export default function FolderDialog({ parent, onClose, onCreate }) {
-  const nameId = useId();
   const [name, setName] = useState('');
-  const [color, setColor] = useState('blue');
+  const [color, setColor] = useState('rose');
+  const [icon, setIcon] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -16,7 +23,7 @@ export default function FolderDialog({ parent, onClose, onCreate }) {
     setSaving(true);
     setError('');
     try {
-      await onCreate({ name: name.trim(), color, parent_id: parent?.id ?? null });
+      await onCreate({ name: name.trim(), color, icon, parent_id: parent?.id ?? null });
       onClose();
     } catch (caught) {
       setError(caught.message);
@@ -26,55 +33,64 @@ export default function FolderDialog({ parent, onClose, onCreate }) {
   }
 
   return (
-    <div className="scrim" role="presentation" onMouseDown={onClose}>
-      <form
-        className="modal"
-        aria-labelledby="folder-dialog-title"
-        onSubmit={submit}
-        onMouseDown={(event) => event.stopPropagation()}
-      >
-        <div className="modal-head">
-          <h2 id="folder-dialog-title">{parent ? 'New folder' : 'New class'}</h2>
-          <button className="iconbtn" type="button" onClick={onClose} aria-label="Close">
-            <Icon name="close" />
-          </button>
+    <div className="scrim" role="presentation">
+      <form className="create-screen" aria-labelledby="create-folder-title" onSubmit={submit} data-tone={color}>
+        <header className="create-head">
+          <button type="button" onClick={onClose}>Cancel</button>
+          <h2 id="create-folder-title">New Folder</h2>
+          <button type="submit" disabled={!name.trim() || saving}>{saving ? 'Creating…' : 'Create'}</button>
+        </header>
+
+        <div className="create-preview" aria-hidden="true">
+          <Icon name={icon || 'folder'} />
         </div>
 
-        {parent && <p className="dim" style={{ marginBottom: '.8rem' }}>Inside {parent.name}</p>}
+        {parent && <p className="create-parent">Inside {parent.name}</p>}
 
-        <label className="field-label" htmlFor={nameId}>{parent ? 'Folder name' : 'Class name'}</label>
         <input
-          id={nameId}
-          className="field"
+          className="create-name"
           autoFocus
           value={name}
           maxLength="120"
-          placeholder="e.g. Biology 101"
+          placeholder="Physics 141"
+          aria-label="Folder name"
           onChange={(event) => setName(event.target.value)}
         />
 
-        <fieldset style={{ border: 0, padding: 0, margin: '1.1rem 0 0' }}>
-          <legend className="field-label">Colour</legend>
-          <div className="swatch-grid">
-            {COLORS.map((option) => (
+        <fieldset>
+          <legend className="create-label">Colour</legend>
+          <div className="swatch-row">
+            {FOLDER_COLORS.map((option) => (
               <button
                 key={option}
                 type="button"
-                className={`swatch-pick ${option} ${color === option ? 'on' : ''}`}
+                data-tone={option}
+                className={`swatch ${color === option ? 'on' : ''}`}
                 onClick={() => setColor(option)}
-                aria-label={`${option} colour`}
+                aria-label={`${option} folder`}
                 aria-pressed={color === option}
               />
             ))}
           </div>
         </fieldset>
 
-        {error && <p className="err" role="alert">{error}</p>}
+        <fieldset>
+          <legend className="create-label">Icon <span className="dim">optional</span></legend>
+          <div className="icon-row">
+            {FOLDER_ICONS.map((option) => (
+              <button
+                key={option}
+                type="button"
+                className={`icon-pick ${icon === option ? 'on' : ''}`}
+                onClick={() => setIcon(icon === option ? null : option)}
+                aria-label={option}
+                aria-pressed={icon === option}
+              ><Icon name={option} /></button>
+            ))}
+          </div>
+        </fieldset>
 
-        <div className="modal-actions">
-          <button type="button" className="btn quiet" onClick={onClose}>Cancel</button>
-          <button className="btn primary" disabled={saving}>{saving ? 'Creating…' : 'Create'}</button>
-        </div>
+        {error && <p className="err" role="alert">{error}</p>}
       </form>
     </div>
   );

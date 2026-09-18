@@ -48,7 +48,7 @@ const html = `<!doctype html>
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
-<title>Class Notes</title>
+<title>VoiceFlow</title>
 <style>
 ${css}
 /* Native shell adjustments: the WebView has no browser chrome.

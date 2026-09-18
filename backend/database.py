@@ -217,6 +217,13 @@ def initialize_database() -> None:
         folder_columns = {row["name"] for row in connection.execute("PRAGMA table_info(folders)")}
         if "archived_at" not in folder_columns:
             connection.execute("ALTER TABLE folders ADD COLUMN archived_at TEXT")
+        if "icon" not in folder_columns:
+            connection.execute("ALTER TABLE folders ADD COLUMN icon TEXT")
+        workspace_columns = {row["name"] for row in connection.execute("PRAGMA table_info(workspaces)")}
+        if "favorite" not in workspace_columns:
+            connection.execute(
+                "ALTER TABLE workspaces ADD COLUMN favorite INTEGER NOT NULL DEFAULT 0"
+            )
         # A folder is a class, and classes do not live inside other classes.
         connection.execute("UPDATE folders SET parent_id = NULL WHERE parent_id IS NOT NULL")
         columns = {row["name"] for row in connection.execute("PRAGMA table_info(lectures)")}

@@ -13,7 +13,7 @@ import { JSDOM } from 'jsdom';
 const here = dirname(fileURLToPath(import.meta.url));
 const source = readFileSync(join(here, '..', 'src', 'bridge.js'), 'utf8');
 const captureSource = readFileSync(
-  join(here, '..', '..', 'frontend', 'src', 'components', 'CaptureView.jsx'),
+  join(here, '..', '..', 'frontend', 'src', 'components', 'RecordScreen.jsx'),
   'utf8',
 );
 
@@ -58,13 +58,20 @@ for (const [label, pattern] of [
 }
 
 console.log('\n== native recording handoff ==');
-const doneStart = captureSource.indexOf('async function done()');
+const doneStart = captureSource.indexOf('async function stop()');
 const doneEnd = captureSource.indexOf('\n  function ', doneStart);
 const doneBody = captureSource.slice(doneStart, doneEnd);
-check('the capture page allows Expo to deliver its first chunk at stop',
-  /window\.__CN_NATIVE__ === true/.test(doneBody)
-    && /!chunksRef\.current\.length && !nativeRecorderDeliversOnStop/.test(doneBody),
+// Expo hands over its file token only once stop() has run, so the page must
+// reach recorder.stop() without first requiring a chunk - and it must not then
+// call an empty result a failure on the native side.
+check('stopping is never gated on a chunk having arrived',
+  !/if \(!recorder \|\| !chunksRef\.current\.length/.test(doneBody)
+    && /if \(!recorder\) return;/.test(doneBody),
   'the page must call native stop before its file token exists');
+check('an empty blob is only an error off the native path',
+  /window\.__CN_NATIVE__ === true/.test(doneBody)
+    && /!blob\.size && !nativeDeliversOnStop/.test(doneBody),
+  'the native recorder legitimately produces no blob here');
 
 const stopStart = body.indexOf('ShimRecorder.prototype.stop');
 const stopEnd = body.indexOf('ShimRecorder.isTypeSupported', stopStart);

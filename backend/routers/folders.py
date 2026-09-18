@@ -17,8 +17,9 @@ def create_folder(folder: FolderCreate) -> dict[str, object]:
             raise HTTPException(status_code=409, detail="You already have a class with that name.")
         folder_id = str(uuid4())
         connection.execute(
-            "INSERT INTO folders (id, name, parent_id, color, created_at) VALUES (?, ?, NULL, ?, ?)",
-            (folder_id, name, color, datetime.now(timezone.utc).isoformat()),
+            "INSERT INTO folders (id, name, parent_id, color, icon, created_at) "
+            "VALUES (?, ?, NULL, ?, ?, ?)",
+            (folder_id, name, color, folder.icon or None, datetime.now(timezone.utc).isoformat()),
         )
     return serialize_folder(get_folder(folder_id))
 
@@ -46,6 +47,10 @@ def update_folder(folder_id: str, update: FolderUpdate) -> dict[str, object]:
             raise HTTPException(status_code=422, detail="Choose a valid class color.")
         changes.append("color = ?")
         values.append(update.color)
+
+    if update.icon is not None:
+        changes.append("icon = ?")
+        values.append(update.icon or None)
 
     if update.archived is not None:
         changes.append("archived_at = ?")

@@ -17,7 +17,7 @@ const capture = readFileSync(join(here, '..', 'src', 'capture.js'), 'utf8');
 const app = readFileSync(join(here, '..', 'App.js'), 'utf8');
 const bridge = readFileSync(join(here, '..', 'src', 'bridge.js'), 'utf8');
 const captureView = readFileSync(
-  join(here, '..', '..', 'frontend', 'src', 'components', 'CaptureView.jsx'), 'utf8',
+  join(here, '..', '..', 'frontend', 'src', 'components', 'RecordScreen.jsx'), 'utf8',
 );
 const appJson = JSON.parse(readFileSync(join(here, '..', 'app.json'), 'utf8'));
 
@@ -75,20 +75,23 @@ console.log('\n== pause is not offered when it cannot be honoured ==');
 check('the shell derives pause support', /SUPPORTS_PAUSE = !TRANSCRIPTION_AVAILABLE/.test(capture));
 check('capabilities reach the page', /__CN_CAPS__/.test(app) && /__CN_CAPS__/.test(bridge));
 check('the page reads them', /caps\.pause !== false/.test(captureView));
-// Resuming would open a second WAV and split the lecture, so the control is a
-// stop rather than a pause - and it has to really stop, or the timer keeps
-// running while the label claims otherwise.
-check('the control is labelled a stop, not a pause',
-  /Stopped/.test(captureView) && /Tap to stop/.test(captureView),
-  'calling it Paused while capture continues is the bug this replaced');
-check('capture actually ends when it is pressed',
-  /if \(!canPause\)[\s\S]{0,600}recorder\.stop\(\)/.test(captureView),
-  'the timer would otherwise keep counting audio nobody asked for');
-check('the clock stops with it',
-  /if \(!canPause\)[\s\S]{0,700}pauseClock\(\)/.test(captureView),
+// Resuming would open a second WAV and split the lecture. Rather than turning
+// pause into a stop and hoping the label keeps up, the control is simply not
+// offered: the screen's three buttons are bookmark, stop and pause, and pause
+// is dead while the recogniser is driving.
+check('the pause control is disabled when pause cannot be honoured',
+  /disabled=\{[^}]*!canPause\}/.test(captureView),
+  'an enabled pause would split the WAV the recogniser is writing');
+check('pressing it does nothing even so',
+  /function pauseOrResume\(\)[\s\S]{0,200}if \(!recorder \|\| !canPause\) return;/.test(captureView),
+  'the handler must refuse too, not only the styling');
+// Stop ends the take and saves it in one press, so there is exactly one stop()
+// on the path and no second one to fail.
+check('stop ends capture and stops the clock',
+  /async function stop\(\)[\s\S]{0,900}stopClock\(\)[\s\S]{0,400}recorder\.stop\(\)/.test(captureView),
   'a running clock over stopped capture reports the wrong duration');
-check('the finished take is reused rather than stopped twice',
-  /stoppedBlobRef/.test(captureView),
+check('the recorder is only stopped once on the save path',
+  (captureView.match(/recorder\.stop\(\)/g) ?? []).length === 1,
   'stopping an already-stopped recorder fails and loses the recording');
 
 console.log('\n== native config a dev build needs ==');

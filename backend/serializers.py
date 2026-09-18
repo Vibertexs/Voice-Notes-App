@@ -24,6 +24,7 @@ def serialize_folder(row: sqlite3.Row) -> dict[str, object]:
         "name": row["name"],
         "parent_id": row["parent_id"],
         "color": row["color"],
+        "icon": row["icon"] if "icon" in row.keys() else None,
         "created_at": row["created_at"],
         "archived": bool(row["archived_at"]) if "archived_at" in row.keys() else False,
         # Present only when the query asked for them (the library grid does).
@@ -96,9 +97,13 @@ def serialize_workspace(row: sqlite3.Row, *, include_sessions: bool = False) -> 
         "id": row["id"],
         "folder_id": row["folder_id"],
         "title": row["title"],
+        "favorite": bool(row["favorite"]) if "favorite" in row.keys() else False,
         "created_at": row["created_at"],
         "updated_at": row["updated_at"],
         "session_count": row["session_count"] if "session_count" in row.keys() else 0,
+        # Present only when the listing asked for it; a single workspace does
+        # not need it because its own recordings carry their durations.
+        "duration_seconds": row["duration_seconds"] if "duration_seconds" in row.keys() else None,
     }
     if include_sessions:
         with connect_database() as connection:

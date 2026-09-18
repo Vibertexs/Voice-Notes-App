@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 class FolderCreate(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     color: str = "blue"
+    icon: str | None = Field(default=None, max_length=40)
 
 
 class FolderUpdate(BaseModel):
@@ -17,6 +18,7 @@ class FolderUpdate(BaseModel):
 
     name: str | None = Field(default=None, min_length=1, max_length=120)
     color: str | None = Field(default=None, min_length=1, max_length=20)
+    icon: str | None = Field(default=None, max_length=40)
     archived: bool | None = None
 
 
@@ -34,6 +36,7 @@ class WorkspaceCreate(BaseModel):
 class WorkspaceUpdate(BaseModel):
     title: str | None = Field(default=None, max_length=180)
     folder_id: str | None = None
+    favorite: bool | None = None
 
 
 class WorkspaceNotesUpdate(BaseModel):

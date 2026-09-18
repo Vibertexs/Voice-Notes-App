@@ -69,7 +69,7 @@ const PATCH = (path, b) => api.handleApi({ method: 'PATCH', path, body: b });
 const PUT = (path, b) => api.handleApi({ method: 'PUT', path, body: b });
 const DELETE = (path) => api.handleApi({ method: 'DELETE', path, body: null });
 
-console.log('== an empty library still has every key LibraryView reads ==');
+console.log('== an empty library still has every key the folder screens read ==');
 let res = await GET('/api/library');
 check('200', res.status === 200, res);
 for (const key of ['current_folder', 'breadcrumbs', 'folders', 'workspaces', 'lectures', 'materials']) {
@@ -90,15 +90,18 @@ check('/api/ai/status returns an object, not a list',
   res.body && typeof res.body === 'object' && !Array.isArray(res.body), res.body);
 
 console.log('\n== creating a class ==');
-res = await POST('/api/folders', { name: 'Biology', color: 'mint' });
+res = await POST('/api/folders', { name: 'Biology', color: 'mint', icon: 'education' });
 const bio = res.body;
 check('201-ish with an id', Boolean(bio.id), bio);
-check('ClassCard reads .name', bio.name === 'Biology');
-check('ClassCard reads .color', bio.color === 'mint');
-check('ClassCard reads .archived', bio.archived === false);
+check('FolderCard reads .name', bio.name === 'Biology');
+check('FolderCard reads .color', bio.color === 'mint');
+check('FolderCard reads .archived', bio.archived === false);
+check('FolderCard reads .icon', bio.icon === 'education', bio);
 res = await GET('/api/library');
 check('appears in the grid', res.body.folders.length === 1);
-check('ClassCard reads .lecture_count', res.body.folders[0].lecture_count === 0, res.body.folders[0]);
+check('FolderCard reads .lecture_count', res.body.folders[0].lecture_count === 0, res.body.folders[0]);
+res = await PATCH(`/api/folders/${bio.id}`, { icon: 'music' });
+check('the icon can be changed', res.body.icon === 'music', res.body);
 
 console.log('\n== recording, then posting it as a lecture ==');
 await api.claimRecording({ id: 'rec1', title: 'Mitosis', fileName: 'rec1.m4a' });
@@ -122,7 +125,7 @@ console.log('\n== the audio bytes never cross the bridge ==');
 res = await POST('/api/lectures', { title: 'No audio' });
 check('a post with no token is rejected', res.status === 422, res);
 
-console.log('\n== WorkspaceView reads the full workspace ==');
+console.log('\n== the playback screen reads the full workspace ==');
 res = await GET(`/api/workspaces/${workspaceId}`);
 check('200', res.status === 200, res);
 for (const key of ['sessions', 'note_body', 'study_notes', 'materials', 'flashcards', 'title']) {
@@ -132,6 +135,15 @@ check('the recording is in sessions', res.body.sessions.length === 1, res.body.s
 check('capture notes landed on the session', res.body.sessions[0].note_body === 'spindle fibres');
 check('session carries markers array', Array.isArray(res.body.sessions[0].markers));
 check('session carries segments array', Array.isArray(res.body.sessions[0].segments));
+// The header's heart and the row's runtime read these two directly.
+check('workspace carries .favorite', res.body.favorite === false, res.body.favorite);
+res = await PATCH(`/api/workspaces/${workspaceId}`, { favorite: true });
+check('favouriting sticks', res.body.favorite === true, res.body);
+res = await GET(`/api/library?folder_id=${bio.id}`);
+check('a listed recording carries .duration_seconds',
+  res.body.workspaces[0].duration_seconds > 0, res.body.workspaces[0]);
+check('a listed recording carries .favorite', res.body.workspaces[0].favorite === true,
+  res.body.workspaces[0]);
 
 console.log('\n== the class now counts its lecture ==');
 res = await GET('/api/library');

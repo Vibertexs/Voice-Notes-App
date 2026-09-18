@@ -38,6 +38,7 @@ export async function openDatabase() {
       name TEXT NOT NULL,
       parent_id TEXT,
       color TEXT NOT NULL DEFAULT 'blue',
+      icon TEXT,
       created_at TEXT NOT NULL,
       archived_at TEXT
     );
@@ -45,6 +46,7 @@ export async function openDatabase() {
       id TEXT PRIMARY KEY NOT NULL,
       folder_id TEXT,
       title TEXT NOT NULL,
+      favorite INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
@@ -115,10 +117,16 @@ export async function openDatabase() {
   // Segments arrived after the first recordings did. ALTER TABLE throws when
   // the column is already there, which is the expected state on every launch
   // but the first.
-  try {
-    await database.execAsync("ALTER TABLE lectures ADD COLUMN segments_json TEXT NOT NULL DEFAULT '[]'");
-  } catch {
-    /* already migrated */
+  for (const migration of [
+    "ALTER TABLE lectures ADD COLUMN segments_json TEXT NOT NULL DEFAULT '[]'",
+    'ALTER TABLE folders ADD COLUMN icon TEXT',
+    'ALTER TABLE workspaces ADD COLUMN favorite INTEGER NOT NULL DEFAULT 0',
+  ]) {
+    try {
+      await database.execAsync(migration);
+    } catch {
+      /* already migrated */
+    }
   }
   return database;
 }
@@ -184,6 +192,7 @@ function folderJson(row) {
     name: row.name,
     parent_id: row.parent_id ?? null,
     color: row.color,
+    icon: row.icon ?? null,
     created_at: row.created_at,
     archived: Boolean(row.archived_at),
     lecture_count: row.lecture_count ?? null,
@@ -264,9 +273,11 @@ async function workspaceJson(db, row, { includeSessions = false } = {}) {
     id: row.id,
     folder_id: row.folder_id ?? null,
     title: row.title,
+    favorite: Boolean(row.favorite),
     created_at: row.created_at,
     updated_at: row.updated_at,
     session_count: row.session_count ?? 0,
+    duration_seconds: row.duration_seconds ?? null,
   };
   if (!includeSessions) return result;
 
@@ -356,10 +367,12 @@ export async function handleApi({ method, path, body }) {
 
     const workspaces = folderId
       ? await db.getAllAsync(
-        `SELECT w.*, (SELECT COUNT(*) FROM lectures l WHERE l.workspace_id = w.id) AS session_count
+        `SELECT w.*, (SELECT COUNT(*) FROM lectures l WHERE l.workspace_id = w.id) AS session_count,
+                (SELECT SUM(l2.duration_seconds) FROM lectures l2 WHERE l2.workspace_id = w.id) AS duration_seconds
            FROM workspaces w WHERE w.folder_id = ? ORDER BY w.updated_at DESC`, folderId)
       : await db.getAllAsync(
-        `SELECT w.*, (SELECT COUNT(*) FROM lectures l WHERE l.workspace_id = w.id) AS session_count
+        `SELECT w.*, (SELECT COUNT(*) FROM lectures l WHERE l.workspace_id = w.id) AS session_count,
+                (SELECT SUM(l2.duration_seconds) FROM lectures l2 WHERE l2.workspace_id = w.id) AS duration_seconds
            FROM workspaces w WHERE w.folder_id IS NULL ORDER BY w.updated_at DESC`);
 
     const materials = folderId
@@ -391,11 +404,11 @@ export async function handleApi({ method, path, body }) {
       if (!name) return fail(422, 'Give the class a name.');
       const folder = {
         id: newId(), name, parent_id: body?.parent_id ?? null,
-        color: body?.color ?? 'blue', created_at: nowIso(),
+        color: body?.color ?? 'blue', icon: body?.icon ?? null, created_at: nowIso(),
       };
       await db.runAsync(
-        'INSERT INTO folders (id, name, parent_id, color, created_at) VALUES (?, ?, ?, ?, ?)',
-        folder.id, folder.name, folder.parent_id, folder.color, folder.created_at,
+        'INSERT INTO folders (id, name, parent_id, color, icon, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+        folder.id, folder.name, folder.parent_id, folder.color, folder.icon, folder.created_at,
       );
       return ok(folderJson({ ...folder, archived_at: null }));
     }
@@ -407,6 +420,9 @@ export async function handleApi({ method, path, body }) {
       }
       if (body?.color !== undefined) {
         await db.runAsync('UPDATE folders SET color = ? WHERE id = ?', body.color, id);
+      }
+      if (body?.icon !== undefined) {
+        await db.runAsync('UPDATE folders SET icon = ? WHERE id = ?', body.icon || null, id);
       }
       if (body?.archived !== undefined) {
         await db.runAsync('UPDATE folders SET archived_at = ? WHERE id = ?', body.archived ? nowIso() : null, id);
@@ -438,6 +454,9 @@ export async function handleApi({ method, path, body }) {
       }
       if (body?.folder_id !== undefined) {
         await db.runAsync('UPDATE workspaces SET folder_id = ? WHERE id = ?', body.folder_id ?? null, id);
+      }
+      if (body?.favorite !== undefined) {
+        await db.runAsync('UPDATE workspaces SET favorite = ? WHERE id = ?', body.favorite ? 1 : 0, id);
       }
       await touchWorkspace(db, id);
       return ok(await workspaceJson(db, await db.getFirstAsync('SELECT * FROM workspaces WHERE id = ?', id)));

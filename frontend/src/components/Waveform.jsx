@@ -1,32 +1,32 @@
 import { useEffect, useRef } from 'react';
 
-const BAR_WIDTH = 3;
-const BAR_GAP = 2;
+const BAR = 3;
+const GAP = 2;
 const SAMPLE_EVERY_MS = 48;
 const MAX_BARS = 900;
 
+/** The board's spectrum, in the order the trace runs: coral into blue. */
+const SPECTRUM = ['#FF375F', '#FF2D8D', '#A855F7', '#3882F6'];
+
 /**
- * The live level meter from the original recorder: rounded bars that scroll
- * right to left, eased so the trace glides instead of twitching.
+ * The live level meter: rounded bars scrolling right to left, eased so the
+ * trace glides instead of twitching.
  *
  * `stream` supplies audio; `phase` only decides the colour, so the trace stays
- * on screen while paused instead of blanking.
+ * on screen while paused instead of blanking. It is drawn symmetrically about
+ * the centre line, which is what makes silence read as a flat thread rather
+ * than as an empty box.
  */
-export default function Waveform({ stream, phase, variant = 'default' }) {
+export default function Waveform({ stream, phase, className = '' }) {
   const canvasRef = useRef(null);
   const levelsRef = useRef([]);
   const frameRef = useRef(0);
   const analyserRef = useRef(null);
   const samplesRef = useRef(null);
-  const contextRef = useRef(null);
   const phaseRef = useRef(phase);
 
   useEffect(() => { phaseRef.current = phase; }, [phase]);
-
-  // Reset the trace when a new take begins.
-  useEffect(() => {
-    if (!stream) levelsRef.current = [];
-  }, [stream]);
+  useEffect(() => { if (!stream) levelsRef.current = []; }, [stream]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -36,7 +36,10 @@ export default function Waveform({ stream, phase, variant = 'default' }) {
     if (stream) {
       const AudioContextClass = window.AudioContext || window.webkitAudioContext;
       audioContext = new AudioContextClass();
-      contextRef.current = audioContext;
+      // A context created outside a user gesture starts suspended, and a
+      // suspended analyser reports silence - a flat trace over a recording
+      // that is actually capturing fine.
+      if (audioContext.state === 'suspended') audioContext.resume().catch(() => {});
       const analyser = audioContext.createAnalyser();
       analyser.fftSize = 1024;
       analyser.smoothingTimeConstant = 0.86;
@@ -70,25 +73,20 @@ export default function Waveform({ stream, phase, variant = 'default' }) {
     const draw = () => {
       const context = canvas.getContext('2d');
       const ratio = window.devicePixelRatio || 1;
-      const barWidth = BAR_WIDTH * ratio;
-      const step = (BAR_WIDTH + BAR_GAP) * ratio;
+      const barWidth = BAR * ratio;
+      const step = (BAR + GAP) * ratio;
       const capacity = Math.ceil(canvas.width / step);
       const visible = levelsRef.current.slice(-capacity);
       context.clearRect(0, 0, canvas.width, canvas.height);
-      const styles = getComputedStyle(canvas);
-      const spectrum = variant === 'spectrum' && phaseRef.current === 'recording'
-        ? (() => {
-          const gradient = context.createLinearGradient(0, 0, canvas.width, 0);
-          gradient.addColorStop(0, '#ff3cbc');
-          gradient.addColorStop(.45, '#a535ff');
-          gradient.addColorStop(.72, '#2f86ff');
-          gradient.addColorStop(1, '#ff3cbc');
-          return gradient;
-        })()
-        : null;
-      context.fillStyle = spectrum || (phaseRef.current === 'recording'
-        ? styles.getPropertyValue('--rec')
-        : styles.getPropertyValue('--wave-idle')).trim() || '#a9b5c6';
+
+      if (phaseRef.current === 'recording') {
+        const gradient = context.createLinearGradient(0, 0, canvas.width, 0);
+        SPECTRUM.forEach((stop, index) => gradient.addColorStop(index / (SPECTRUM.length - 1), stop));
+        context.fillStyle = gradient;
+      } else {
+        context.fillStyle = 'rgba(255,255,255,.22)';
+      }
+
       for (let index = 0; index < capacity; index += 1) {
         const sourceIndex = visible.length - capacity + index;
         const previous = visible[sourceIndex - 1] ?? visible[sourceIndex] ?? 0;
@@ -108,11 +106,11 @@ export default function Waveform({ stream, phase, variant = 'default' }) {
     let target = 0;
     let level = 0;
     let lastSampleAt = 0;
-    const tick = (now) => {
+    const tick = (time) => {
       if (phaseRef.current === 'recording') {
-        if (now - lastSampleAt >= SAMPLE_EVERY_MS) {
+        if (time - lastSampleAt >= SAMPLE_EVERY_MS) {
           target = sampleLevel();
-          lastSampleAt = now;
+          lastSampleAt = time;
         }
         level += (target - level) * 0.16;
         levelsRef.current.push(level);
@@ -131,9 +129,8 @@ export default function Waveform({ stream, phase, variant = 'default' }) {
       analyserRef.current = null;
       samplesRef.current = null;
       if (audioContext) audioContext.close().catch(() => {});
-      contextRef.current = null;
     };
   }, [stream]);
 
-  return <canvas ref={canvasRef} className="waveform" aria-hidden="true" />;
+  return <canvas ref={canvasRef} className={className} aria-hidden="true" />;
 }

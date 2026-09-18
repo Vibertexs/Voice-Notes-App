@@ -79,7 +79,10 @@ export default function SyncedTranscript({ segments, currentSeconds, onSeek, sta
       if ((segments[i].start_seconds ?? 0) <= (currentSeconds ?? 0)) index = i;
       else break;
     }
-    return index;
+    // At the very beginning of a recording the first segment can start a
+    // fraction of a second after zero. Treat it as current so playback never
+    // opens on an all-faded transcript.
+    return index < 0 ? 0 : index;
   })();
 
   // A new line means playback moved on, which is a good moment to take the
@@ -98,15 +101,17 @@ export default function SyncedTranscript({ segments, currentSeconds, onSeek, sta
 
   if (!segments?.length) {
     return (
-      <p className="dim">
-        {status === 'ready' ? 'No speech was recognised in this recording.' : 'Transcribing…'}
+      <p className="transcript-empty">
+        {['ready', 'complete'].includes(status) ? 'No speech was recognised in this recording.'
+          : status === 'unavailable' ? 'This recording has no transcript.'
+            : 'Transcribing…'}
       </p>
     );
   }
 
   return (
     <div
-      className="lines"
+      className="transcript"
       ref={listRef}
       onWheel={() => { userScrolledRef.current = true; }}
       onTouchMove={() => { userScrolledRef.current = true; }}
