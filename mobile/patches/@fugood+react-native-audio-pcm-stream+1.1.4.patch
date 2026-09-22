@@ -1,0 +1,18 @@
+diff --git a/node_modules/@fugood/react-native-audio-pcm-stream/android/src/main/java/com/imxiqi/rnliveaudiostream/RNLiveAudioStreamModule.java b/node_modules/@fugood/react-native-audio-pcm-stream/android/src/main/java/com/imxiqi/rnliveaudiostream/RNLiveAudioStreamModule.java
+index 6d7d17d..d882dcc 100644
+--- a/node_modules/@fugood/react-native-audio-pcm-stream/android/src/main/java/com/imxiqi/rnliveaudiostream/RNLiveAudioStreamModule.java
++++ b/node_modules/@fugood/react-native-audio-pcm-stream/android/src/main/java/com/imxiqi/rnliveaudiostream/RNLiveAudioStreamModule.java
+@@ -104,7 +104,12 @@ public class RNLiveAudioStreamModule extends ReactContextBaseJavaModule {
+ 
+                         // skip first 2 buffers to eliminate "click sound"
+                         if (bytesRead > 0 && ++count > 2) {
+-                            base64Data = Base64.encodeToString(buffer, Base64.NO_WRAP);
++                            // Encode only what was read. The buffer is reused
++                            // every pass, so encoding all of it re-sent the tail
++                            // of the previous chunk whenever a read came up
++                            // short - heard as a stutter, and transcribed as
++                            // repeated words.
++                            base64Data = Base64.encodeToString(buffer, 0, bytesRead, Base64.NO_WRAP);
+                             eventEmitter.emit("data", base64Data);
+                         }
+                     }

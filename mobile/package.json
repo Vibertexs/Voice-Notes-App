@@ -23,12 +23,14 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "build:web": "node scripts/bundle-web.mjs",
-    "test": "node tests/run.mjs"
+    "test": "node tests/run.mjs",
+    "postinstall": "patch-package"
   },
   "private": true,
   "devDependencies": {
     "@expo/ngrok": "^4.1.3",
     "jsdom": "^29.1.1",
+    "patch-package": "^8.0.1",
     "sql.js": "^1.14.2"
   }
 }

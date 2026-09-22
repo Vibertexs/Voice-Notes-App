@@ -163,6 +163,18 @@ export default function App() {
     const destination = audioFile(fileName);
     if (destination.exists) destination.delete();
     const durationSeconds = Number(recorder.getDuration(completedPath) ?? 0);
+    // The file's length is measured from the bytes written, and the recorder
+    // was open for a knowable amount of time. Pausing can only make the audio
+    // shorter than the wall clock, never longer - so audio that outruns the
+    // clock means chunks were written more than once, which is heard as a
+    // stutter and read by Whisper as repeated words. Say so with the numbers
+    // rather than leaving a corrupt file to explain itself.
+    const wallSeconds = (Date.now() - startedAt) / 1000;
+    if (durationSeconds > wallSeconds * 1.05 + 0.5) {
+      setPageError((current) => current
+        || `capture: ${durationSeconds.toFixed(1)}s of audio from ${wallSeconds.toFixed(1)}s of recording `
+        + `(${(durationSeconds / Math.max(0.1, wallSeconds)).toFixed(2)}x) - chunks are being duplicated`);
+    }
     await source.move(destination);
     await finishRecording({
       id,

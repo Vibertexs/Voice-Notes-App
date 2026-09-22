@@ -125,6 +125,28 @@ check('pausing drops chunks rather than stopping the stream',
 check('the header is patched at the end, not held in memory',
   /handle\.offset = 4/.test(pcm) && /handle\.offset = 40/.test(pcm),
   'an hour of PCM is ~115MB and must never be buffered to compute its length');
+
+// The capture module reused one byte array per read and base64-encoded all of
+// it, so a short read re-sent the tail of the previous chunk: audible as a
+// stutter, and transcribed as repeated words. The fix lives in a patch, and a
+// plain `npm install` would undo it without the postinstall hook.
+const captureModule = join(
+  here, '..', 'node_modules', '@fugood', 'react-native-audio-pcm-stream',
+  'android', 'src', 'main', 'java', 'com', 'imxiqi', 'rnliveaudiostream',
+  'RNLiveAudioStreamModule.java',
+);
+if (existsSync(captureModule)) {
+  const capture = readFileSync(captureModule, 'utf8');
+  check('the installed recorder encodes only the bytes it read',
+    /encodeToString\(buffer, 0, bytesRead,/.test(capture)
+      && !/encodeToString\(buffer, Base64/.test(capture),
+    'encoding the whole buffer re-sends the previous chunk on a short read');
+}
+check('the patch that fixes it is in the repo',
+  existsSync(join(here, '..', 'patches', '@fugood+react-native-audio-pcm-stream+1.1.4.patch')));
+check('an install reapplies it',
+  JSON.parse(readFileSync(join(here, '..', 'package.json'), 'utf8')).scripts.postinstall === 'patch-package',
+  'without this the build silently ships the stutter again');
 check('the page bridge still uses native recording commands',
   /rec\.start/.test(bridge) && /rec\.pause/.test(bridge) && /rec\.resume/.test(bridge) && /rec\.stop/.test(bridge));
 check('the transcript settings explain private on-device processing',
