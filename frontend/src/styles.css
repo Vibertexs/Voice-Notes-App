@@ -48,6 +48,7 @@
           'Inter', 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
 
   --t-title:  2rem;                            /* page titles, 32px      */
+  --t-head:   1.375rem;                        /* screen headers, 22px   */
   --t-timer:  clamp(3.25rem, 15.5vw, 4rem);    /* the take clock, 52-64px */
   --t-lyric:  clamp(1.75rem, 7.6vw, 2.125rem); /* transcript, 28-34px    */
   --t-row:    1.0625rem;                       /* list titles, 17px      */
@@ -65,7 +66,7 @@
 
   /* ---- Space ---------------------------------------------- */
   --gut: 1.25rem;
-  --nav: 4.75rem;
+  --record-space: 6rem;
   --top: env(safe-area-inset-top, 0px);
   --bot: env(safe-area-inset-bottom, 0px);
 
@@ -131,7 +132,7 @@ h1, h2, h3, p { margin: 0; }
    ========================================================= */
 .screen {
   min-height: 100dvh;
-  padding: calc(var(--top) + 1rem) var(--gut) calc(var(--nav) + var(--bot) + 2rem);
+  padding: calc(var(--top) + 1rem) var(--gut) calc(var(--record-space) + var(--bot) + 1.5rem);
 }
 
 /* The title block: a large bold title, metadata under it when
@@ -142,15 +143,27 @@ h1, h2, h3, p { margin: 0; }
 }
 .head-title { min-width: 0; }
 .head-title h1 {
-  font-size: var(--t-title); font-weight: 700; line-height: 1.08; letter-spacing: -.028em;
+  font-size: var(--t-head); font-weight: 600; line-height: 1.12; letter-spacing: -.022em;
 }
 .head-title p { margin-top: .25rem; color: var(--text-2); font-size: var(--t-meta); }
 .head-actions { display: flex; flex: 0 0 auto; align-items: center; gap: .5rem; }
+
+/* A header that carries the screen's name in the middle, for screens with no
+   title block under it - an empty folder, a take being recorded. */
+.head.titled { display: grid; grid-template-columns: 1fr auto 1fr; }
+.head.titled > :last-child { justify-self: end; }
+.head-name {
+  overflow: hidden; font-size: var(--t-row); font-weight: 600;
+  letter-spacing: -.017em; text-align: center; text-overflow: ellipsis; white-space: nowrap;
+}
 
 /* The big title under a back row, as the folder screen uses it. */
 .page-title { margin-top: 1.15rem; }
 .page-title h1 { font-size: var(--t-title); font-weight: 700; line-height: 1.1; letter-spacing: -.028em; }
 .page-title p { margin-top: .3rem; color: var(--text-2); font-size: var(--t-meta); }
+.page-title.compact { margin-top: .9rem; }
+.page-title.compact h1 { font-size: var(--t-head); }
+.page-title.compact p { margin-top: .2rem; font-variant-numeric: tabular-nums; }
 
 .section { margin-top: 1.75rem; }
 .section-head {
@@ -172,7 +185,6 @@ h1, h2, h3, p { margin: 0; }
 .icon-btn svg { width: 1.125rem; height: 1.125rem; }
 .icon-btn:active { transform: scale(.9); }
 .icon-btn.plain { background: transparent; }
-.icon-btn.accent { color: var(--primary); box-shadow: inset 0 0 0 1px rgba(255,55,95,.45); }
 .icon-btn.on { color: var(--primary); }
 .icon-btn.lg { width: 2.75rem; height: 2.75rem; }
 .icon-btn.lg svg { width: 1.3rem; height: 1.3rem; }
@@ -201,50 +213,51 @@ h1, h2, h3, p { margin: 0; }
    text, the name and count bottom-left, the menu bottom-right.
    ========================================================= */
 .folder-cards { display: grid; gap: .75rem; margin-top: 1rem; }
+.new-recording { margin-top: .85rem; }
 
 .folder-card {
   position: relative; isolation: isolate;
-  aspect-ratio: 2.72 / 1; min-height: 7.25rem; overflow: hidden;
-  border-radius: var(--r-card);
+  aspect-ratio: 3.8 / 1; min-height: 5.5rem; overflow: hidden;
+  border-radius: var(--r-row);
   background: linear-gradient(152deg, var(--g1, #3B8AF8), var(--g2, #1046C9));
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.18);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.16);
   transition: transform .2s var(--spring);
 }
 .folder-card:active { transform: scale(.978); }
 .folder-card > .folder-open {
   position: absolute; inset: 0; z-index: 2;
-  display: flex; align-items: flex-end;
-  width: 100%; padding: 1rem 1.1rem; text-align: left;
+  display: flex; align-items: center;
+  width: 100%; padding: .85rem 1rem; text-align: left;
 }
-/* The artwork belongs to the background rather than sitting next
-   to the text: upper half, centred, and the copy never runs into
-   it however long the name is. */
+/* The artwork is an illustration, not a watermark: it sits inside the card,
+   right of centre, translucent white over the gradient but plainly there. */
 .folder-art {
-  position: absolute; top: 7%; left: 50%; z-index: 0;
-  width: 9.5rem; height: 56%;
-  transform: translateX(-50%); pointer-events: none;
+  position: absolute; top: 50%; right: 2.25rem; left: auto; z-index: 0;
+  width: 7.5rem; height: 82%;
+  transform: translateY(-50%); pointer-events: none;
 }
-.folder-art .sheet-l, .folder-art .sheet-r { fill: rgba(255,255,255,.17); }
-.folder-art .body  { fill: rgba(255,255,255,.28); }
-.folder-art .tab   { fill: rgba(255,255,255,.34); }
-.folder-art .badge { color: rgba(255,255,255,.62); }
+.folder-art .sheet-l, .folder-art .sheet-r { fill: rgba(255,255,255,.13); }
+.folder-art .body  { fill: rgba(255,255,255,.22); }
+.folder-art .tab   { fill: rgba(255,255,255,.28); }
+.folder-art .badge { color: rgba(255,255,255,.55); }
 .folder-card::after {
-  content: ''; position: absolute; inset: 45% 0 0; z-index: 1;
-  background: linear-gradient(180deg, transparent, rgba(0,0,0,.22));
+  content: ''; position: absolute; inset: 40% 0 0; z-index: 1;
+  background: linear-gradient(180deg, transparent, rgba(0,0,0,.2));
   pointer-events: none;
 }
-.folder-copy { display: grid; gap: .15rem; min-width: 0; }
+.folder-copy { display: grid; gap: .1rem; min-width: 0; }
 .folder-copy strong {
-  overflow: hidden; color: #fff; font-size: 1.1875rem; font-weight: 700;
-  letter-spacing: -.024em; text-overflow: ellipsis; white-space: nowrap;
+  overflow: hidden; color: #fff; font-size: 1.0625rem; font-weight: 700;
+  letter-spacing: -.02em; text-overflow: ellipsis; white-space: nowrap;
 }
-.folder-copy small { color: rgba(255,255,255,.78); font-size: var(--t-meta); font-weight: 500; }
+.folder-copy small { color: rgba(255,255,255,.75); font-size: .75rem; font-weight: 500; }
 .folder-card > .folder-menu {
-  position: absolute; right: .6rem; bottom: .7rem; z-index: 3;
+  position: absolute; top: 50%; right: .35rem; z-index: 3;
   display: grid; place-items: center; width: 2.25rem; height: 2.25rem;
-  border-radius: var(--r-full); color: rgba(255,255,255,.92);
+  border-radius: var(--r-full); color: rgba(255,255,255,.9);
+  transform: translateY(-50%);
 }
-.folder-card > .folder-menu svg { width: 1.15rem; height: 1.15rem; }
+.folder-card > .folder-menu svg { width: 1.1rem; height: 1.1rem; }
 .folder-card > .folder-menu:active { background: rgba(0,0,0,.16); }
 
 /* =========================================================
@@ -305,39 +318,78 @@ h1, h2, h3, p { margin: 0; }
 .recording-row > .row-menu svg { width: 1.15rem; height: 1.15rem; }
 
 /* =========================================================
-   BottomNavigation — Folders, and Record. Nothing else.
-   ========================================================= */
-.nav {
-  position: fixed; inset: auto 0 0; z-index: 40;
-  display: grid; grid-template-columns: 1fr 1fr; align-items: center;
-  height: calc(var(--nav) + var(--bot));
-  padding: 0 2.25rem calc(var(--bot) * .8);
-  /* Solid, not frosted: rows scrolling underneath must disappear behind the
-     bar rather than ghost through it. */
-  background: var(--bg);
-  border-top: 1px solid var(--hairline);
-}
-.nav-btn {
-  display: grid; justify-items: center; gap: .3rem;
-  color: var(--text-3); transition: color .18s var(--ease);
-}
-.nav-btn svg { width: 1.375rem; height: 1.375rem; }
-.nav-btn span { font-size: var(--t-micro); font-weight: 600; letter-spacing: -.01em; }
-.nav-btn.active { color: var(--primary); }
+   Filing by hand
 
-/* The record button breaks the plane of the bar. It is the one
-   thing in the interface allowed to glow. */
-.nav-record { justify-items: center; gap: .34rem; transform: translateY(-1.1rem); }
-.nav-record .dot {
+   A row lifts off the list, the folder under the finger lights
+   up, and everything else stays exactly where it was.
+   ========================================================= */
+/* While carrying something, nothing else should respond to a
+   finger - and the page must not scroll itself away underneath. */
+body.is-dragging { touch-action: none; user-select: none; -webkit-user-select: none; }
+body.is-dragging .recording-row > .row-menu,
+body.is-dragging .folder-card > .folder-menu { opacity: 0; pointer-events: none; }
+
+.recording-row.lifted { opacity: .35; }
+
+.drop-over { position: relative; }
+.folder-card.drop-over, .compact-row.drop-over {
+  outline: 2px solid var(--primary); outline-offset: 2px;
+  transform: scale(1.015);
+}
+.drop-out.drop-over { color: var(--text); border-color: var(--primary); background: rgba(255,55,95,.14); }
+
+.drag-ghost {
+  position: fixed; z-index: 80; pointer-events: none;
+  display: flex; align-items: center; gap: .55rem;
+  max-width: 15rem; padding: .6rem .9rem;
+  border-radius: var(--r-row); color: var(--text); background: var(--card-hi);
+  box-shadow: 0 .9rem 2rem rgba(0,0,0,.55);
+  font-size: var(--t-meta); font-weight: 600;
+  transform: translate(-50%, -140%) rotate(-1.5deg);
+}
+.drag-ghost svg { flex: 0 0 auto; width: .9rem; height: .9rem; color: var(--text-2); }
+.drag-ghost span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.drag-ghost.armed { background: var(--primary); box-shadow: 0 .9rem 2rem rgba(255,55,95,.45); }
+.drag-ghost.armed svg { color: rgba(255,255,255,.8); }
+
+/* The way out of a folder, shown only while something is being carried. */
+.drop-out {
+  position: fixed; left: var(--gut); right: var(--gut); z-index: 45;
+  bottom: calc(1.25rem + var(--bot));
+  display: flex; align-items: center; justify-content: center; gap: .5rem;
+  min-height: 3.5rem; padding: 0 1rem;
+  border: 1.5px dashed var(--hairline-2); border-radius: var(--r-sheet);
+  color: var(--text-2); background: rgba(21,23,26,.92);
+  font-size: var(--t-meta); font-weight: 600; text-align: center;
+  animation: rise .2s var(--ease);
+}
+.drop-out svg { width: 1.1rem; height: 1.1rem; }
+
+/* =========================================================
+   RecordButton — the only persistent control
+
+   Not a tab bar with one tab in it: a single floating action,
+   over a short fade so rows scrolling underneath dissolve into
+   the background rather than collide with it.
+   ========================================================= */
+.record-dock {
+  position: fixed; inset: auto 0 0; z-index: 40;
   display: grid; place-items: center;
-  width: 3.5rem; height: 3.5rem; border-radius: var(--r-full);
+  height: calc(var(--record-space) + var(--bot));
+  padding-bottom: var(--bot);
+  background: linear-gradient(180deg, transparent, rgba(10,10,15,.86) 45%, var(--bg) 78%);
+  pointer-events: none;
+}
+.record-fab {
+  pointer-events: auto;
+  display: grid; place-items: center;
+  width: 4rem; height: 4rem; border-radius: var(--r-full);
   color: #fff; background: linear-gradient(150deg, var(--primary-hi), var(--primary) 46%, var(--primary-lo));
-  box-shadow: 0 0 0 .3rem rgba(255,55,95,.1), 0 .65rem 1.5rem rgba(255,55,95,.34);
+  box-shadow: 0 0 0 .4rem rgba(255,55,95,.1), 0 .7rem 1.6rem rgba(255,55,95,.38);
   transition: transform .2s var(--spring);
 }
-.nav-record .dot svg { width: 1.5rem; height: 1.5rem; }
-.nav-record span { color: var(--text-2); font-size: var(--t-micro); font-weight: 600; }
-.nav-record:active .dot { transform: scale(.92); }
+.record-fab svg { width: 1.625rem; height: 1.625rem; }
+.record-fab:active { transform: scale(.92); }
 
 /* =========================================================
    Recording screen
@@ -355,7 +407,7 @@ h1, h2, h3, p { margin: 0; }
 }
 .rec-stage { display: grid; align-content: center; justify-items: center; min-height: 0; }
 .rec-clock {
-  font-size: var(--t-timer); font-weight: 600; line-height: 1;
+  font-size: var(--t-timer); font-weight: 700; line-height: 1;
   letter-spacing: -.045em; font-variant-numeric: tabular-nums;
 }
 .rec-state {
@@ -373,11 +425,46 @@ h1, h2, h3, p { margin: 0; }
 /* The live transcript takes the screen over the moment there are
    words, because the words are the point. */
 .rec-lyrics { display: grid; grid-template-rows: auto minmax(0,1fr); min-height: 0; }
-.rec-lyrics .rec-state { justify-self: start; margin: 0 0 .5rem; }
-.rec-lyrics .rec-state b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+.rec-lyrics .rec-state {
+  justify-self: center; margin: 0 0 .5rem;
+  color: var(--text-2); font-size: var(--t-meta); font-variant-numeric: tabular-nums;
+}
+/* The dot stays the recording colour even when the words around it do not. */
+.rec-lyrics .rec-state i { background: var(--primary); }
 .rec-lyrics .rec-trace { height: 3rem; margin: 0; }
 
-/* Controls: bookmark, stop, pause. Stop dominates. */
+/* The bottom area owns a fixed reservation for paused-only actions. Floating
+   bookmark UI is anchored to it, so neither pausing nor opening a label field
+   can reflow the timer, waveform, or primary recording control. */
+.rec-bottom { position: relative; }
+.bookmark-composer,
+.bookmark-rack {
+  position: absolute; z-index: 3; left: 0; right: 0; bottom: calc(100% + .7rem);
+}
+.bookmark-composer {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: .45rem;
+  min-height: 3.3rem; padding: .38rem .45rem .38rem .7rem; border: 1px solid var(--hairline-2);
+  border-radius: var(--r-row); background: rgba(28,30,38,.92); box-shadow: 0 .8rem 1.8rem rgba(0,0,0,.34);
+  backdrop-filter: blur(1rem); -webkit-backdrop-filter: blur(1rem);
+}
+.bookmark-at { display: inline-flex; align-items: center; gap: .3rem; color: var(--primary-hi); font-size: var(--t-meta); font-variant-numeric: tabular-nums; font-weight: 700; }
+.bookmark-at svg { width: .9rem; height: .9rem; }
+.bookmark-composer input { min-width: 0; height: 2.25rem; padding: 0 .15rem; color: var(--text); background: transparent; border: 0; outline: 0; font-size: var(--t-body); }
+.bookmark-composer input::placeholder { color: var(--text-3); }
+.bookmark-close { display: grid; place-items: center; width: 2.15rem; height: 2.15rem; border-radius: var(--r-full); color: var(--text-2); }
+.bookmark-close:active { background: var(--hairline); }
+.bookmark-close svg { width: 1rem; height: 1rem; }
+.bookmark-save { height: 2.15rem; padding: 0 .7rem; border-radius: var(--r-full); color: #fff; background: var(--primary); font-size: var(--t-meta); font-weight: 700; }
+.bookmark-save:active { transform: scale(.96); }
+.bookmark-rack { display: grid; justify-items: center; gap: .35rem; pointer-events: none; }
+.bookmark-chip { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: .35rem; max-width: min(20rem, 100%); padding: .38rem .62rem; border: 1px solid var(--hairline); border-radius: var(--r-full); color: var(--text-2); background: rgba(28,30,38,.82); box-shadow: 0 .5rem 1.2rem rgba(0,0,0,.2); font-size: var(--t-micro); backdrop-filter: blur(.75rem); -webkit-backdrop-filter: blur(.75rem); }
+.bookmark-chip svg { width: .75rem; height: .75rem; color: var(--primary-hi); }
+.bookmark-chip b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); font-weight: 600; }
+.bookmark-chip small { color: var(--text-3); font-variant-numeric: tabular-nums; }
+
+/* The centre is always the record/pause/resume action. Saving and cancelling
+   are deliberately revealed only after a pause, so they cannot interrupt a
+   lecture in progress by mistake. */
 .rec-controls {
   display: grid; grid-template-columns: 1fr auto 1fr;
   align-items: center; justify-items: center; gap: 1.5rem;
@@ -385,17 +472,56 @@ h1, h2, h3, p { margin: 0; }
 .rec-controls .icon-btn { width: 3rem; height: 3rem; }
 .rec-controls .side-l { justify-self: end; }
 .rec-controls .side-r { justify-self: start; }
-.stop-btn {
+.rec-main-control { display: grid; justify-items: center; gap: .55rem; }
+.rec-main-control > span { min-height: 1rem; color: var(--text-2); font-size: var(--t-meta); font-weight: 600; }
+.record-action {
   display: grid; place-items: center;
   width: 5rem; height: 5rem; border-radius: var(--r-full);
   color: #fff; background: linear-gradient(150deg, var(--primary-hi), var(--primary) 48%, var(--primary-lo));
   box-shadow: 0 0 0 .45rem rgba(255,55,95,.1), 0 .9rem 2rem rgba(255,55,95,.3);
   transition: transform .2s var(--spring), width .24s var(--spring), height .24s var(--spring);
 }
-.stop-btn svg { width: 1.75rem; height: 1.75rem; }
-.stop-btn:active { transform: scale(.94); }
-.stop-btn.idle { width: 5.5rem; height: 5.5rem; }
-.rec-hint { margin-top: 1.1rem; color: var(--text-3); font-size: var(--t-meta); text-align: center; }
+.record-action svg { width: 1.75rem; height: 1.75rem; }
+.record-action:active { transform: scale(.94); }
+.record-action.idle { width: 5.5rem; height: 5.5rem; }
+.finish-side {
+  display: grid; justify-items: center; gap: .35rem;
+  transition: opacity .18s var(--ease);
+}
+.finish-side small { min-height: 1rem; color: var(--text-2); font-size: var(--t-micro); font-weight: 600; }
+/* Still occupying its space, just not offering itself. */
+.finish-side.hidden { opacity: 0; pointer-events: none; }
+.rec-hint {
+  /* Two lines' worth, always: the wording changes between states and a wrap
+     would otherwise move everything under it. */
+  min-height: 2.4rem; margin-top: 1.1rem;
+  color: var(--text-3); font-size: var(--t-meta); text-align: center;
+}
+.rec-cancel-slot {
+  display: grid; align-items: center; min-height: 4.4rem; height: 4.4rem; margin-top: .55rem;
+  overflow: hidden;
+}
+.slide-cancel {
+  --slide-progress: 0;
+  position: relative; display: grid; place-items: center;
+  width: min(20rem, 100%); height: 3.45rem; margin: 0 auto; overflow: hidden;
+  border-radius: var(--r-full); color: var(--text-3); background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px var(--hairline); touch-action: none; user-select: none;
+  font-size: var(--t-meta); font-weight: 600; letter-spacing: .01em;
+}
+.slide-cancel::before {
+  content: ''; position: absolute; inset: 0 auto 0 0; width: calc(var(--slide-progress) * 100%);
+  background: rgba(255,55,95,.16); transition: width .12s linear;
+}
+.slide-cancel > span:last-child { position: relative; pointer-events: none; }
+.slide-cancel-thumb {
+  position: absolute; z-index: 1; left: .24rem; top: .24rem; display: grid; place-items: center;
+  width: 2.97rem; height: 2.97rem; border-radius: var(--r-full); color: var(--danger); background: #fff;
+  box-shadow: 0 .3rem .75rem rgba(0,0,0,.3);
+  transform: translateX(calc(var(--slide-travel) * var(--slide-progress)));
+  transition: transform .12s linear;
+}
+.slide-cancel-thumb svg { width: 1.1rem; height: 1.1rem; }
 .rec-error {
   margin-top: 1rem; padding: .7rem .9rem; border-radius: var(--r-field);
   color: #FFD9DC; background: rgba(255,69,58,.12); font-size: var(--t-meta); text-align: center;
@@ -420,7 +546,9 @@ h1, h2, h3, p { margin: 0; }
   display: block; width: 100%; padding: .34rem 0;
   font-size: var(--t-lyric); font-weight: 700; line-height: 1.24;
   letter-spacing: -.026em; text-align: left;
-  transition: color .28s var(--ease);
+  /* Short: a long fade on the line that just became current reads as the
+     words arriving late, which is the one thing this screen must not do. */
+  transition: color .12s linear;
 }
 .transcript .line.active { color: var(--text); }
 .transcript .line.past   { color: var(--text-3); }
@@ -437,19 +565,19 @@ h1, h2, h3, p { margin: 0; }
    Playback
    ========================================================= */
 .play-screen {
-  display: grid; grid-template-rows: auto minmax(0,1fr) auto;
+  display: grid; grid-template-rows: auto auto minmax(0,1fr) auto;
   height: 100dvh; overflow: hidden;
   padding: calc(var(--top) + 1rem) var(--gut) calc(1.25rem + var(--bot));
   background: var(--bg);
 }
-.play-head { display: grid; grid-template-columns: 2.375rem minmax(0,1fr) auto; align-items: center; gap: .75rem; }
-.play-head .head-title h1 {
-  overflow: hidden; font-size: var(--t-row); font-weight: 600;
-  letter-spacing: -.017em; text-overflow: ellipsis; white-space: nowrap;
-}
-.play-head .head-title p { margin-top: .1rem; color: var(--text-2); font-size: var(--t-meta); }
 .play-body { min-height: 0; }
-.play-transport { padding-top: .5rem; }
+/* The transport is opaque and reserves room above the scrubber, because the
+   time pill sits above the playhead and would otherwise land on the last line
+   of the transcript scrolling behind it. */
+.play-transport {
+  position: relative; z-index: 1;
+  padding-top: 2rem; background: var(--bg);
+}
 
 /* ---- ScrubbableWaveform ----------------------------------
    The playhead is a fixed white line in the middle; the timeline
@@ -492,12 +620,15 @@ h1, h2, h3, p { margin: 0; }
 .play-btn {
   display: grid; place-items: center;
   width: 4rem; height: 4rem; border-radius: var(--r-full);
-  color: #fff; background: linear-gradient(150deg, var(--primary-hi), var(--primary) 48%, var(--primary-lo));
-  box-shadow: 0 .6rem 1.5rem rgba(255,55,95,.28);
+  color: var(--bg); background: #fff;
+  box-shadow: 0 .6rem 1.5rem rgba(0,0,0,.5);
   transition: transform .2s var(--spring);
 }
 .play-btn svg { width: 1.6rem; height: 1.6rem; }
 .play-btn:active { transform: scale(.93); }
+.play-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; margin-top: .9rem; }
+.play-actions .btn { min-height: 2.875rem; gap: .35rem; padding: 0 .4rem; font-size: var(--t-meta); }
+.play-actions .btn svg { width: 1rem; height: 1rem; color: var(--text-2); }
 
 /* =========================================================
    ActionSheet — one sheet, iOS behaviour
@@ -516,9 +647,25 @@ h1, h2, h3, p { margin: 0; }
   animation: rise .3s var(--ease);
 }
 .sheet-grip { width: 2.25rem; height: .25rem; margin: .25rem auto .9rem; border-radius: var(--r-full); background: var(--text-4); }
-.sheet-title { padding: 0 .3rem .6rem; }
-.sheet-title strong { display: block; font-size: var(--t-row); font-weight: 600; }
-.sheet-title small { color: var(--text-2); font-size: var(--t-meta); }
+
+/* The header card: the object the sheet is about, and the way out of it. */
+.sheet-head {
+  display: grid; grid-template-columns: auto minmax(0,1fr) auto;
+  align-items: center; gap: .85rem; padding: .55rem .2rem .95rem;
+}
+.sheet-thumb {
+  display: grid; place-items: center; width: 2.75rem; height: 2.75rem;
+  border-radius: var(--r-field); color: #fff;
+  background: linear-gradient(152deg, var(--g1, var(--primary)), var(--g2, var(--primary-lo)));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.18);
+}
+.sheet-thumb svg { width: 1.25rem; height: 1.25rem; }
+.sheet-copy { display: grid; gap: .12rem; min-width: 0; }
+.sheet-copy strong {
+  overflow: hidden; font-size: var(--t-row); font-weight: 700;
+  letter-spacing: -.017em; text-overflow: ellipsis; white-space: nowrap;
+}
+.sheet-copy small { color: var(--text-2); font-size: var(--t-meta); font-variant-numeric: tabular-nums; }
 .sheet-group { overflow: hidden; border-radius: var(--r-sheet); background: var(--surface-2); }
 .sheet-group + .sheet-group { margin-top: .6rem; }
 .sheet-item {
@@ -542,7 +689,7 @@ h1, h2, h3, p { margin: 0; }
 .sheet-swatches { display: flex; flex-wrap: wrap; gap: .8rem; justify-content: center; padding: 1rem 1.1rem; }
 
 /* A sheet carrying content rather than a menu. */
-.sheet.tall { display: grid; grid-template-rows: auto auto minmax(0,1fr); height: 88dvh; }
+.sheet.tall { display: grid; grid-template-rows: auto minmax(0,1fr); height: 88dvh; }
 .sheet-body { min-height: 0; overflow-y: auto; padding-bottom: 1rem; }
 .sheet-lines { display: grid; gap: .9rem; }
 .sheet-lines button {
@@ -567,12 +714,11 @@ h1, h2, h3, p { margin: 0; }
 .create-head button:disabled { color: var(--text-4); }
 .create-preview {
   display: grid; place-items: center;
-  width: 7rem; height: 5rem; margin: 2.5rem auto 1.75rem;
-  border-radius: var(--r-row);
-  background: linear-gradient(152deg, var(--g1), var(--g2));
-  box-shadow: 0 1rem 2rem rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.2);
+  width: 5.5rem; height: 5.5rem; margin: 2.5rem auto 1.75rem;
+  border-radius: var(--r-card); background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px var(--hairline);
 }
-.create-preview svg { width: 2.25rem; height: 2.25rem; color: rgba(255,255,255,.92); }
+.create-preview svg { width: 2.5rem; height: 2.5rem; color: var(--g1); }
 .create-parent { margin: -1rem 0 1.25rem; color: var(--text-2); font-size: var(--t-meta); text-align: center; }
 .create-name {
   width: 100%; height: 3.25rem; padding: 0 1rem;
@@ -584,8 +730,8 @@ h1, h2, h3, p { margin: 0; }
 fieldset + fieldset .create-label { margin-top: 0; }
 .swatch-row { display: flex; gap: .55rem; justify-content: space-between; padding: .25rem; }
 .swatch {
-  flex: 0 0 auto; width: 1.875rem; height: 1.875rem; border-radius: var(--r-full);
-  background: linear-gradient(152deg, var(--g1), var(--g2));
+  flex: 0 0 auto; width: 2.25rem; height: 2.25rem; border-radius: var(--r-full);
+  background: var(--g1);
   transition: transform .18s var(--spring), box-shadow .18s var(--ease);
 }
 .swatch.on { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px #fff; }
@@ -618,16 +764,26 @@ fieldset + fieldset .create-label { margin-top: 0; }
 .centred h2 { font-size: 1.5rem; font-weight: 700; letter-spacing: -.024em; }
 .centred p { max-width: 17rem; color: var(--text-2); font-size: var(--t-body); }
 .centred .stack { display: grid; gap: .65rem; width: min(20rem, 100%); margin-top: 2rem; }
+.saved-note {
+  display: flex; align-items: center; justify-content: center; gap: .45rem;
+  max-width: 19rem; margin-top: .9rem;
+  color: var(--text-2); font-size: var(--t-meta); line-height: 1.45;
+}
+.saved-note i {
+  flex: 0 0 auto; width: .45rem; height: .45rem; border-radius: var(--r-full);
+  background: var(--primary); animation: pulse 1.9s var(--ease) infinite;
+}
+.saved-note.quiet { color: var(--text-3); }
 
 .empty { display: grid; align-content: center; justify-items: center; gap: .4rem; padding: 4rem 0; text-align: center; }
 .empty .folder-art {
-  position: relative; top: auto; left: auto;
-  width: 7.5rem; height: 4.75rem; margin-bottom: 1.25rem; transform: none;
+  position: relative; top: auto; right: auto; left: auto;
+  width: 11rem; height: 7rem; margin-bottom: 1.5rem; transform: none;
 }
-.empty .folder-art .sheet-l, .empty .folder-art .sheet-r { fill: rgba(255,255,255,.06); }
-.empty .folder-art .body  { fill: rgba(255,255,255,.13); }
-.empty .folder-art .tab   { fill: rgba(255,255,255,.17); }
-.empty .folder-art .badge { color: rgba(255,255,255,.16); }
+.empty .folder-art .sheet-l, .empty .folder-art .sheet-r { fill: rgba(255,255,255,.04); }
+.empty .folder-art .body  { fill: rgba(255,255,255,.08); }
+.empty .folder-art .tab   { fill: rgba(255,255,255,.11); }
+.empty .folder-art .badge { color: rgba(255,255,255,.12); }
 .empty strong { font-size: 1.1875rem; font-weight: 700; letter-spacing: -.022em; }
 .empty p { max-width: 15rem; color: var(--text-2); font-size: var(--t-meta); line-height: 1.5; }
 
@@ -648,6 +804,8 @@ fieldset + fieldset .create-label { margin-top: 0; }
   color: #fff; background: linear-gradient(98deg, var(--primary), var(--primary-lo));
   box-shadow: 0 .55rem 1.35rem rgba(255,55,95,.28);
 }
+/* A full-width pill, as the folder screen's New Recording action. */
+.btn.wide { display: flex; width: 100%; border-radius: var(--r-full); }
 .btn.quiet { min-height: 2.75rem; font-size: var(--t-body); font-weight: 500; }
 .btn.small { min-height: 2.25rem; padding: 0 .9rem; font-size: var(--t-meta); }
 .btn:disabled { color: var(--text-3); background: var(--surface); box-shadow: none; }
@@ -739,7 +897,7 @@ select.field { appearance: none; }
 
 /* Toast, banner, boot */
 .toast {
-  position: fixed; left: 50%; bottom: calc(var(--nav) + var(--bot) + 1rem); z-index: 70;
+  position: fixed; left: 50%; bottom: calc(var(--record-space) + var(--bot) + 1rem); z-index: 70;
   max-width: calc(100% - 2 * var(--gut)); padding: .7rem 1.1rem;
   border-radius: var(--r-full); background: var(--card-hi); color: var(--text);
   font-size: var(--t-meta); font-weight: 500; text-align: center;
@@ -773,7 +931,7 @@ select.field { appearance: none; }
    design; a second layout for tablets would be a second design. */
 @media (min-width: 30rem) {
   .app-shell { max-width: 30rem; margin: 0 auto; box-shadow: 0 0 0 1px var(--hairline); }
-  .nav { left: 50%; width: 100%; max-width: 30rem; transform: translateX(-50%); }
+  .record-dock { left: 50%; width: 100%; max-width: 30rem; transform: translateX(-50%); }
   .scrim { align-items: center; }
   .sheet, .modal { width: min(30rem, 100%); margin: 0 auto; }
 }

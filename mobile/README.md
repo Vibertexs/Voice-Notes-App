@@ -13,20 +13,27 @@ Everything a browser cannot do on a phone is served by the native shell:
 | The page asks for       | The shell answers with              |
 | ----------------------- | ----------------------------------- |
 | `fetch('/api/…')`       | SQLite, via `src/localApi.js`       |
-| `MediaRecorder`         | `expo-audio`, via `src/bridge.js`   |
+| `MediaRecorder`         | `expo-audio-studio`, via `src/bridge.js` |
 | `<audio src=…>`         | the file on disk, over a `file://` base origin |
+| finished WAV             | `whisper.rn` / whisper.cpp on the phone |
 
 Recording is the reason this is a native app rather than a website saved to the
 home screen. **A WebView's `MediaRecorder` is suspended the moment the screen
 locks** — which is precisely the case this app exists to handle. So audio is
-captured by `expo-audio`, and only a token naming the file on disk ever crosses
-into the page. The bytes never do.
+captured as a pause-safe 16 kHz PCM WAV by `expo-audio-studio`, and only a token
+naming the file on disk ever crosses into the page. The bytes never do.
+
+When the first lecture is finished, the app downloads the roughly 60 MB
+Whisper Base English model once. That is the only transcription-related network
+request. Whisper then reads the local WAV directly and all later transcription
+works offline; lecture audio is never sent to an endpoint.
 
 ## Layout
 
-    App.js                    the shell: WebView, bridge handlers, the recorder
+    App.js                    the shell: WebView, bridge handlers, recorder, local Whisper queue
     src/bridge.js             injected into the page; replaces fetch and MediaRecorder
     src/localApi.js           the backend, on the phone: schema, routes, serializers
+    src/onDeviceWhisper.js    model download and private whisper.cpp inference
     src/webapp.generated.js   the inlined web build (generated, do not edit)
     scripts/bundle-web.mjs    regenerates the above from frontend-dist/
 
@@ -47,19 +54,17 @@ neither — Fast Refresh picks those up.
 
 ## What does not work on the phone yet
 
-Transcription and the AI features need the Python service and its models. Those
-endpoints return a 503 with a plain explanation rather than a stub that looks
-like it worked, so a screen that depends on them says so instead of showing
-empty results. Recording, classes, lectures, notes, markers, search and
-playback all run entirely on the device.
+AI study features still need a bundled local model. Recording, classes,
+lectures, notes, markers, playback, search, and Whisper transcription run on
+the device. Whisper needs a development or production build, not Expo Go,
+because it contains native code.
 
 ## Builds
 
-Expo Go runs the JS but is Expo's binary, not ours. It cannot grant the
-permissions `app.json` declares, so background recording and any native module
-are unavailable there. Everything still runs - capture falls back to
-foreground-only and transcription is skipped - but that is a development
-convenience, not the product.
+Expo Go runs the JS but is Expo's binary, not ours. It does not contain the
+native WAV recorder or whisper.cpp, so this app must use a development or
+production build. Expo Go is useful only for web-shell iteration, not testing
+recording or transcription.
 
 Three profiles, in `eas.json`:
 

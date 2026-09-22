@@ -1,6 +1,7 @@
 """Timed transcript lines: the rows that make a transcript seekable."""
 from __future__ import annotations
 
+import json
 import sqlite3
 from uuid import uuid4
 
@@ -24,13 +25,17 @@ def replace_transcript_segments(
             end = float(segment.get("end", start))
         except (TypeError, ValueError):
             continue
-        rows.append((str(uuid4()), lecture_id, len(rows), start, max(start, end), text))
+        words = segment.get("words") or []
+        rows.append((
+            str(uuid4()), lecture_id, len(rows), start, max(start, end), text,
+            json.dumps(words, separators=(",", ":")),
+        ))
     if rows:
         connection.executemany(
             """
             INSERT INTO transcript_segments (
-                id, lecture_id, position, start_seconds, end_seconds, text
-            ) VALUES (?, ?, ?, ?, ?, ?)
+                id, lecture_id, position, start_seconds, end_seconds, text, words
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
             rows,
         )
@@ -43,11 +48,19 @@ def read_transcript_segments(
 ) -> list[dict[str, object]]:
     rows = connection.execute(
         """
-        SELECT start_seconds, end_seconds, text
+        SELECT start_seconds, end_seconds, text, words
         FROM transcript_segments
         WHERE lecture_id = ?
         ORDER BY position ASC
         """,
         (lecture_id,),
     ).fetchall()
-    return [dict(row) for row in rows]
+    segments: list[dict[str, object]] = []
+    for row in rows:
+        segment = dict(row)
+        try:
+            segment["words"] = json.loads(segment["words"] or "[]")
+        except (TypeError, ValueError):
+            segment["words"] = []
+        segments.append(segment)
+    return segments

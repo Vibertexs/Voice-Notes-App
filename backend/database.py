@@ -117,7 +117,8 @@ def initialize_database() -> None:
                 position INTEGER NOT NULL,
                 start_seconds REAL NOT NULL,
                 end_seconds REAL NOT NULL,
-                text TEXT NOT NULL
+                text TEXT NOT NULL,
+                words TEXT NOT NULL DEFAULT '[]'
             )
             """
         )
@@ -219,6 +220,15 @@ def initialize_database() -> None:
             connection.execute("ALTER TABLE folders ADD COLUMN archived_at TEXT")
         if "icon" not in folder_columns:
             connection.execute("ALTER TABLE folders ADD COLUMN icon TEXT")
+        segment_columns = {
+            row["name"] for row in connection.execute("PRAGMA table_info(transcript_segments)")
+        }
+        if "words" not in segment_columns:
+            # Transcripts made before word timing stay readable; they simply
+            # fall back to spreading words across the line.
+            connection.execute(
+                "ALTER TABLE transcript_segments ADD COLUMN words TEXT NOT NULL DEFAULT '[]'"
+            )
         workspace_columns = {row["name"] for row in connection.execute("PRAGMA table_info(workspaces)")}
         if "favorite" not in workspace_columns:
             connection.execute(

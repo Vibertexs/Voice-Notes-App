@@ -5,7 +5,7 @@
  * over the two browser APIs it depends on:
  *
  *   fetch('/api/...')  -> a message to native, answered from SQLite
- *   MediaRecorder      -> a message to native, answered by expo-audio
+ *   MediaRecorder      -> a message to native, answered by the local WAV recorder
  *
  * Recording is the reason the WebView cannot simply use the browser APIs: a
  * WebView's MediaRecorder is suspended when the screen locks, which is exactly
@@ -306,6 +306,21 @@ export const BRIDGE_JS = String.raw`
     }).catch(function (error) {
       self.state = 'inactive';
       self.__emit('error', { type: 'error', error: error, message: error.message });
+      self.__emit('stop', { type: 'stop' });
+    });
+  };
+
+  // Stop is a save operation. Cancelling takes a separate bridge path
+  // so the native shell can remove its provisional row and temp file instead
+  // of leaving an orphaned recording behind.
+  ShimRecorder.prototype.discard = function () {
+    var self = this;
+    if (self.state === 'inactive') return;
+    self.state = 'inactive';
+    self.__operation = self.__operation.then(function () { return call('rec.cancel', {}); });
+    self.__operation.then(function () {
+      self.__emit('stop', { type: 'stop' });
+    }).catch(function () {
       self.__emit('stop', { type: 'stop' });
     });
   };

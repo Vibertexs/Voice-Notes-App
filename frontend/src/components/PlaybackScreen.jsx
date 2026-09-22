@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import ActionSheet from './ActionSheet';
 import FileList from './FileList';
 import FlashcardDeck from './FlashcardDeck';
+import { Icon } from './Icon';
 import PlaybackControls, { SPEEDS } from './PlaybackControls';
 import RecordingRow from './RecordingRow';
 import RecordingSheet from './RecordingSheet';
@@ -24,7 +25,7 @@ const MARKER_GRAB_SECONDS = 2.5;
  * rather than a row of buttons competing with the words.
  */
 export default function PlaybackScreen({
-  workspace, courseName = 'Unfiled', folders = [], onBack, onContinue, onReload, onDelete,
+  workspace, folders = [], onBack, onContinue, onReload, onDelete,
   onToggleFavourite, onPickFile, notify, pendingSeek, onSeekHandled,
 }) {
   const [sheet, setSheet] = useState(null); // options | transcript | notes | takes
@@ -41,6 +42,12 @@ export default function PlaybackScreen({
 
   const selected = workspace.sessions.find((session) => session.id === selectedId) ?? workspace.sessions[0];
   const status = selected?.transcription_status;
+  // Older recordings predate Whisper's word-level timings. Their lines still
+  // play and seek correctly, but rebuilding once replaces the estimate with
+  // the exact timing used to light each word.
+  const needsPreciseTiming = Boolean(selected?.segments?.some(
+    (segment) => !Array.isArray(segment.words) || segment.words.length === 0,
+  ));
   const statusCopy = ['ready', 'complete'].includes(status) ? ''
     : status === 'failed' ? 'Transcript failed'
       : status === 'unavailable' ? 'No transcript'
@@ -73,12 +80,29 @@ export default function PlaybackScreen({
     onSeekHandled?.();
   }, [pendingSeek, selected?.id, onSeekHandled]);
 
-  function seek(seconds) {
+  // While playing, read the clock every frame rather than waiting for
+  // `timeupdate`: the spec throttles that event to about 4Hz, which is a
+  // quarter of a second of drift between a word being said and being lit.
+  // `timeupdate` stays as the fallback for a backgrounded tab, where frames
+  // stop arriving but the audio keeps going.
+  useEffect(() => {
+    if (!playing) return undefined;
+    let frame = 0;
+    const follow = () => {
+      const player = audioRef.current;
+      if (player && !scrubRef.current) setPosition(player.currentTime);
+      frame = requestAnimationFrame(follow);
+    };
+    frame = requestAnimationFrame(follow);
+    return () => cancelAnimationFrame(frame);
+  }, [playing]);
+
+  const seek = useCallback((seconds) => {
     const player = audioRef.current;
     if (!player) return;
     player.currentTime = Math.max(0, Math.min(duration || Infinity, seconds));
     setPosition(player.currentTime);
-  }
+  }, [duration]);
   function togglePlay() {
     const player = audioRef.current;
     if (!player) return;
@@ -124,23 +148,19 @@ export default function PlaybackScreen({
 
   async function retranscribe() {
     setBusy('transcribe');
-    try { await libraryApi.retranscribe(selected.id); notify('Transcription restarted.'); onReload(); }
+    try { await libraryApi.retranscribe(selected.id); notify('Rebuilding precise word timing.'); onReload(); }
     catch (caught) { notify(caught.message, 'error'); }
     finally { setBusy(''); }
   }
 
   const when = selected ? dateLabel(selected.created_at) : '';
   const runtime = duration ? mmss(duration) : '';
-  const subtitle = [courseName, when].filter(Boolean).join(' · ');
+  const subtitle = [when, runtime].filter(Boolean).join(' · ');
 
   return (
     <main className="play-screen">
-      <header className="play-head">
+      <header className="head">
         <IconButton name="back" label="Back" variant="plain" onClick={onBack} />
-        <div className="head-title">
-          <h1>{workspace.title}</h1>
-          <p>{[courseName, when, runtime].filter(Boolean).join(' · ')}</p>
-        </div>
         <div className="head-actions">
           <IconButton
             name={workspace.favorite ? 'heartOn' : 'heart'}
@@ -152,6 +172,11 @@ export default function PlaybackScreen({
           <IconButton name="more" label="Recording options" variant="plain" onClick={() => setSheet('options')} />
         </div>
       </header>
+
+      <div className="page-title compact">
+        <h1>{workspace.title}</h1>
+        <p>{[when, runtime].filter(Boolean).join(' · ')}</p>
+      </div>
 
       <section className="play-body">
         {selected
@@ -194,14 +219,17 @@ export default function PlaybackScreen({
           />
 
           <div className="scrub-times">
-            <span>{mmss(position)}</span>
+            <span>{mmss(0)}</span>
             <span className="status">
               {statusCopy}
               {status === 'failed' && (
                 <> · <button className="linkbtn" onClick={retranscribe} disabled={busy === 'transcribe'}>Retry</button></>
               )}
+              {status !== 'failed' && needsPreciseTiming && (
+                <button className="linkbtn" onClick={retranscribe} disabled={busy === 'transcribe'}>Improve sync</button>
+              )}
             </span>
-            <span>-{mmss(Math.max(0, duration - position))}</span>
+            <span>{mmss(duration)}</span>
           </div>
 
           <PlaybackControls
@@ -214,6 +242,18 @@ export default function PlaybackScreen({
             onForward15={() => seek(position + 15)}
             onBookmark={toggleMarker}
           />
+
+          <div className="play-actions">
+            <button type="button" className="btn" onClick={() => setSheet('chapters')}>
+              <Icon name="text" />Chapters
+            </button>
+            <button type="button" className="btn" onClick={() => setSheet('transcript')}>
+              <Icon name="document" />Transcript
+            </button>
+            <button type="button" className="btn" onClick={() => setSheet('options')}>
+              <Icon name="more" />More
+            </button>
+          </div>
         </section>
       )}
 
@@ -237,6 +277,21 @@ export default function PlaybackScreen({
             { label: 'Continue recording', icon: 'mic', onSelect: onContinue },
           ].filter(Boolean)}
         />
+      )}
+
+      {sheet === 'chapters' && (
+        <ActionSheet title="Chapters" subtitle={workspace.title} onClose={() => setSheet(null)}>
+          {selected?.markers?.length
+            ? <div className="sheet-lines">
+                {[...selected.markers].sort((a, b) => a.time_seconds - b.time_seconds).map((item) => (
+                  <button key={item.id} onClick={() => { seek(item.time_seconds); setSheet(null); }}>
+                    <time>{mmss(item.time_seconds)}</time>
+                    <span>{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            : <p className="dim">No chapters yet. Bookmark a moment and it will appear here.</p>}
+        </ActionSheet>
       )}
 
       {sheet === 'takes' && (

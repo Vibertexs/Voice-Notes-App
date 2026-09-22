@@ -10,9 +10,9 @@ import { Directory, File, Paths } from 'expo-file-system';
  * serializers deliberately mirror backend/database.py and backend/serializers.py
  * - the client is unmodified, so any divergence shows up as a broken screen.
  *
- * What genuinely cannot run here says so. Transcription and the AI endpoints
- * need the Python service; they return a clear message rather than a stub that
- * looks like it worked.
+ * What genuinely cannot run here says so. The AI endpoints still need a model
+ * that has not been bundled yet; finished recordings are transcribed by the
+ * native Whisper runtime in App.js, entirely on the phone.
  */
 
 const DB_NAME = 'classnotes-web.db';
@@ -131,29 +131,9 @@ export async function openDatabase() {
   return database;
 }
 
-// --- settings --------------------------------------------------------------
-
-export async function getSetting(key, fallback = '') {
-  const db = await openDatabase();
-  const row = await db.getFirstAsync('SELECT value FROM settings WHERE key = ?', key);
-  return row?.value ?? fallback;
-}
-
-export async function setSetting(key, value) {
-  const db = await openDatabase();
-  await db.runAsync(
-    `INSERT INTO settings (key, value) VALUES (?, ?)
-     ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
-    key, String(value ?? ''),
-  );
-}
-
-export const TRANSCRIPTION_SERVER = 'transcription_server_url';
-
 /**
- * Lectures still waiting on a server transcript. Drained whenever one becomes
- * reachable, which is what lets a recording be saved on a bus and transcribed
- * an hour later without the user doing anything.
+ * Lectures still waiting for their local Whisper pass. The shell drains these
+ * after a save and again on launch if Android or iOS interrupted it.
  */
 export async function pendingTranscriptions() {
   const db = await openDatabase();
@@ -528,23 +508,17 @@ export async function handleApi({ method, path, body }) {
       if (!row) return fail(404, 'That recording is no longer on the device.');
       const file = row.file_name ? audioFile(row.file_name) : null;
       if (!file?.exists) return fail(404, 'The audio for that recording is missing.');
-      // Android will only read back 16kHz mono WAV, which is what the
-      // recogniser itself writes. An m4a from the fallback recorder cannot be
-      // re-read, and there is no transcoder on the device.
-      const server = await getSetting(TRANSCRIPTION_SERVER, '');
-      if (server) {
-        // The server takes any format, so this works for recordings the
-        // on-device recogniser could never re-read.
-        await markTranscriptionPending(id);
-        return ok({ id, status: 'pending', via: 'server' });
-      }
+      // Whisper's native binding reads the 16 kHz mono WAV emitted by the
+      // recorder. Legacy m4a captures are safely retained, but need to be
+      // recorded again to be transcribed privately on this device.
       if (!row.file_name.endsWith('.wav')) {
-        return fail(503, 'This recording was captured without on-device transcription, and there is no transcription server set. Add one in Settings to transcribe it.');
+        return fail(422, 'This older recording is not a WAV. New recordings transcribe privately on this device.');
       }
       if (!TRANSCRIPTION_ON_DEVICE.value) {
-        return fail(503, 'This build has no on-device transcription and no server is configured.');
+        return fail(503, 'On-device Whisper is not ready yet. Restart the app after installing the current build.');
       }
-      return ok({ id, status: 'queued', via: 'device', uri: file.uri });
+      await markTranscriptionPending(id);
+      return ok({ id, status: 'pending', via: 'device', uri: file.uri });
     }
   }
 
@@ -616,17 +590,9 @@ export async function handleApi({ method, path, body }) {
   if (head === 'settings') {
     if (method === 'GET') {
       return ok({
-        transcription_server: await getSetting(TRANSCRIPTION_SERVER, ''),
         transcription_on_device: TRANSCRIPTION_ON_DEVICE.value,
-      });
-    }
-    if (method === 'PUT' || method === 'PATCH') {
-      if (body?.transcription_server !== undefined) {
-        await setSetting(TRANSCRIPTION_SERVER, String(body.transcription_server ?? '').trim());
-      }
-      return ok({
-        transcription_server: await getSetting(TRANSCRIPTION_SERVER, ''),
-        transcription_on_device: TRANSCRIPTION_ON_DEVICE.value,
+        transcription_engine: 'Whisper Base English',
+        transcription_delivery: 'on_device',
       });
     }
   }

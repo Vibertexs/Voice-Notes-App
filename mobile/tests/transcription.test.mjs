@@ -1,23 +1,26 @@
 /**
- * The on-device transcription path.
+ * The private mobile transcription path.
  *
- * None of this can be exercised on a device from here - it needs a dev build -
- * so the checks cover what is verifiable without one: that the two capture
- * engines stay separable, that the recogniser is configured to stay offline,
- * and that a transcript survives the round trip into the database and back out
- * in the shape the page reads.
+ * Device-native modules cannot run in Node, so this suite checks the pieces we
+ * can prove here: Whisper receives a local WAV, model download is the only
+ * network operation, the shell has no endpoint fallback, and its results keep
+ * their timed shape through SQLite.
  */
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import initSqlJs from 'sql.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const capture = readFileSync(join(here, '..', 'src', 'capture.js'), 'utf8');
 const app = readFileSync(join(here, '..', 'App.js'), 'utf8');
+const whisper = readFileSync(join(here, '..', 'src', 'onDeviceWhisper.js'), 'utf8');
 const bridge = readFileSync(join(here, '..', 'src', 'bridge.js'), 'utf8');
 const captureView = readFileSync(
   join(here, '..', '..', 'frontend', 'src', 'components', 'RecordScreen.jsx'), 'utf8',
+);
+const styles = readFileSync(join(here, '..', '..', 'frontend', 'src', 'styles.css'), 'utf8');
+const settingsView = readFileSync(
+  join(here, '..', '..', 'frontend', 'src', 'components', 'SettingsDialog.jsx'), 'utf8',
 );
 const appJson = JSON.parse(readFileSync(join(here, '..', 'app.json'), 'utf8'));
 
@@ -27,89 +30,77 @@ function check(label, ok, detail) {
   console.log((ok ? 'PASS  ' : 'FAIL  ') + label + (ok ? '' : '   -> ' + String(detail).slice(0, 300)));
 }
 
-console.log('== a lecture never leaves the phone ==');
-check('recognition is pinned to on-device', /requiresOnDeviceRecognition:\s*true/.test(capture),
-  'network recognition would upload the lecture and be rate limited');
-// The guarantee is only real if there is no path that flips it off. A missing
-// offline model must mean no transcript, never a silent upload.
-check('no code path turns on-device recognition off',
-  !/requiresOnDeviceRecognition:\s*(false|onDevice|[a-z]\w*\.\w+)/.test(capture),
-  'a variable here is a way for a lecture to leave the phone');
+console.log('== Whisper stays on the phone ==');
+check('the native binding is installed', existsSync(join(here, '..', 'node_modules', 'whisper.rn')));
+check('the local module initializes whisper.cpp',
+  /require\('whisper\.rn'\)/.test(whisper) && /loadWhisper\(\)\(\{/.test(whisper));
+// whisper.rn is a native module: importing it at module scope in a binary
+// built before it was added throws before React renders, and the whole app is
+// a red screen. It must be reached for only when it is about to be used.
+check('it is loaded lazily, not at import',
+  !/^import .*from 'whisper\.rn'/m.test(whisper),
+  'a top-level import takes the entire app down on an older dev build');
+check('a compact Base English model is downloaded once',
+  /ggml-base\.en-q5_1\.bin/.test(whisper) && /File\.createDownloadTask/.test(whisper), whisper);
+check('the model download reports progress', /onProgress: \(\{ bytesWritten, totalBytes \}\)/.test(whisper));
+check('the recognizer receives an English local-file job',
+  /context\.transcribe\(fileUri/.test(whisper) && /language: 'en'/.test(whisper));
+check('Whisper timestamps are converted from centiseconds to app seconds',
+  /\.t0 \?\? 0\) \/ 100/.test(whisper) && /\.t1 \?\? 0\) \/ 100/.test(whisper));
+// whisper.rn reports no word timings (its Android bridge sets
+// dtw_token_timestamps = false), so resolution has to come from asking for
+// short pieces and regrouping them into lines here.
+check('short pieces are requested and regrouped into readable lines',
+  /maxLen: 1/.test(whisper) && /function groupIntoLines/.test(whisper),
+  'without this a whole line lights at once and the transcript lags the voice');
+check('the model module has no audio upload call', !/fetch\(|createUploadTask|uploadAsync/.test(whisper));
 
-console.log('\n== the language pack installs itself ==');
-// Expecting a user to find Android speech settings and install English by
-// hand is not a product. The app asks for it, and upgrades when it lands.
-check('the app triggers the download itself',
-  /androidTriggerOfflineModelDownload/.test(capture),
-  'the user would otherwise have to install a language pack by hand');
-check('it does not re-open the system dialog on every check',
-  /downloadRequested/.test(capture),
-  'Android 13 opens a dialog; reopening it repeatedly is its own bug');
-check('support is re-checked, not decided once',
-  /export async function refreshOnDeviceSupport/.test(capture));
-check('the shell keeps watching after the first failure',
-  /refreshOnDeviceSupport\(\)/.test(app) && /setInterval\(recheck/.test(app),
-  'a pack that arrives later must not need a restart');
-check('the page is told when capability changes',
-  /cn:caps/.test(app) && /cn:caps/.test(captureView),
-  'the capture screen would otherwise keep hiding the transcript panel');
-check('Android below 13 is reported, not retried forever',
-  /Platform\.Version\) < 33/.test(capture),
-  'the download API does not exist before Android 13');
-check('every model state has something to say',
-  /export function describeModelStatus/.test(capture));
+console.log('\n== the shell no longer has a server escape hatch ==');
+check('old remote helper is removed', !existsSync(join(here, '..', 'src', 'remote.js')));
+check('App has no transcription endpoint, host discovery, or remote client',
+  !/(TRANSCRIPTION_SERVER|transcribeRemotely|developmentTranscriptionServer|NativeModules\.SourceCode|probe\()/.test(app));
+check('every saved capture queues the local Whisper pass',
+  /await markTranscriptionPending\(id\);/.test(app) && /transcribeOnDevice\(file\.uri/.test(app));
+check('capture is continuous pause-safe PCM WAV',
+  /ExpoAudioStudio\.startRecording\(\)/.test(app)
+    && /const fileName = `\$\{id\}\.wav`;/.test(app)
+    && /ExpoAudioStudio\.pauseRecording\(\)/.test(app)
+    && /ExpoAudioStudio\.resumeRecording\(\)/.test(app));
+check('the page bridge still uses native recording commands',
+  /rec\.start/.test(bridge) && /rec\.pause/.test(bridge) && /rec\.resume/.test(bridge) && /rec\.stop/.test(bridge));
+check('the transcript settings explain private on-device processing',
+  /never sent to a server/.test(settingsView) && /60 MB/.test(settingsView)
+    && !/Server address|transcription-server/.test(settingsView));
 
-console.log('\n== the app still works without the native module ==');
-// expo-speech-recognition does not exist in Expo Go. If its absence threw, the
-// app would not start there at all.
-check('the module is loaded defensively', /try\s*\{[\s\S]{0,200}require\('expo-speech-recognition'\)/.test(capture),
-  'a missing native module must not be fatal');
-check('availability is derived, not assumed',
-  /TRANSCRIPTION_AVAILABLE = speech !== null/.test(capture));
-check('the fallback recorder is still wired', /prepareToRecordAsync/.test(app),
-  'expo-audio must still record when the recogniser is unavailable');
-check('the two engines are told apart by name', /engine: 'speech'/.test(app) && /engine: 'audio'/.test(app));
+console.log('\n== pause is required before saving ==');
+check('the shell tells the page that native pause exists', /transcription: false, pause: true/.test(app));
+check('the page reads capabilities', /caps\.pause !== false/.test(captureView));
+check('finish is unavailable until the take is paused',
+  /async function finish\(\)[\s\S]{0,420}phase !== 'paused'/.test(captureView));
+check('cancel remains a paused-only slide action',
+  /rec-cancel-slot \$\{phase === 'paused' \? 'visible' : ''\}/.test(captureView)
+    && /\{phase === 'paused' && <SlideToCancel/.test(captureView));
+check('the cancel area is reserved before pause, preventing a layout jump',
+  /\.rec-cancel-slot \{[\s\S]{0,180}height: 4\.4rem/.test(styles)
+    && !/\.rec-cancel-slot\.visible \{[\s\S]{0,120}height: auto/.test(styles));
+check('bookmarks capture typed labels without joining the recording layout flow',
+  /function BookmarkComposer/.test(captureView)
+    && /className="bookmark-composer"/.test(captureView)
+    && /\.bookmark-composer,[\s\S]{0,160}position: absolute/.test(styles));
 
-console.log('\n== pause is not offered when it cannot be honoured ==');
-// One session writes one WAV; pausing would split the audio in two.
-check('the shell derives pause support', /SUPPORTS_PAUSE = !TRANSCRIPTION_AVAILABLE/.test(capture));
-check('capabilities reach the page', /__CN_CAPS__/.test(app) && /__CN_CAPS__/.test(bridge));
-check('the page reads them', /caps\.pause !== false/.test(captureView));
-// Resuming would open a second WAV and split the lecture. Rather than turning
-// pause into a stop and hoping the label keeps up, the control is simply not
-// offered: the screen's three buttons are bookmark, stop and pause, and pause
-// is dead while the recogniser is driving.
-check('the pause control is disabled when pause cannot be honoured',
-  /disabled=\{[^}]*!canPause\}/.test(captureView),
-  'an enabled pause would split the WAV the recogniser is writing');
-check('pressing it does nothing even so',
-  /function pauseOrResume\(\)[\s\S]{0,200}if \(!recorder \|\| !canPause\) return;/.test(captureView),
-  'the handler must refuse too, not only the styling');
-// Stop ends the take and saves it in one press, so there is exactly one stop()
-// on the path and no second one to fail.
-check('stop ends capture and stops the clock',
-  /async function stop\(\)[\s\S]{0,900}stopClock\(\)[\s\S]{0,400}recorder\.stop\(\)/.test(captureView),
-  'a running clock over stopped capture reports the wrong duration');
-check('the recorder is only stopped once on the save path',
-  (captureView.match(/recorder\.stop\(\)/g) ?? []).length === 1,
-  'stopping an already-stopped recorder fails and loses the recording');
-
-console.log('\n== native config a dev build needs ==');
-const android = appJson.expo.android;
-check('the recogniser service is declared in queries',
-  JSON.stringify(android.queries ?? []).includes('android.speech.RecognitionService'),
-  'Android 11+ hides the service without a queries entry');
-check('RECORD_AUDIO is declared', android.permissions.includes('android.permission.RECORD_AUDIO'));
+console.log('\n== native config contains no endpoint exception ==');
 const plugin = appJson.expo.plugins.find(
-  (entry) => (Array.isArray(entry) ? entry[0] : entry) === 'expo-speech-recognition');
-check('the config plugin is present', Boolean(plugin));
-check('the plugin carries permission copy', Array.isArray(plugin) && Boolean(plugin[1]?.speechRecognitionPermission),
-  'the OS prompt would otherwise be blank');
-check('iOS declares its speech usage string',
-  Boolean(appJson.expo.ios.infoPlist.NSSpeechRecognitionUsageDescription),
-  'iOS rejects a build that asks for speech without a reason');
+  (entry) => (Array.isArray(entry) ? entry[0] : entry) === 'expo-audio-studio');
+check('the local WAV recorder plugin is enabled', Array.isArray(plugin));
+check('RECORD_AUDIO remains declared', appJson.expo.android.permissions.includes('android.permission.RECORD_AUDIO'));
+check('Android retains Internet only for the one-time model download', appJson.expo.android.permissions.includes('android.permission.INTERNET'));
+check('the HTTP cleartext workaround is removed',
+  !JSON.stringify(appJson.expo.plugins).includes('expo-build-properties')
+    && !JSON.stringify(appJson.expo).includes('usesCleartextTraffic'));
+check('the old system speech recognizer plugin is removed',
+  !JSON.stringify(appJson.expo.plugins).includes('expo-speech-recognition'));
 
-console.log('\n== a transcript survives the round trip ==');
+console.log('\n== a transcript survives the local round trip ==');
 const source = readFileSync(join(here, '..', 'src', 'localApi.js'), 'utf8');
 const SQL = await initSqlJs();
 const db = new SQL.Database();
@@ -157,7 +148,9 @@ await api.openDatabase();
 await api.claimRecording({ id: 'lec1', title: 'Cell division', fileName: 'lec1.wav' });
 disk.set('file:///doc/recordings/lec1.wav', 5_000_000);
 await api.finishRecording({ id: 'lec1', durationMs: 600_000, sizeBytes: 5_000_000 });
-await api.saveTranscript('lec1', '  mitosis produces two identical daughter cells  ');
+await api.saveTranscript('lec1', '  mitosis produces two identical daughter cells  ', [
+  { text: 'mitosis produces two identical daughter cells', start_seconds: 12.3, end_seconds: 15.8 },
+]);
 
 let res = await api.handleApi({
   method: 'POST', path: '/api/lectures',
@@ -166,69 +159,24 @@ let res = await api.handleApi({
 const workspaceId = res.body.workspace_id;
 res = await api.handleApi({ method: 'GET', path: `/api/workspaces/${workspaceId}`, body: null });
 const session = res.body.sessions[0];
+check('the transcript is stored', session.transcript === 'mitosis produces two identical daughter cells', session.transcript);
+check('status is ready after local inference', session.transcription_status === 'ready', session.transcription_status);
+check('timed segments reach the panel', session.segments[0]?.start_seconds === 12.3, session.segments);
 
-check('the transcript is stored', session.transcript === 'mitosis produces two identical daughter cells',
-  session.transcript);
-check('it is trimmed, not stored with its padding', !session.transcript.startsWith(' '));
-check('status flips to ready so the page shows it', session.transcription_status === 'ready',
-  session.transcription_status);
-check('progress reads complete', session.transcription_progress === 1, session.transcription_progress);
-// The transcript panel renders segments, not the flat text. Returning an
-// empty list shows "No speech detected" over a perfectly good transcript,
-// which is exactly what happened.
-check('the transcript reaches the panel as a segment',
-  session.segments.length > 0, session.segments);
-check('the segment carries the text', /mitosis/.test(session.segments[0]?.text ?? ''),
-  session.segments[0]);
-check('and a timestamp to seek to', typeof session.segments[0]?.start_seconds === 'number',
-  session.segments[0]);
-
-console.log('\n== an empty transcript is not passed off as a real one ==');
-await api.claimRecording({ id: 'lec2', title: 'Silent', fileName: 'lec2.wav' });
-disk.set('file:///doc/recordings/lec2.wav', 1000);
-await api.saveTranscript('lec2', '   ');
-res = await api.handleApi({ method: 'POST', path: '/api/lectures',
-  body: { audio: { __recording: 'lec2' }, title: 'Silent', create_workspace: 'true' } });
-res = await api.handleApi({ method: 'GET', path: `/api/workspaces/${res.body.workspace_id}`, body: null });
-check('silence stays unavailable rather than ready',
-  res.body.sessions[0].transcription_status === 'unavailable', res.body.sessions[0].transcription_status);
-
-console.log('\n== re-transcribing routes to whatever can actually do it ==');
-await api.claimRecording({ id: 'old1', title: 'Old m4a', fileName: 'old1.m4a' });
-disk.set('file:///doc/recordings/old1.m4a', 1000);
-
-// Nothing available: no server set, and this build has no recogniser.
+console.log('\n== retry queues only the private device path ==');
 api.TRANSCRIPTION_ON_DEVICE.value = false;
 res = await api.handleApi({ method: 'POST', path: '/api/lectures/lec1/retranscribe', body: {} });
-check('with nothing available it says so rather than pretending', res.status === 503, res);
-
-// On-device only: a WAV can be re-read, an m4a cannot, and the message says why.
+check('a missing native build says so clearly', res.status === 503, res);
 api.TRANSCRIPTION_ON_DEVICE.value = true;
 res = await api.handleApi({ method: 'POST', path: '/api/lectures/lec1/retranscribe', body: {} });
-check('on device, a wav is re-read', res.status === 200 && res.body.via === 'device', res);
+check('a WAV queues local Whisper', res.status === 200 && res.body.via === 'device' && res.body.status === 'pending', res);
+await api.claimRecording({ id: 'old1', title: 'Legacy', fileName: 'old1.m4a' });
+disk.set('file:///doc/recordings/old1.m4a', 1000);
 res = await api.handleApi({ method: 'POST', path: '/api/lectures/old1/retranscribe', body: {} });
-check('on device, an m4a explains it cannot be', res.status === 503 && /server/i.test(res.body.detail), res);
-
-// With a server, format stops mattering - it takes anything.
-await api.setSetting(api.TRANSCRIPTION_SERVER, 'http://100.76.29.83:8000');
-res = await api.handleApi({ method: 'POST', path: '/api/lectures/old1/retranscribe', body: {} });
-check('a server takes the m4a the device could not', res.status === 200 && res.body.via === 'server', res);
-check('and the lecture is queued, not transcribed inline', res.body.status === 'pending', res.body);
-
-console.log('\n== the queue is what makes an unreachable server survivable ==');
-const queued = await api.pendingTranscriptions();
-check('the queued lecture is listed', queued.some((row) => row.id === 'old1'), queued.map((r) => r.id));
-check('only lectures with audio are queued', queued.every((row) => row.file_name), queued);
-
-console.log('\n== the server address is a setting, not a constant ==');
+check('legacy m4a captures explain their local limitation', res.status === 422 && /WAV/.test(res.body.detail), res);
 res = await api.handleApi({ method: 'GET', path: '/api/settings', body: null });
-check('settings report the configured server',
-  res.body.transcription_server === 'http://100.76.29.83:8000', res.body);
-res = await api.handleApi({ method: 'PUT', path: '/api/settings',
-  body: { transcription_server: '  https://api.example.com/  ' } });
-check('a new address replaces it', res.body.transcription_server === 'https://api.example.com/', res.body);
-res = await api.handleApi({ method: 'PUT', path: '/api/settings', body: { transcription_server: '' } });
-check('and it can be cleared back to device-only', res.body.transcription_server === '', res.body);
+check('settings report the on-device engine, not a server',
+  res.body.transcription_delivery === 'on_device' && res.body.transcription_engine === 'Whisper Base English', res.body);
 
 console.log('\n' + pass + '/' + total + ' passed');
 process.exit(pass === total ? 0 : 1);

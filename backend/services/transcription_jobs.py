@@ -1,6 +1,7 @@
 """Background transcription: queueing, progress, ETA and resumption."""
 from __future__ import annotations
 
+import json
 import sqlite3
 from concurrent.futures import ThreadPoolExecutor
 from time import monotonic
@@ -56,13 +57,16 @@ def flush_progress_segments(
                 continue
             begin = max(0.0, float(item.get("start", 0.0)))
             finish = max(begin, float(item.get("end", begin)))
-            rows.append((str(uuid4()), lecture_id, start_position + len(rows), begin, finish, text))
+            rows.append((
+                str(uuid4()), lecture_id, start_position + len(rows), begin, finish, text,
+                json.dumps(item.get("words") or [], separators=(",", ":")),
+            ))
         if rows:
             connection.executemany(
                 """
                 INSERT INTO transcript_segments (
-                    id, lecture_id, position, start_seconds, end_seconds, text
-                ) VALUES (?, ?, ?, ?, ?, ?)
+                    id, lecture_id, position, start_seconds, end_seconds, text, words
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
                 """,
                 rows,
             )
@@ -177,15 +181,16 @@ def transcribe_lecture_now(lecture_id: str) -> None:
                     if begin < written_to - 0.01:
                         continue
                     finish = max(begin, float(segment.get("end", begin)))
-                    rows.append(
-                        (str(uuid4()), lecture_id, start_position + len(rows), begin, finish, text)
-                    )
+                    rows.append((
+                        str(uuid4()), lecture_id, start_position + len(rows), begin, finish, text,
+                        json.dumps(segment.get("words") or [], separators=(",", ":")),
+                    ))
                 if rows:
                     connection.executemany(
                         """
                         INSERT INTO transcript_segments (
-                            id, lecture_id, position, start_seconds, end_seconds, text
-                        ) VALUES (?, ?, ?, ?, ?, ?)
+                            id, lecture_id, position, start_seconds, end_seconds, text, words
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?)
                         """,
                         rows,
                     )

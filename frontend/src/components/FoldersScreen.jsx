@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Icon } from './Icon';
 import RecordingRow from './RecordingRow';
 import { CompactFolderRow, FolderCard } from './FolderCard';
 import { IconButton, SearchBar } from './ui';
@@ -21,6 +22,7 @@ const FEATURED = 3;
  */
 export default function FoldersScreen({
   data, archived = [], onOpenFolder, onNewFolder, onFolderMenu, onOpenSettings, onOpenResult,
+  onOpenWorkspace, onWorkspaceMenu, onPickUp, blockClick, draggingId,
 }) {
   const [query, setQuery] = useState('');
   const [matches, setMatches] = useState([]);
@@ -31,6 +33,9 @@ export default function FoldersScreen({
   const folders = data.folders.filter((folder) => folder.name.toLowerCase().includes(term.toLowerCase()));
   const featured = folders.slice(0, FEATURED);
   const rest = folders.slice(FEATURED);
+  // Recordings that have not been filed yet. The library call already returns
+  // them at the root, so this is data the screen was simply throwing away.
+  const unfiled = data.workspaces ?? [];
 
   const runSearch = useCallback(async (text) => {
     if (!text) { ticketRef.current += 1; setMatches([]); setSearchNote(''); return; }
@@ -55,8 +60,7 @@ export default function FoldersScreen({
       <header className="head">
         <div className="head-title"><h1>Folders</h1></div>
         <div className="head-actions">
-          <IconButton name="gear" label="Settings" onClick={onOpenSettings} />
-          <IconButton name="plus" label="New folder" variant="accent" onClick={onNewFolder} />
+          <IconButton name="plus" label="New folder" variant="plain" onClick={onNewFolder} />
         </div>
       </header>
 
@@ -67,6 +71,26 @@ export default function FoldersScreen({
           {featured.map((folder) => (
             <FolderCard key={folder.id} folder={folder} onOpen={onOpenFolder} onMenu={onFolderMenu} />
           ))}
+        </section>
+      )}
+
+      {unfiled.length > 0 && !term && (
+        <section className="section">
+          <div className="section-head"><h2>General</h2></div>
+          <ul className="recording-rows">
+            {unfiled.map((workspace) => (
+              <RecordingRow
+                key={workspace.id}
+                title={workspace.title}
+                lecture={{ created_at: workspace.updated_at, duration_seconds: workspace.duration_seconds }}
+                onOpen={() => onOpenWorkspace(workspace.id)}
+                onMenu={() => onWorkspaceMenu(workspace)}
+                onPickUp={(event) => onPickUp(event, workspace)}
+                blockClick={blockClick}
+                dragging={draggingId === workspace.id}
+              />
+            ))}
+          </ul>
         </section>
       )}
 
@@ -92,10 +116,20 @@ export default function FoldersScreen({
         </section>
       )}
 
-      {!folders.length && !term && (
+      {!folders.length && !unfiled.length && !term && (
         <section className="section">
-          <p className="dim">No folders yet. Tap + to make your first one.</p>
+          <p className="dim">Nothing here yet. Tap the record button to start, or + to make a folder.</p>
         </section>
+      )}
+
+      {!term && (
+        <div className="compact-rows section">
+          <button type="button" className="compact-row" onClick={onOpenSettings}>
+            <span className="tone-mark"><Icon name="gear" /></span>
+            <span className="compact-copy"><strong>Settings</strong></span>
+            <span className="chev"><Icon name="chev" /></span>
+          </button>
+        </div>
       )}
 
       {term && (

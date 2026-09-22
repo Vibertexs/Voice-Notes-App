@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import ActionSheet from './components/ActionSheet';
-import BottomNavigation from './components/BottomNavigation';
+import DragGhost from './components/DragGhost';
+import RecordButton from './components/RecordButton';
 import FolderDialog from './components/FolderDialog';
 import FolderScreen from './components/FolderScreen';
 import FoldersScreen from './components/FoldersScreen';
@@ -10,6 +11,8 @@ import RecordingSheet from './components/RecordingSheet';
 import SettingsDialog from './components/SettingsDialog';
 import { FOLDER_COLORS } from './components/FolderCard';
 import { libraryApi } from './lib/api';
+import { countLabel, recordingMeta } from './lib/format';
+import useDragToFile from './lib/useDragToFile';
 
 function Toast({ toast }) {
   return toast ? <div className={`toast ${toast.kind ?? ''}`} role="status">{toast.message}</div> : null;
@@ -126,6 +129,20 @@ export default function App() {
     } catch (caught) { notify(caught.message, 'error'); }
   }
 
+  /** Filing by hand: a recording dropped on a folder, or dropped out of one. */
+  const fileWorkspace = useCallback(async (workspace, target) => {
+    const folderId = target === 'general' ? null : target;
+    if ((workspace.folder_id ?? null) === folderId) return;
+    try {
+      await libraryApi.updateWorkspace(workspace.id, { folder_id: folderId });
+      const name = allFolders.find((folder) => folder.id === folderId)?.name;
+      notify(folderId ? `Moved to ${name ?? 'the folder'}.` : 'Moved to General.');
+      await refresh();
+    } catch (caught) { notify(caught.message, 'error'); }
+  }, [allFolders, notify, refresh]);
+
+  const { drag, beginDrag, blockClick } = useDragToFile(fileWorkspace);
+
   /* ---- files ---- */
   function pickFile(target) {
     fileTargetRef.current = target ?? {};
@@ -172,7 +189,10 @@ export default function App() {
   if (error && !library && !workspace) return <BootError error={error} retry={openFolders} />;
   if (!library && screen.name !== 'workspace') return <Boot />;
 
-  const showNav = ['folders', 'folder'].includes(screen.name);
+  // Recording is offered wherever it has somewhere to go: the root, and inside
+  // a folder (where it files itself into that folder). Playback keeps its own
+  // transport at the bottom, so the two never share that space.
+  const canRecord = ['folders', 'folder'].includes(screen.name);
 
   return (
     <div className="app-shell">
@@ -187,6 +207,11 @@ export default function App() {
           onFolderMenu={setFolderSheet}
           onOpenSettings={() => setSettingsOpen(true)}
           onOpenResult={openSearchResult}
+          onOpenWorkspace={openWorkspace}
+          onWorkspaceMenu={setRecordingSheet}
+          onPickUp={beginDrag}
+          blockClick={blockClick}
+          draggingId={drag?.item?.id}
         />
       )}
 
@@ -199,6 +224,11 @@ export default function App() {
           onWorkspaceMenu={setRecordingSheet}
           onDeleteMaterial={deleteMaterial}
           onAddFile={() => pickFile({ folderId: library.current_folder.id })}
+          onRecord={() => startCapture()}
+          onPickUp={beginDrag}
+          blockClick={blockClick}
+          draggingId={drag?.item?.id}
+          dragging={Boolean(drag)}
         />
       )}
 
@@ -206,7 +236,6 @@ export default function App() {
         ? <PlaybackScreen
             workspace={workspace}
             folders={allFolders}
-            courseName={allFolders.find((folder) => folder.id === workspace.folder_id)?.name ?? 'Unfiled'}
             onBack={() => (workspace.folder_id ? openFolder(workspace.folder_id) : openFolders())}
             onContinue={() => startCapture(workspace)}
             onReload={refreshWorkspace}
@@ -224,13 +253,12 @@ export default function App() {
           context={captureContext ?? {}}
           onSaved={captureSaved}
           onCancel={cancelCapture}
+          onOpenSettings={() => setSettingsOpen(true)}
           notify={notify}
         />
       )}
 
-      {showNav && (
-        <BottomNavigation active="folders" onFolders={openFolders} onRecord={() => startCapture()} />
-      )}
+      {canRecord && !drag && <RecordButton onClick={() => startCapture()} />}
 
       {folderDialog && (
         <FolderDialog
@@ -243,7 +271,9 @@ export default function App() {
       {folderSheet && (
         <ActionSheet
           title={folderSheet.name}
-          subtitle="Folder"
+          subtitle={countLabel(folderSheet.lecture_count ?? 0)}
+          tone={folderSheet.color}
+          icon={folderSheet.icon || 'folder'}
           onClose={() => setFolderSheet(null)}
           items={[
             { label: 'Colour', icon: 'levels', chevron: true, keepOpen: true, onSelect: () => { setColourSheet(folderSheet); setFolderSheet(null); } },
@@ -259,7 +289,13 @@ export default function App() {
       )}
 
       {colourSheet && (
-        <ActionSheet title="Colour" subtitle={colourSheet.name} onClose={() => setColourSheet(null)}>
+        <ActionSheet
+          title="Colour"
+          subtitle={colourSheet.name}
+          tone={colourSheet.color}
+          icon={colourSheet.icon || 'folder'}
+          onClose={() => setColourSheet(null)}
+        >
           <div className="swatch-row">
             {FOLDER_COLORS.map((color) => (
               <button
@@ -278,7 +314,10 @@ export default function App() {
         <RecordingSheet
           workspace={recordingSheet}
           folders={allFolders}
-          subtitle={allFolders.find((folder) => folder.id === recordingSheet.folder_id)?.name ?? 'Unfiled'}
+          subtitle={recordingMeta({
+            created_at: recordingSheet.updated_at,
+            duration_seconds: recordingSheet.duration_seconds,
+          })}
           notify={notify}
           onClose={() => setRecordingSheet(null)}
           onChanged={refresh}
@@ -295,6 +334,7 @@ export default function App() {
         onChange={(event) => { uploadFiles([...event.target.files]); event.target.value = ''; }}
       />
 
+      <DragGhost drag={drag} />
       <Toast toast={toast} />
     </div>
   );

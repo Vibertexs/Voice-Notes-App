@@ -5,8 +5,8 @@ const GAP = 2;
 const SAMPLE_EVERY_MS = 48;
 const MAX_BARS = 900;
 
-/** The board's spectrum, in the order the trace runs: coral into blue. */
-const SPECTRUM = ['#FF375F', '#FF2D8D', '#A855F7', '#3882F6'];
+/** The board's spectrum, in the order the trace runs: coral into purple. */
+const SPECTRUM = ['#FF375F', '#FF2D8D', '#A855F7'];
 
 /**
  * The live level meter: rounded bars scrolling right to left, eased so the

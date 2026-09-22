@@ -58,7 +58,7 @@ for (const [label, pattern] of [
 }
 
 console.log('\n== native recording handoff ==');
-const doneStart = captureSource.indexOf('async function stop()');
+const doneStart = captureSource.indexOf('async function finish()');
 const doneEnd = captureSource.indexOf('\n  function ', doneStart);
 const doneBody = captureSource.slice(doneStart, doneEnd);
 // Expo hands over its file token only once stop() has run, so the page must
@@ -66,7 +66,7 @@ const doneBody = captureSource.slice(doneStart, doneEnd);
 // call an empty result a failure on the native side.
 check('stopping is never gated on a chunk having arrived',
   !/if \(!recorder \|\| !chunksRef\.current\.length/.test(doneBody)
-    && /if \(!recorder\) return;/.test(doneBody),
+    && /phase !== 'paused'/.test(doneBody),
   'the page must call native stop before its file token exists');
 check('an empty blob is only an error off the native path',
   /window\.__CN_NATIVE__ === true/.test(doneBody)
@@ -84,6 +84,9 @@ check('quick recording controls wait for the native start command',
   /this\.__operation = Promise\.resolve\(\)/.test(body)
     && /self\.__operation = self\.__operation\.then\(function \(\) \{ return call\('rec\.stop'/.test(body),
   'pause, resume, and stop must not overtake asynchronous native preparation');
+check('cancellation takes its own native discard path',
+  /ShimRecorder\.prototype\.discard/.test(body) && /call\('rec\.cancel'/.test(body),
+  'sliding to cancel must not save an orphaned native recording');
 
 console.log('\n== a native recorder can finish without an early chunk ==');
 const dom = new JSDOM('<div id="root">ready</div>', {

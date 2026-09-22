@@ -26,3 +26,6 @@ data/
 mobile/node_modules/
 mobile/.expo/
 mobile/dist/
+
+# Expo export artifacts from build verification
+mobile/.verify-android/

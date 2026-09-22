@@ -138,9 +138,15 @@ check('not showing the error screen', !onErrorScreen, text.slice(0, 220));
 check('the home page rendered', Boolean(document_.querySelector(librarySelector)),
   `waited ${waited}ms; body: ${text.slice(0, 160)}`);
 check('the folders section is present', /folder/i.test(text), text.slice(0, 160));
-check('the record button is present', Boolean(
-  [...document_.querySelectorAll('button')].find((b) => /record/i.test(b.textContent))),
-  [...document_.querySelectorAll('button')].map((b) => b.textContent).slice(0, 8).join(' | '));
+// The record action carries no visible label - it is a circle - so it is found
+// the way a person using VoiceOver would find it.
+check('the record button is present',
+  Boolean(document_.querySelector('button[aria-label="Record"]')),
+  [...document_.querySelectorAll('button')].map((b) => b.getAttribute('aria-label')).slice(0, 8).join(' | '));
+// There is no tab bar: recording is the only persistent control, and Folders is
+// reached by going back rather than by a tab.
+check('no tab bar came back', document_.querySelectorAll('nav').length === 0,
+  [...document_.querySelectorAll('nav')].map((n) => n.className).join(' | '));
 
 console.log('\n== the bridge replaced the browser APIs ==');
 check('fetch was taken over', dom.window.__CN_BRIDGE__ === true);

@@ -120,6 +120,12 @@ def transcribe_audio(
         condition_on_previous_text=True,
         language=language,
         vad_filter=True,
+        # Per-word times, so a transcript can follow speech rather than
+        # guessing at it. Spreading words evenly across a segment drifts by
+        # up to a second inside a long line, which reads as lag. This costs
+        # an extra alignment pass, which is worth it for a screen whose whole
+        # job is showing which word is being said.
+        word_timestamps=True,
     )
 
     if not total_seconds:
@@ -133,6 +139,15 @@ def transcribe_audio(
             "start": round(segment.start + offset, 2),
             "end": round(segment.end + offset, 2),
             "text": segment.text.strip(),
+            "words": [
+                {
+                    "start": round(word.start + offset, 2),
+                    "end": round(word.end + offset, 2),
+                    "word": word.word,
+                }
+                for word in (segment.words or [])
+                if word.start is not None and word.end is not None
+            ],
         }
         transcript_segments.append(entry)
         if on_segment is not None:

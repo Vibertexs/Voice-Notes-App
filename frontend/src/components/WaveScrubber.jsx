@@ -217,8 +217,10 @@ export default function WaveScrubber({
       aria-valuetext={mmss(currentSeconds || 0)}
     >
       <canvas ref={canvasRef} />
+      {/* The playhead says where it is, whether or not a thumb is on it -
+          it is the only place the current time is written. */}
       <span className="playhead" aria-hidden="true">
-        {dragging && <em>{mmss(preview)}</em>}
+        <em>{mmss(dragging ? preview : currentSeconds || 0)}</em>
       </span>
     </div>
   );

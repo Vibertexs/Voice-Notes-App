@@ -52,6 +52,7 @@ const PATHS = {
   computer: <><rect x="3.5" y="5" width="17" height="11" rx="1.8" /><path d="M2.5 19.5h19" /></>,
   people: <><circle cx="9.5" cy="8.5" r="3" /><path d="M3.8 19.5a5.7 5.7 0 0 1 11.4 0" /><path d="M16 6.2a3 3 0 0 1 0 5.8" /><path d="M17.4 14.6a5.7 5.7 0 0 1 3 4.9" /></>,
   levels: <><path d="M4 8.5h16M4 15.5h16" /><circle cx="9" cy="8.5" r="2" fill="currentColor" stroke="none" /><circle cx="15" cy="15.5" r="2" fill="currentColor" stroke="none" /></>,
+  dumbbell: <><path d="M8 12h8" /><rect x="6" y="7.5" width="2.2" height="9" rx="1" /><rect x="3.2" y="9.5" width="2.2" height="5" rx="1" /><rect x="15.8" y="7.5" width="2.2" height="9" rx="1" /><rect x="18.6" y="9.5" width="2.2" height="5" rx="1" /></>,
   music: <><path d="M9 17.5V6.2l10-2v11" /><circle cx="6.8" cy="17.6" r="2.4" /><circle cx="16.8" cy="15.4" r="2.4" /></>,
   airplane: <><path d="M10.5 3.7a1.5 1.5 0 0 1 3 0V9l7 4.2v2.1l-7-2.1v4l2.4 1.8v1.4L12 19.6l-3.9.8v-1.4l2.4-1.8v-4l-7 2.1v-2.1L10.5 9Z" /></>,
   favourite: <><path d="M12 19.7S4 15 4 9.9a4 4 0 0 1 7.3-2.3l.7 1 .7-1A4 4 0 0 1 20 9.9c0 5.1-8 9.8-8 9.8Z" /></>,
@@ -73,6 +74,6 @@ export function Icon({ name, size, className = '' }) {
 }
 
 /** The eight folder icons offered when a folder is created. */
-export const FOLDER_ICONS = ['education', 'document', 'computer', 'people', 'levels', 'music', 'airplane', 'favourite'];
+export const FOLDER_ICONS = ['education', 'document', 'computer', 'people', 'dumbbell', 'music', 'airplane', 'favourite'];
 
 export default Icon;

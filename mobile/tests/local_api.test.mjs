@@ -189,15 +189,17 @@ check('hit carries an excerpt', res.body.results[0].excerpt.includes('spindle'),
 res = await GET('/api/search?q=' + encodeURIComponent('nothing-matches-this'));
 check('no false positives', res.body.results.length === 0);
 
-console.log('\n== what the phone cannot do says so, and does not pretend ==');
+console.log('\n== unavailable features and legacy formats explain themselves ==');
 for (const [label, call] of [
-  ['transcription', () => POST('/api/lectures/rec1/retranscribe', {})],
   ['ai questions', () => POST(`/api/workspaces/${workspaceId}/ai/questions`, { question: 'x' })],
   ['flashcards', () => POST(`/api/workspaces/${workspaceId}/flashcards/generate`, {})],
 ]) {
   const r = await call();
   check(`${label} returns a real error, not a fake success`, r.status === 503 && typeof r.body.detail === 'string', r);
 }
+res = await POST('/api/lectures/rec1/retranscribe', {});
+check('a legacy m4a explains the private WAV limitation',
+  res.status === 422 && /WAV/.test(res.body.detail), res);
 res = await GET('/api/ai/status');
 check('ai status reports unavailable rather than failing', res.status === 200 && res.body.available === false, res);
 

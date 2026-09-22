@@ -12,11 +12,11 @@ import { countLabel } from '../lib/format';
  * different idea.
  */
 
-export const FOLDER_COLORS = ['rose', 'coral', 'amber', 'lime', 'mint', 'sky', 'blue', 'violet', 'slate'];
+export const FOLDER_COLORS = ['rose', 'coral', 'amber', 'lime', 'blue', 'violet', 'slate'];
 
-export function FolderCard({ folder, onOpen, onMenu }) {
+export function FolderCard({ folder, onOpen, onMenu, droppable = true }) {
   return (
-    <article className="folder-card" data-tone={folder.color}>
+    <article className="folder-card" data-tone={folder.color} data-drop={droppable ? folder.id : undefined}>
       <FolderArt icon={folder.icon} />
       <button className="folder-open" onClick={() => onOpen(folder.id)}>
         <span className="folder-copy">
@@ -33,7 +33,7 @@ export function FolderCard({ folder, onOpen, onMenu }) {
 
 export function CompactFolderRow({ folder, onOpen }) {
   return (
-    <button className="compact-row" data-tone={folder.color} onClick={() => onOpen(folder.id)}>
+    <button className="compact-row" data-tone={folder.color} data-drop={folder.id} onClick={() => onOpen(folder.id)}>
       <span className="tone-mark"><Icon name={folder.icon || 'folder'} /></span>
       <span className="compact-copy">
         <strong>{folder.name}</strong>

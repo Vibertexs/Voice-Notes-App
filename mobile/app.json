@@ -6,7 +6,6 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.classnotes.app",
@@ -14,8 +13,7 @@
         "UIBackgroundModes": [
           "audio"
         ],
-        "NSMicrophoneUsageDescription": "Class Notes needs the microphone to record your lectures.",
-        "NSSpeechRecognitionUsageDescription": "Class Notes turns your lectures into searchable text on this device. Nothing is sent anywhere."
+        "NSMicrophoneUsageDescription": "Class Notes needs the microphone to record your lectures. Audio stays on this device."
       }
     },
     "android": {
@@ -35,38 +33,20 @@
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
-      },
-      "queries": [
-        {
-          "intent": [
-            {
-              "action": "android.speech.RecognitionService"
-            }
-          ]
-        }
-      ]
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
       [
-        "expo-audio",
+        "expo-audio-studio",
         {
           "microphonePermission": "Class Notes records your lectures so you can replay and search them later. Audio stays on this device."
         }
       ],
       "expo-sqlite",
-      [
-        "expo-speech-recognition",
-        {
-          "microphonePermission": "Class Notes needs the microphone to record your lectures.",
-          "speechRecognitionPermission": "Class Notes turns your lectures into searchable text on this device. Nothing is sent anywhere.",
-          "androidSpeechServicePackages": [
-            "com.google.android.googlequicksearchbox"
-          ]
-        }
-      ]
+      "expo-splash-screen"
     ],
     "runtimeVersion": {
       "policy": "appVersion"

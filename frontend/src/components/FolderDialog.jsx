@@ -75,7 +75,7 @@ export default function FolderDialog({ parent, onClose, onCreate }) {
         </fieldset>
 
         <fieldset>
-          <legend className="create-label">Icon <span className="dim">optional</span></legend>
+          <legend className="create-label">Icon (Optional)</legend>
           <div className="icon-row">
             {FOLDER_ICONS.map((option) => (
               <button

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { memo, useEffect, useRef } from 'react';
 
 /**
  * The transcript, following playback the way lyrics do.
@@ -9,10 +9,10 @@ import { useEffect, useRef } from 'react';
  * somewhere in a paragraph; and the panel scrolls itself to keep that line
  * near the middle.
  *
- * Word timing is interpolated across the segment rather than measured. The
- * recogniser gives a start and an end for each segment and nothing finer, so
- * the fill advances evenly through the words in between — close enough to
- * read along with, and it never drifts, because every segment re-anchors it.
+ * Word timing is measured where the recogniser provides it: Whisper is asked
+ * for per-word times, so a word lights at the moment it is spoken. Transcripts
+ * recorded before that existed carry no word times, and fall back to spreading
+ * the words evenly across the line - readable, but it drifts inside a long one.
  *
  * Auto-scroll stops as soon as the reader scrolls by hand, because dragging
  * someone back to the playhead while they are reading ahead is worse than not
@@ -38,7 +38,12 @@ function progressThrough(segment, seconds) {
   return clamp((seconds - start) / span, 0, 1);
 }
 
-function Line({ segment, state, seconds, onSeek, innerRef }) {
+/**
+ * Memoised, because playback now moves the clock every frame. Only the line
+ * being spoken depends on `seconds` - every other line is handed 0, so its
+ * props do not change and React leaves it alone.
+ */
+const Line = memo(function Line({ segment, state, seconds, onSeek, innerRef }) {
   const common = {
     ref: innerRef,
     className: `line ${state}`,
@@ -48,6 +53,23 @@ function Line({ segment, state, seconds, onSeek, innerRef }) {
 
   if (state !== 'active') return <button {...common}>{segment.text}</button>;
 
+  // Measured timing when the transcript has it: each word lights when it is
+  // actually spoken, which is the only way the line can keep up with a voice.
+  const timed = segment.words;
+  if (timed?.length) {
+    return (
+      <button {...common}>
+        {timed.map((word, position) => (
+          <span key={position} className={`w ${(word.start ?? 0) <= seconds ? 'on' : ''}`}>
+            {word.word}
+          </span>
+        ))}
+      </button>
+    );
+  }
+
+  // Transcripts made before word timing existed: spread the words evenly and
+  // accept the drift, rather than leaving the line unlit.
   const parts = splitWords(segment.text);
   const total = parts.filter((part) => part.trim()).length;
   const spoken = Math.round(progressThrough(segment, seconds) * total);
@@ -64,7 +86,7 @@ function Line({ segment, state, seconds, onSeek, innerRef }) {
       })}
     </button>
   );
-}
+});
 
 export default function SyncedTranscript({ segments, currentSeconds, onSeek, status }) {
   const listRef = useRef(null);
@@ -120,7 +142,7 @@ export default function SyncedTranscript({ segments, currentSeconds, onSeek, sta
         <Line
           key={`${segment.start_seconds}-${index}`}
           segment={segment}
-          seconds={currentSeconds ?? 0}
+          seconds={index === activeIndex ? (currentSeconds ?? 0) : 0}
           state={index === activeIndex ? 'active' : index < activeIndex ? 'past' : 'future'}
           innerRef={index === activeIndex ? activeRef : null}
           onSeek={onSeek}
