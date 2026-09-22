@@ -141,6 +141,21 @@ if (existsSync(captureModule)) {
     /encodeToString\(buffer, 0, bytesRead,/.test(capture)
       && !/encodeToString\(buffer, Base64/.test(capture),
     'encoding the whole buffer re-sends the previous chunk on a short read');
+  // stop() only lowers a flag, so a thread can still be inside read() when the
+  // next take begins. Sharing the recorder field let it read from, release, or
+  // null a recorder that now belongs to that newer take.
+  check('a take reads from its own recorder, not the shared field',
+    /final AudioRecord active = recorder;/.test(capture)
+      && /active\.read\(buffer, 0, buffer\.length\)/.test(capture)
+      && /if \(recorder == active\)/.test(capture),
+    'a finishing thread must not touch the recorder that replaced it');
+  check('a finishing take stands down when the next one starts',
+    /private volatile int session/.test(capture)
+      && /while \(isRecording && session == mySession\)/.test(capture),
+    'two threads on one stream write the same audio twice');
+  check('the stop flag is visible across threads',
+    /private volatile boolean isRecording/.test(capture),
+    'a non-volatile flag can leave the recording thread running after stop');
 }
 check('the patch that fixes it is in the repo',
   existsSync(join(here, '..', 'patches', '@fugood+react-native-audio-pcm-stream+1.1.4.patch')));

@@ -1,8 +1,52 @@
 diff --git a/node_modules/@fugood/react-native-audio-pcm-stream/android/src/main/java/com/imxiqi/rnliveaudiostream/RNLiveAudioStreamModule.java b/node_modules/@fugood/react-native-audio-pcm-stream/android/src/main/java/com/imxiqi/rnliveaudiostream/RNLiveAudioStreamModule.java
-index 6d7d17d..d882dcc 100644
+index 6d7d17d..1be0f5f 100644
 --- a/node_modules/@fugood/react-native-audio-pcm-stream/android/src/main/java/com/imxiqi/rnliveaudiostream/RNLiveAudioStreamModule.java
 +++ b/node_modules/@fugood/react-native-audio-pcm-stream/android/src/main/java/com/imxiqi/rnliveaudiostream/RNLiveAudioStreamModule.java
-@@ -104,7 +104,12 @@ public class RNLiveAudioStreamModule extends ReactContextBaseJavaModule {
+@@ -27,7 +27,13 @@ public class RNLiveAudioStreamModule extends ReactContextBaseJavaModule {
+ 
+     private AudioRecord recorder = null;
+     private int bufferSize;
+-    private boolean isRecording;
++    // Written on the bridge thread and read on the recording thread, so both
++    // have to be volatile or the recording thread can miss stop() entirely.
++    private volatile boolean isRecording;
++    // Each take gets a number. A thread still finishing when the next take
++    // begins sees the number move and leaves, instead of carrying on beside it
++    // and emitting a second stream of audio into the same file.
++    private volatile int session = 0;
+ 
+     public RNLiveAudioStreamModule(ReactApplicationContext reactContext) {
+         super(reactContext);
+@@ -89,7 +95,17 @@ public class RNLiveAudioStreamModule extends ReactContextBaseJavaModule {
+     public void start() {
+         if (recorder == null || isRecording) return;
+         isRecording = true;
+-        recorder.startRecording();
++
++        // The thread works from its own references. Reading the shared fields
++        // meant a take beginning while this one was still finishing could have
++        // its recorder read from, released, or cleared by the thread it
++        // replaced. start() only ever runs on the bridge thread, so claiming
++        // the next session number here needs no lock.
++        final AudioRecord active = recorder;
++        final int size = bufferSize;
++        final int mySession = ++session;
++
++        active.startRecording();
+ 
+         Thread recordingThread = new Thread(new Runnable() {
+             public void run() {
+@@ -97,23 +113,32 @@ public class RNLiveAudioStreamModule extends ReactContextBaseJavaModule {
+                     int bytesRead;
+                     int count = 0;
+                     String base64Data;
+-                    byte[] buffer = new byte[bufferSize];
++                    byte[] buffer = new byte[size];
+ 
+-                    while (isRecording) {
+-                        bytesRead = recorder.read(buffer, 0, buffer.length);
++                    while (isRecording && session == mySession) {
++                        bytesRead = active.read(buffer, 0, buffer.length);
  
                          // skip first 2 buffers to eliminate "click sound"
                          if (bytesRead > 0 && ++count > 2) {
@@ -16,3 +60,19 @@ index 6d7d17d..d882dcc 100644
                              eventEmitter.emit("data", base64Data);
                          }
                      }
+-                    recorder.stop();
++                    active.stop();
+                 } catch (Exception e) {
+                     e.printStackTrace();
+                 } finally {
+-                    recorder.release();
+-                    recorder = null;
++                    active.release();
++                    // Only disown the field if it still holds this take's
++                    // recorder; a newer take may already have put its own there.
++                    if (recorder == active) {
++                        recorder = null;
++                    }
+                 }
+             }
+         });
