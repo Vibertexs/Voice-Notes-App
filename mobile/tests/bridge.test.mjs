@@ -68,10 +68,19 @@ check('stopping is never gated on a chunk having arrived',
   !/if \(!recorder \|\| !chunksRef\.current\.length/.test(doneBody)
     && /phase !== 'paused'/.test(doneBody),
   'the page must call native stop before its file token exists');
-check('an empty blob is only an error off the native path',
-  /window\.__CN_NATIVE__ === true/.test(doneBody)
-    && /!blob\.size && !nativeDeliversOnStop/.test(doneBody),
-  'the native recorder legitimately produces no blob here');
+// The check below this one proves the shell emits its token before it emits
+// stop, so by the time the page builds its blob a native take has one. An
+// empty blob therefore means the recorder failed, on any path - and posting it
+// anyway came back as "did not produce any audio", which named the symptom and
+// buried the cause.
+check('an empty blob is an error on every path',
+  /if \(!blob\.size\) \{/.test(doneBody)
+    && !/nativeDeliversOnStop/.test(doneBody),
+  'an empty native blob is a failed recorder, not a silent take');
+check('the reason the recorder gave is what the page reports',
+  /stopFailureRef\.current \|\|/.test(doneBody)
+    && /stopFailureRef\.current = detail/.test(captureSource),
+  'the native message is the only account of why recording stopped');
 
 const stopStart = body.indexOf('ShimRecorder.prototype.stop');
 const stopEnd = body.indexOf('ShimRecorder.isTypeSupported', stopStart);

@@ -61,6 +61,7 @@ export default function RecordScreen({ context, onSaved, onCancel, notify }) {
   const recorderRef = useRef(null);
   const streamRef = useRef(null);
   const chunksRef = useRef([]);
+  const stopFailureRef = useRef('');
   const startedAtRef = useRef(0);
   const carriedRef = useRef(0);
   const timerRef = useRef(0);
@@ -101,8 +102,16 @@ export default function RecordScreen({ context, onSaved, onCancel, notify }) {
       setLiveStream(stream);
       recorderRef.current = recorder;
       chunksRef.current = [];
+      stopFailureRef.current = '';
       recorder.addEventListener('dataavailable', (event) => { if (event.data.size) chunksRef.current.push(event.data); });
-      recorder.addEventListener('error', () => setError('The microphone stopped unexpectedly.'));
+      recorder.addEventListener('error', (event) => {
+        // The native shell reports why it could not record - that the file was
+        // never written, that the build has no recorder. Replacing it with one
+        // generic sentence threw away the only account of what went wrong.
+        const detail = String(event?.message ?? '').trim();
+        stopFailureRef.current = detail;
+        setError(detail || 'The microphone stopped unexpectedly.');
+      });
       recorder.start(1000);
       startClock();
       setPhase('recording');
@@ -146,7 +155,6 @@ export default function RecordScreen({ context, onSaved, onCancel, notify }) {
     // on disk and only emits its file token on stop. Either way the page must
     // never refuse to stop for want of a chunk - stopping a second early used
     // to do nothing at all, with the screen still saying Recording.
-    const nativeDeliversOnStop = typeof window !== 'undefined' && window.__CN_NATIVE__ === true;
     setPhase('saving');
     setError('');
     stopClock();
@@ -158,8 +166,12 @@ export default function RecordScreen({ context, onSaved, onCancel, notify }) {
     });
     streamRef.current?.getTracks().forEach((track) => track.stop());
     setLiveStream(null);
-    if (!blob.size && !nativeDeliversOnStop) {
-      setError('That take did not capture any audio.');
+    if (!blob.size) {
+      // The shell emits its file token before it emits stop, so by now an
+      // empty blob means the recorder failed rather than that the take was
+      // silent. Posting it anyway reached the server as "did not produce any
+      // audio", which described the symptom and hid the cause.
+      setError(stopFailureRef.current || 'That take did not capture any audio.');
       setPhase('paused');
       return;
     }
