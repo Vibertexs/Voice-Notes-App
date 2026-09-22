@@ -55,6 +55,8 @@ const fakeFs = { File: FakeFile, Directory: FakeDirectory, Paths: { document: 'f
 
 const body = source
   .replace(/import \* as SQLite from 'expo-sqlite';/, 'const SQLite = __sqlite;')
+  .replace(/import \{ ON_DEVICE_MODEL \} from '\.\/onDeviceWhisper';/,
+    "const ON_DEVICE_MODEL = { name: 'Whisper Small English' };")
   .replace(/import \{ Directory, File, Paths \} from 'expo-file-system';/,
     'const { Directory, File, Paths } = __fs;')
   .replace(/export (async function|function|const)/g, '$1');
@@ -221,4 +223,6 @@ res = await GET('/api/does-not-exist');
 check('404', res.status === 404, res);
 
 console.log('\n' + pass + '/' + total + ' passed');
-process.exit(pass === total ? 0 : 1);
+// exitCode rather than exit(): sql.js tears its WASM heap down asynchronously,
+// and exiting out from under it aborts the process even when every check passed.
+process.exitCode = pass === total ? 0 : 1;

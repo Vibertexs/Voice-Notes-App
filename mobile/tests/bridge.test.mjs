@@ -144,4 +144,6 @@ check('no arrow functions', !/=>/.test(body), 'arrow functions in an untranspile
 check('no let or const', !/(^|[;\s{])(let|const)\s/.test(body), 'use var in the injected script');
 
 console.log('\n' + pass + '/' + total + ' passed');
-process.exit(pass === total ? 0 : 1);
+// exitCode rather than exit(): sql.js tears its WASM heap down asynchronously,
+// and exiting out from under it aborts the process even when every check passed.
+process.exitCode = pass === total ? 0 : 1;

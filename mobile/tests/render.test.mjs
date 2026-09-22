@@ -58,6 +58,8 @@ class FakeDirectory {
 }
 const body = source
   .replace(/import \* as SQLite from 'expo-sqlite';/, 'const SQLite = __sqlite;')
+  .replace(/import \{ ON_DEVICE_MODEL \} from '\.\/onDeviceWhisper';/,
+    "const ON_DEVICE_MODEL = { name: 'Whisper Small English' };")
   .replace(/import \{ Directory, File, Paths \} from 'expo-file-system';/,
     'const { Directory, File, Paths } = __fs;')
   .replace(/export (async function|function|const)/g, '$1');
@@ -162,4 +164,6 @@ console.log('\n' + pass + '/' + total + ' passed');
 if (pageErrors.length) {
   console.log('\npage errors:\n  ' + pageErrors.slice(0, 5).join('\n  '));
 }
-process.exit(pass === total ? 0 : 1);
+// exitCode rather than exit(): sql.js tears its WASM heap down asynchronously,
+// and exiting out from under it aborts the process even when every check passed.
+process.exitCode = pass === total ? 0 : 1;

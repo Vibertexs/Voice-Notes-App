@@ -204,4 +204,6 @@ check('settings report the on-device engine, not a server',
   res.body.transcription_delivery === 'on_device' && res.body.transcription_engine === 'Whisper Small English', res.body);
 
 console.log('\n' + pass + '/' + total + ' passed');
-process.exit(pass === total ? 0 : 1);
+// exitCode rather than exit(): sql.js tears its WASM heap down asynchronously,
+// and exiting out from under it aborts the process even when every check passed.
+process.exitCode = pass === total ? 0 : 1;
