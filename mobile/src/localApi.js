@@ -1,5 +1,6 @@
 import * as SQLite from 'expo-sqlite';
 import { Directory, File, Paths } from 'expo-file-system';
+import { ON_DEVICE_MODEL } from './onDeviceWhisper';
 
 /**
  * The backend, on the phone.
@@ -591,7 +592,7 @@ export async function handleApi({ method, path, body }) {
     if (method === 'GET') {
       return ok({
         transcription_on_device: TRANSCRIPTION_ON_DEVICE.value,
-        transcription_engine: 'Whisper Base English',
+        transcription_engine: ON_DEVICE_MODEL.name,
         transcription_delivery: 'on_device',
       });
     }

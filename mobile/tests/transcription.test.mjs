@@ -40,8 +40,14 @@ check('the local module initializes whisper.cpp',
 check('it is loaded lazily, not at import',
   !/^import .*from 'whisper\.rn'/m.test(whisper),
   'a top-level import takes the entire app down on an older dev build');
-check('a compact Base English model is downloaded once',
-  /ggml-base\.en-q5_1\.bin/.test(whisper) && /File\.createDownloadTask/.test(whisper), whisper);
+check('a quantised English model is downloaded once',
+  /ggml-small\.en-q5_1\.bin/.test(whisper) && /File\.createDownloadTask/.test(whisper), whisper);
+// The guard exists to catch a half-finished download. If it is ever left
+// below the real file size, a truncated model reaches whisper.cpp and fails
+// somewhere far less obvious than here.
+check('the size guard matches the model it now downloads',
+  /MIN_MODEL_BYTES = 150 \* 1024 \* 1024/.test(whisper),
+  'small.en-q5_1 is ~181MB; a guard sized for base.en would pass a truncated file');
 check('the model download reports progress', /onProgress: \(\{ bytesWritten, totalBytes \}\)/.test(whisper));
 check('the recognizer receives an English local-file job',
   /context\.transcribe\(fileUri/.test(whisper) && /language: 'en'/.test(whisper));
@@ -151,6 +157,8 @@ class FakeDirectory {
 }
 const body = source
   .replace(/import \* as SQLite from 'expo-sqlite';/, 'const SQLite = __sqlite;')
+  .replace(/import \{ ON_DEVICE_MODEL \} from '\.\/onDeviceWhisper';/,
+    "const ON_DEVICE_MODEL = { name: 'Whisper Small English' };")
   .replace(/import \{ Directory, File, Paths \} from 'expo-file-system';/,
     'const { Directory, File, Paths } = __fs;')
   .replace(/export (async function|function|const)/g, '$1');
@@ -193,7 +201,7 @@ res = await api.handleApi({ method: 'POST', path: '/api/lectures/old1/retranscri
 check('legacy m4a captures explain their local limitation', res.status === 422 && /WAV/.test(res.body.detail), res);
 res = await api.handleApi({ method: 'GET', path: '/api/settings', body: null });
 check('settings report the on-device engine, not a server',
-  res.body.transcription_delivery === 'on_device' && res.body.transcription_engine === 'Whisper Base English', res.body);
+  res.body.transcription_delivery === 'on_device' && res.body.transcription_engine === 'Whisper Small English', res.body);
 
 console.log('\n' + pass + '/' + total + ' passed');
 process.exit(pass === total ? 0 : 1);

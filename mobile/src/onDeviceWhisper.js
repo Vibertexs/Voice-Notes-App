@@ -27,21 +27,26 @@ function loadWhisper() {
  * file directly from the app's documents directory.
  */
 const MODEL_DIRECTORY = new Directory(Paths.document, 'whisper-models');
-const MODEL_FILE_NAME = 'ggml-base.en-q5_1.bin';
+const MODEL_FILE_NAME = 'ggml-small.en-q5_1.bin';
 const MODEL_URL = `https://huggingface.co/ggerganov/whisper.cpp/resolve/main/${MODEL_FILE_NAME}`;
 const MODEL_FILE = new File(MODEL_DIRECTORY, MODEL_FILE_NAME);
 const PARTIAL_MODEL_FILE = new File(MODEL_DIRECTORY, `${MODEL_FILE_NAME}.partial`);
 
-// The q5 base English model is about 60 MB. Treat anything substantially
-// smaller as an interrupted download rather than letting the native model
-// loader fail with an opaque error.
-const MIN_MODEL_BYTES = 50 * 1024 * 1024;
+// The q5 small English model is about 181 MB. It is roughly three times the
+// work of base.en, which a phone can afford: base transcribed at about eight
+// times realtime on a 2023 handset, so small still lands near three, and an
+// hour of lecture takes about twenty minutes. The accuracy is worth it - base
+// mishears ordinary words often enough to make a transcript annoying to read.
+//
+// Anything substantially smaller than the real file is an interrupted
+// download; catching it here beats an opaque failure inside the model loader.
+const MIN_MODEL_BYTES = 150 * 1024 * 1024;
 
 let contextPromise = null;
 
 export const ON_DEVICE_MODEL = Object.freeze({
-  name: 'Whisper Base English',
-  sizeLabel: 'about 60 MB',
+  name: 'Whisper Small English',
+  sizeLabel: 'about 181 MB',
   downloadUrl: MODEL_URL,
 });
 
