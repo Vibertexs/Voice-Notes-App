@@ -21,13 +21,13 @@ const open = bridgeSource.indexOf('String.raw`');
 const body = bridgeSource.slice(open + 'String.raw`'.length, bridgeSource.lastIndexOf('`;'));
 
 console.log('== native actually produces a level ==');
-check('WAV recorder emits amplitude events', /ExpoAudioStudio\.addListener\('onRecorderAmplitude'/.test(appSource));
+check('WAV recorder emits amplitude events', /recorder\.addListener\('onRecorderAmplitude'/.test(appSource));
 check('metering frequency is configured', /setAmplitudeUpdateFrequency\(METERING_HERTZ\)/.test(appSource));
 check('native dBFS levels are pushed into the page', /__cnSetLevel/.test(appSource));
 check('one recorder owns capture and pause/resume',
-  /ExpoAudioStudio\.startRecording/.test(appSource)
-    && /ExpoAudioStudio\.pauseRecording/.test(appSource)
-    && /ExpoAudioStudio\.resumeRecording/.test(appSource));
+  /recorder\.startRecording/.test(appSource)
+    && /recorder\.pauseRecording/.test(appSource)
+    && /recorder\.resumeRecording/.test(appSource));
 
 console.log('\n== the page and the bridge agree on the gate constants ==');
 const gateMatch = waveSource.match(/\(rms - ([\d.]+)\) \/ ([\d.]+)/);

@@ -62,10 +62,22 @@ check('App has no transcription endpoint, host discovery, or remote client',
 check('every saved capture queues the local Whisper pass',
   /await markTranscriptionPending\(id\);/.test(app) && /transcribeOnDevice\(file\.uri/.test(app));
 check('capture is continuous pause-safe PCM WAV',
-  /ExpoAudioStudio\.startRecording\(\)/.test(app)
+  /recorder\.startRecording\(\)/.test(app)
     && /const fileName = `\$\{id\}\.wav`;/.test(app)
-    && /ExpoAudioStudio\.pauseRecording\(\)/.test(app)
-    && /ExpoAudioStudio\.resumeRecording\(\)/.test(app));
+    && /recorder\.pauseRecording\(\)/.test(app)
+    && /recorder\.resumeRecording\(\)/.test(app));
+// The recorder writes the container itself, which is the only reason pause can
+// leave no gap: while paused the chunks are simply not appended.
+const pcm = readFileSync(join(here, '..', 'src', 'pcmRecorder.js'), 'utf8');
+check('the WAV it writes is what whisper.cpp reads',
+  /SAMPLE_RATE = 16000/.test(pcm) && /CHANNELS = 1/.test(pcm) && /BITS_PER_SAMPLE = 16/.test(pcm),
+  'whisper.cpp decodes nothing else - not AAC, not MP3');
+check('pausing drops chunks rather than stopping the stream',
+  /if \(!state\.recording \|\| state\.paused/.test(pcm),
+  'stopping and restarting would split the lecture into two files');
+check('the header is patched at the end, not held in memory',
+  /handle\.offset = 4/.test(pcm) && /handle\.offset = 40/.test(pcm),
+  'an hour of PCM is ~115MB and must never be buffered to compute its length');
 check('the page bridge still uses native recording commands',
   /rec\.start/.test(bridge) && /rec\.pause/.test(bridge) && /rec\.resume/.test(bridge) && /rec\.stop/.test(bridge));
 check('the transcript settings explain private on-device processing',
@@ -89,9 +101,14 @@ check('bookmarks capture typed labels without joining the recording layout flow'
     && /\.bookmark-composer,[\s\S]{0,160}position: absolute/.test(styles));
 
 console.log('\n== native config contains no endpoint exception ==');
-const plugin = appJson.expo.plugins.find(
-  (entry) => (Array.isArray(entry) ? entry[0] : entry) === 'expo-audio-studio');
-check('the local WAV recorder plugin is enabled', Array.isArray(plugin));
+// Capture is a plain React Native module now, so there is no config plugin to
+// look for - the dependency and the permission are what make it real.
+const deps = JSON.parse(readFileSync(join(here, '..', 'package.json'), 'utf8')).dependencies;
+check('the PCM capture module is a dependency',
+  Boolean(deps['@fugood/react-native-audio-pcm-stream']), Object.keys(deps).join(', '));
+check('no recorder that cannot produce PCM WAV crept back in',
+  !deps['expo-audio-studio'] && !deps['expo-av'],
+  'expo-audio records AAC on Android, which whisper.cpp will not read');
 check('RECORD_AUDIO remains declared', appJson.expo.android.permissions.includes('android.permission.RECORD_AUDIO'));
 check('Android retains Internet only for the one-time model download', appJson.expo.android.permissions.includes('android.permission.INTERNET'));
 check('the HTTP cleartext workaround is removed',

@@ -39,12 +39,6 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      [
-        "expo-audio-studio",
-        {
-          "microphonePermission": "Class Notes records your lectures so you can replay and search them later. Audio stays on this device."
-        }
-      ],
       "expo-sqlite",
       "expo-splash-screen"
     ],

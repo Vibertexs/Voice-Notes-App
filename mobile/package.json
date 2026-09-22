@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "main": "index.js",
   "dependencies": {
+    "@fugood/react-native-audio-pcm-stream": "^1.1.4",
     "buffer": "^6.0.3",
     "expo": "~57.0.24",
-    "expo-audio-studio": "^2.0.0-beta.2",
     "expo-dev-client": "~57.0.19",
     "expo-file-system": "~57.0.7",
     "expo-keep-awake": "~57.0.2",

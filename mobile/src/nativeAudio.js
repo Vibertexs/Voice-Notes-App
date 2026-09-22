@@ -1,18 +1,19 @@
+import { NativeModules } from 'react-native';
+
 /**
  * The recorder, loaded defensively.
  *
- * `expo-audio-studio` is a native module: its JavaScript exists in every
- * bundle, but the code it calls only exists in a binary that was compiled
- * after it was added to package.json. Importing it into a build that predates
- * it throws at module scope - before React renders anything - so the whole app
- * is a red error screen and nothing, not even the library, can be opened.
+ * Recording needs native code, and native code only exists in a binary that
+ * was compiled after the package was added. A build that predates it used to
+ * throw at module scope - before React rendered anything - so one missing
+ * module turned the whole app into an error screen, including the parts that
+ * do not record at all.
  *
- * Loading it through here turns that into a capability instead of a crash: the
- * app opens, the recordings you already have are readable, and the one thing
- * that genuinely needs the binary says so when you reach for it.
+ * Loading it through here makes that a capability rather than a crash: the app
+ * opens, recordings already on the phone are readable, and only the thing that
+ * genuinely needs the binary says so when it is reached for.
  *
- * `whisper.rn` is loaded the same way in onDeviceWhisper.js, for the same
- * reason.
+ * whisper.rn is loaded the same way in onDeviceWhisper.js, for the same reason.
  */
 
 const REBUILD_HINT =
@@ -23,12 +24,12 @@ let native = null;
 let problem = '';
 
 try {
-  // The package calls requireNativeModule at module scope, so a binary without
-  // the native side throws right here. That throw is the whole test: do not
-  // also probe for a named method. Expo's native objects do not always expose
-  // their methods the way a plain object does, and a probe that guesses wrong
-  // would disable recording on a build that works perfectly well.
-  const module = require('expo-audio-studio');
+  // The PCM stream is a plain React Native module, so its absence shows up as
+  // a missing entry in NativeModules rather than as a throw. Check that first,
+  // then load the recorder that builds on it.
+  if (!NativeModules.RNLiveAudioStream) throw new Error('RNLiveAudioStream is not in this binary');
+  // eslint-disable-next-line global-require
+  const module = require('./pcmRecorder');
   native = module?.default ?? module;
   if (!native) problem = REBUILD_HINT;
 } catch (error) {
@@ -43,9 +44,9 @@ export const HAS_RECORDER = native !== null;
 export const RECORDER_PROBLEM = problem;
 
 /**
- * The real module when it is there; otherwise a stand-in whose every method
- * rejects with the reason. Calls fail one at a time and are reported back to
- * the page, rather than taking the process down at import.
+ * The real recorder when it is there; otherwise a stand-in whose every method
+ * fails with the reason. Calls fail one at a time and are reported back to the
+ * page, rather than taking the process down at import.
  */
 const missing = new Proxy({}, {
   get(_target, key) {

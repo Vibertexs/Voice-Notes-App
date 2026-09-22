@@ -5,7 +5,7 @@ import {
 import { WebView } from 'react-native-webview';
 import { useKeepAwake } from 'expo-keep-awake';
 import { File } from 'expo-file-system';
-import ExpoAudioStudio, { HAS_RECORDER, RECORDER_PROBLEM } from './src/nativeAudio';
+import recorder, { HAS_RECORDER, RECORDER_PROBLEM } from './src/nativeAudio';
 import { BRIDGE_JS } from './src/bridge';
 import { WEB_APP_HTML } from './src/webapp.generated';
 import {
@@ -30,8 +30,9 @@ import { transcribeOnDevice } from './src/onDeviceWhisper';
  */
 const METERING_HERTZ = 12;
 
-function isStudioPath(value) {
-  return typeof value === 'string' && /recording_.*\.wav$/i.test(value);
+/** The recorder answers with the file it wrote; anything else is an error. */
+function isWavPath(value) {
+  return typeof value === 'string' && /\.wav$/i.test(value);
 }
 
 function asFileUri(path) {
@@ -75,10 +76,11 @@ export default function App() {
 
   useEffect(() => {
     if (!HAS_RECORDER) return undefined;
-    ExpoAudioStudio.setAmplitudeUpdateFrequency(METERING_HERTZ);
-    const subscription = ExpoAudioStudio.addListener('onRecorderAmplitude', ({ amplitude }) => {
-      // Metering is dBFS: roughly -60 in a silent room, 0 at the clipping point.
-      pushLevel((Number(amplitude ?? -60) + 60) / 60);
+    recorder.setAmplitudeUpdateFrequency(METERING_HERTZ);
+    const subscription = recorder.addListener('onRecorderAmplitude', ({ amplitude }) => {
+      // The recorder measures loudness off the PCM it is writing and reports it
+      // already gated and curved, 0 to 1, which is the scale the waveform draws.
+      pushLevel(Number(amplitude ?? 0));
     });
     return () => subscription.remove();
   }, [pushLevel]);
@@ -141,8 +143,8 @@ export default function App() {
     // Set this before starting the native recorder so the shared error handler
     // can remove the claimed row if Android rejects the start request.
     active.current = { id, fileName, startedAt: Date.now(), sourceUri: null };
-    const startedPath = ExpoAudioStudio.startRecording();
-    if (!isStudioPath(startedPath)) {
+    const startedPath = recorder.startRecording();
+    if (!isWavPath(startedPath)) {
       throw new Error(`Could not start recording: ${startedPath || 'unknown recorder error'}`);
     }
     active.current.sourceUri = asFileUri(startedPath);
@@ -152,15 +154,15 @@ export default function App() {
   const stopRecording = useCallback(async () => {
     if (!active.current) throw new Error('Nothing is recording.');
     const { id, fileName, startedAt } = active.current;
-    const completedPath = ExpoAudioStudio.stopRecording();
-    if (!isStudioPath(completedPath)) {
+    const completedPath = recorder.stopRecording();
+    if (!isWavPath(completedPath)) {
       throw new Error(`Could not finish recording: ${completedPath || 'unknown recorder error'}`);
     }
     const source = new File(asFileUri(completedPath));
     if (!source?.exists) throw new Error('The recording file was not written.');
     const destination = audioFile(fileName);
     if (destination.exists) destination.delete();
-    const durationSeconds = Number(ExpoAudioStudio.getDuration(completedPath) ?? 0);
+    const durationSeconds = Number(recorder.getDuration(completedPath) ?? 0);
     await source.move(destination);
     await finishRecording({
       id,
@@ -178,8 +180,8 @@ export default function App() {
     if (!current) return { cancelled: true };
     // `stopRecording()` finalises a temporary WAV, but we intentionally never
     // move it into the library. The claimed row is removed afterwards.
-    const path = ExpoAudioStudio.stopRecording();
-    if (isStudioPath(path)) {
+    const path = recorder.stopRecording();
+    if (isWavPath(path)) {
       const file = new File(asFileUri(path));
       if (file.exists) file.delete();
     }
@@ -209,9 +211,9 @@ export default function App() {
       }
       if (channel === 'mic.permission') {
         if (!HAS_RECORDER) { reply(id, false, { message: RECORDER_PROBLEM }); return; }
-        const granted = await ExpoAudioStudio.requestMicrophonePermission();
+        const granted = await recorder.requestMicrophonePermission();
         if (!granted.granted) { reply(id, true, { ok: false }); return; }
-        await ExpoAudioStudio.configureAudioSession({
+        await recorder.configureAudioSession({
           category: 'playAndRecord',
           mode: 'measurement',
           options: { allowBluetooth: true, defaultToSpeaker: true },
@@ -227,13 +229,13 @@ export default function App() {
       }
       if (channel === 'rec.start') { reply(id, true, await startRecording()); return; }
       if (channel === 'rec.pause') {
-        const result = ExpoAudioStudio.pauseRecording();
+        const result = recorder.pauseRecording();
         if (result !== 'paused') throw new Error(`Could not pause recording: ${result}`);
         reply(id, true, { ok: true });
         return;
       }
       if (channel === 'rec.resume') {
-        const result = ExpoAudioStudio.resumeRecording();
+        const result = recorder.resumeRecording();
         if (result !== 'resumed') throw new Error(`Could not resume recording: ${result}`);
         reply(id, true, { ok: true });
         return;
