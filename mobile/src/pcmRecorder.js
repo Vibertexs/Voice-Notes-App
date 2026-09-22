@@ -76,6 +76,7 @@ const state = {
   handle: null,
   file: null,
   dataBytes: 0,
+  chunks: 0,
   recording: false,
   paused: false,
   subscription: null,
@@ -101,6 +102,7 @@ function onChunk(base64) {
   try {
     state.handle.writeBytes(bytes);
     state.dataBytes += bytes.byteLength;
+    state.chunks += 1;
   } catch {
     // A failed write must not take the app down mid-lecture; the header is
     // patched from dataBytes, so what did land stays playable.
@@ -151,6 +153,7 @@ export function startRecording() {
   state.file = target;
   state.handle = handle;
   state.dataBytes = 0;
+  state.chunks = 0;
   state.paused = false;
   state.recording = true;
 
@@ -226,6 +229,19 @@ export function getDuration(uri) {
   return state.dataBytes / BYTES_PER_SECOND;
 }
 
+/**
+ * What the last take actually wrote.
+ *
+ * The file on disk is the only thing that can be measured afterwards, and it
+ * cannot say whether audio arrived twice or was written twice. Counting the
+ * chunks accepted and the bytes handed to the file separates the two: bytes
+ * that match the file mean this module wrote faithfully what it was given,
+ * and the duplication happened before it.
+ */
+export function getStats() {
+  return { bytes: state.dataBytes, chunks: state.chunks };
+}
+
 export const RECORDING_FORMAT = Object.freeze({
   sampleRate: SAMPLE_RATE,
   channels: CHANNELS,
@@ -242,4 +258,5 @@ export default {
   resumeRecording,
   stopRecording,
   getDuration,
+  getStats,
 };

@@ -171,9 +171,19 @@ export default function App() {
     // rather than leaving a corrupt file to explain itself.
     const wallSeconds = (Date.now() - startedAt) / 1000;
     if (durationSeconds > wallSeconds * 1.05 + 0.5) {
+      // Where the extra audio came from is the useful half. The recorder
+      // counts what it handed to the file, so bytes that match the file's own
+      // length mean it wrote faithfully what it was given and the duplication
+      // happened upstream, in the chunks it was handed.
+      const stats = recorder.getStats?.() ?? {};
+      const written = Number(stats.bytes ?? 0);
+      const onDisk = Math.max(0, Number(source.size ?? 0) - 44);
+      const faithful = written > 0 && Math.abs(written - onDisk) < 4096;
       setPageError((current) => current
         || `capture: ${durationSeconds.toFixed(1)}s of audio from ${wallSeconds.toFixed(1)}s of recording `
-        + `(${(durationSeconds / Math.max(0.1, wallSeconds)).toFixed(2)}x) - chunks are being duplicated`);
+        + `(${(durationSeconds / Math.max(0.1, wallSeconds)).toFixed(2)}x). `
+        + `${stats.chunks ?? '?'} chunks, ${written} bytes written vs ${onDisk} on disk `
+        + `- ${faithful ? 'duplicated before the recorder' : 'written more than once'}`);
     }
     await source.move(destination);
     await finishRecording({
