@@ -1,5 +1,5 @@
 diff --git a/node_modules/@fugood/react-native-audio-pcm-stream/android/src/main/java/com/imxiqi/rnliveaudiostream/RNLiveAudioStreamModule.java b/node_modules/@fugood/react-native-audio-pcm-stream/android/src/main/java/com/imxiqi/rnliveaudiostream/RNLiveAudioStreamModule.java
-index 6d7d17d..1be0f5f 100644
+index 6d7d17d..89a501f 100644
 --- a/node_modules/@fugood/react-native-audio-pcm-stream/android/src/main/java/com/imxiqi/rnliveaudiostream/RNLiveAudioStreamModule.java
 +++ b/node_modules/@fugood/react-native-audio-pcm-stream/android/src/main/java/com/imxiqi/rnliveaudiostream/RNLiveAudioStreamModule.java
 @@ -27,7 +27,13 @@ public class RNLiveAudioStreamModule extends ReactContextBaseJavaModule {
@@ -36,7 +36,7 @@ index 6d7d17d..1be0f5f 100644
  
          Thread recordingThread = new Thread(new Runnable() {
              public void run() {
-@@ -97,23 +113,32 @@ public class RNLiveAudioStreamModule extends ReactContextBaseJavaModule {
+@@ -97,23 +113,34 @@ public class RNLiveAudioStreamModule extends ReactContextBaseJavaModule {
                      int bytesRead;
                      int count = 0;
                      String base64Data;
@@ -52,10 +52,12 @@ index 6d7d17d..1be0f5f 100644
                          if (bytesRead > 0 && ++count > 2) {
 -                            base64Data = Base64.encodeToString(buffer, Base64.NO_WRAP);
 +                            // Encode only what was read. The buffer is reused
-+                            // every pass, so encoding all of it re-sent the tail
-+                            // of the previous chunk whenever a read came up
-+                            // short - heard as a stutter, and transcribed as
-+                            // repeated words.
++                            // every pass, so encoding all of it would re-send
++                            // the tail of the previous chunk on a short read.
++                            // Measured on a Galaxy S23+ every read filled the
++                            // buffer, so this never fired there - but a read is
++                            // only documented to return what it got, and the
++                            // padding is silent when it does happen.
 +                            base64Data = Base64.encodeToString(buffer, 0, bytesRead, Base64.NO_WRAP);
                              eventEmitter.emit("data", base64Data);
                          }

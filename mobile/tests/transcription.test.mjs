@@ -126,10 +126,19 @@ check('the header is patched at the end, not held in memory',
   /handle\.offset = 4/.test(pcm) && /handle\.offset = 40/.test(pcm),
   'an hour of PCM is ~115MB and must never be buffered to compute its length');
 
-// The capture module reused one byte array per read and base64-encoded all of
-// it, so a short read re-sent the tail of the previous chunk: audible as a
-// stutter, and transcribed as repeated words. The fix lives in a patch, and a
-// plain `npm install` would undo it without the postinstall hook.
+// Two defects in the capture module, both fixed in a patch that a plain
+// `npm install` would undo without the postinstall hook.
+//
+// The first is latent: one byte array is reused per read and all of it was
+// encoded, so a short read would re-send the tail of the previous chunk.
+// Measured on a Galaxy S23+ every read filled the buffer, so it never fired
+// there - the recorded stutter came from the second defect, not this one.
+//
+// The second is what was heard. stop() only lowers a flag, so a thread could
+// still be reading when the next take began and two recorders ran at once.
+// Their chunks interleaved into one file, which measured as 5.5s of audio from
+// 4.0s of recording, with a step across every chunk seam twice the size of the
+// steps within a chunk - two streams spliced together, not one recorded twice.
 const captureModule = join(
   here, '..', 'node_modules', '@fugood', 'react-native-audio-pcm-stream',
   'android', 'src', 'main', 'java', 'com', 'imxiqi', 'rnliveaudiostream',
