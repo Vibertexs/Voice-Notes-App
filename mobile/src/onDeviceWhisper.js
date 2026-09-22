@@ -96,10 +96,6 @@ async function getContext(onProgress) {
   return contextPromise;
 }
 
-/**
- * Transcribe a PCM WAV already stored on the phone. whisper.cpp timestamps use
- * centiseconds, while the app's segment format uses seconds.
- */
 /** Roughly a comfortable line of a transcript. */
 const MAX_LINE_WORDS = 12;
 const MAX_LINE_CHARS = 72;
@@ -107,16 +103,47 @@ const MAX_LINE_CHARS = 72;
 const PIECE_IS_A_LINE = 3;
 
 /**
- * Turn whisper's short pieces back into readable lines, keeping each piece's
- * own timing.
+ * Rebuild whole words from the pieces whisper emits.
+ *
+ * whisper.cpp only splits on word boundaries when `split_on_word` is set, and
+ * whisper.rn does not expose it - so with `maxLen: 1` every split lands on a
+ * token, and tokens are subword. "mitosis" arrives as " mit" + "osis", and a
+ * full stop arrives as its own piece.
+ *
+ * The leading space is the whole signal: whisper gives a word-initial token
+ * one and a continuation none. Joining on that puts the words back together
+ * and keeps punctuation tight against them, while each word keeps the start of
+ * its first piece and the end of its last.
+ */
+function joinIntoWords(pieces) {
+  const words = [];
+  for (const piece of pieces) {
+    const raw = String(piece.text ?? '');
+    const text = raw.trim();
+    if (!text) continue;
+    const start = Math.max(0, Number(piece.t0 ?? 0) / 100);
+    const end = Math.max(0, Number(piece.t1 ?? 0) / 100);
+    const previous = words[words.length - 1];
+    if (previous && !/^\s/.test(raw)) {
+      previous.text += text;
+      previous.end = Math.max(previous.end, end);
+    } else {
+      words.push({ text, start, end });
+    }
+  }
+  return words;
+}
+
+/**
+ * Turn whisper's pieces back into readable lines, keeping each word's timing.
  *
  * whisper.rn reports a start and an end per segment and nothing finer - its
  * Android bridge compiles with `dtw_token_timestamps = false`, so real word
  * timings are not available to ask for. Transcribing with a small `maxLen`
- * gets pieces of a word or two instead, and grouping them here rebuilds the
- * lines the transcript displays while keeping the timing that arrived with
- * each piece. The result is the same shape the desktop produces from
- * faster-whisper's word timestamps, so the player treats both identically.
+ * gets a piece per token instead, and joining them here rebuilds the words and
+ * then the lines the transcript displays. The result is the same shape the
+ * desktop produces from faster-whisper's word timestamps, so the player treats
+ * both identically.
  */
 function groupIntoLines(pieces) {
   const clean = pieces
@@ -142,14 +169,16 @@ function groupIntoLines(pieces) {
 
   const lines = [];
   let line = null;
-  for (const piece of clean) {
-    if (!line) line = { text: '', start_seconds: piece.start, end_seconds: piece.end, words: [] };
+  for (const word of joinIntoWords(pieces)) {
+    if (!line) line = { text: '', start_seconds: word.start, end_seconds: word.end, words: [] };
     // A leading space on every word but the first, matching what the desktop
     // stores, so the player can render words without inventing separators.
-    line.words.push({ start: piece.start, end: piece.end, word: line.words.length ? ` ${piece.text}` : piece.text });
-    line.text = line.text ? `${line.text} ${piece.text}` : piece.text;
-    line.end_seconds = Math.max(line.end_seconds, piece.end);
-    if (/[.!?]$/.test(piece.text) || line.words.length >= MAX_LINE_WORDS || line.text.length >= MAX_LINE_CHARS) {
+    line.words.push({ start: word.start, end: word.end, word: line.words.length ? ` ${word.text}` : word.text });
+    line.text = line.text ? `${line.text} ${word.text}` : word.text;
+    line.end_seconds = Math.max(line.end_seconds, word.end);
+    // Breaking here is safe because a whole word has just landed - a line can
+    // no longer end in the middle of one.
+    if (/[.!?]$/.test(word.text) || line.words.length >= MAX_LINE_WORDS || line.text.length >= MAX_LINE_CHARS) {
       lines.push(line);
       line = null;
     }

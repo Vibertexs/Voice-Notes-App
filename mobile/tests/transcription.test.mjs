@@ -61,6 +61,47 @@ check('short pieces are requested and regrouped into readable lines',
   'without this a whole line lights at once and the transcript lags the voice');
 check('the model module has no audio upload call', !/fetch\(|createUploadTask|uploadAsync/.test(whisper));
 
+console.log('\n== the grouping runs, not just matches ==');
+// The grouping is pure, so lift it out of the module and exercise it. Its
+// dependencies are the two constants above it and nothing else.
+const groupingEnd = whisper.indexOf('* Transcribe a PCM WAV');
+const groupingSource = whisper.slice(
+  whisper.indexOf('/** Roughly a comfortable line'),
+  whisper.lastIndexOf('/**', groupingEnd),
+);
+const groupIntoLines = new Function(`${groupingSource}\nreturn groupIntoLines;`)();
+
+// What whisper.cpp actually emits with maxLen: 1 and split_on_word off: one
+// piece per token, word-initial tokens carrying a leading space and subword
+// continuations carrying none.
+const tokens = [
+  { text: ' Mit', t0: 0, t1: 20 }, { text: 'osis', t0: 20, t1: 45 },
+  { text: ' produces', t0: 45, t1: 90 }, { text: ' two', t0: 90, t1: 110 },
+  { text: ' identical', t0: 110, t1: 170 },
+  { text: ' daughter', t0: 170, t1: 215 }, { text: ' cells', t0: 215, t1: 260 },
+  { text: '.', t0: 260, t1: 265 },
+];
+const [first] = groupIntoLines(tokens);
+check('subword tokens are rejoined into words',
+  first.text === 'Mitosis produces two identical daughter cells.', first.text);
+check('punctuation stays tight against its word',
+  first.words.map((w) => w.word).join('') === 'Mitosis produces two identical daughter cells.',
+  first.words);
+check('a rejoined word spans its first piece to its last',
+  first.words[0].start === 0 && first.words[0].end === 0.45, first.words[0]);
+check('the line ends when the sentence does',
+  first.start_seconds === 0 && first.end_seconds === 2.65, first);
+
+// A model that ignored maxLen returns whole sentences; claiming word timing
+// there would light a full line at once.
+const sentences = groupIntoLines([
+  { text: ' The cell divides in two.', t0: 0, t1: 300 },
+  { text: ' Each half carries the same genes.', t0: 300, t1: 640 },
+]);
+check('whole-sentence pieces claim no word timing',
+  sentences.length === 2 && !sentences[0].words, sentences[0]);
+check('empty input groups to nothing', groupIntoLines([]).length === 0);
+
 console.log('\n== the shell no longer has a server escape hatch ==');
 check('old remote helper is removed', !existsSync(join(here, '..', 'src', 'remote.js')));
 check('App has no transcription endpoint, host discovery, or remote client',
