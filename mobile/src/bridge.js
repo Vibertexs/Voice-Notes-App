@@ -276,18 +276,25 @@ export const BRIDGE_JS = String.raw`
     });
   };
 
+  // Pause and resume swallow their own failures, but the swallowing has to be
+  // part of the chain. Keeping the rejected promise as __operation meant one
+  // failed pause or resume poisoned everything queued after it: the next stop
+  // was never sent to native, and the page was handed that earlier error
+  // instead - so a take could not be finished and the reason made no sense.
   ShimRecorder.prototype.pause = function () {
     var self = this;
     self.state = 'paused';
-    self.__operation = self.__operation.then(function () { return call('rec.pause', {}); });
-    self.__operation.catch(function () {});
+    self.__operation = self.__operation
+      .then(function () { return call('rec.pause', {}); })
+      .catch(function () {});
   };
 
   ShimRecorder.prototype.resume = function () {
     var self = this;
     self.state = 'recording';
-    self.__operation = self.__operation.then(function () { return call('rec.resume', {}); });
-    self.__operation.catch(function () {});
+    self.__operation = self.__operation
+      .then(function () { return call('rec.resume', {}); })
+      .catch(function () {});
   };
 
   ShimRecorder.prototype.stop = function () {

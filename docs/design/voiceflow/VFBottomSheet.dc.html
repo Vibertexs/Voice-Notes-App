@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;display=swap"></helmet>
+<div style="position:absolute;inset:0;pointer-events:{{ pe }};font-family:Figtree,sans-serif;color:#F4F4F6;overflow:hidden;border-radius:inherit">
+  <div onClick="{{ close }}" style="position:absolute;inset:0;background:rgba(0,0,0,.6);opacity:{{ scrimO }};transition:opacity .3s"></div>
+  <div style="position:absolute;left:8px;right:8px;bottom:8px;border-radius:32px;background:#17171C;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06),0 -20px 60px rgba(0,0,0,.5);padding:10px 20px 22px;transform:translateY({{ ty }});transition:transform .4s cubic-bezier(.2,.8,.2,1)">
+    <div onClick="{{ close }}" style="width:36px;height:4px;border-radius:2px;background:#3A3A44;margin:0 auto 14px;cursor:pointer"></div>
+    <sc-if value="{{ iconCheck }}" hint-placeholder-val="{{ false }}"><div style="width:60px;height:60px;border-radius:30px;margin:6px auto 16px;background:rgba(255,45,85,.16);box-shadow:inset 0 0 0 1px rgba(255,45,85,.35);display:flex;align-items:center;justify-content:center"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FF2D55" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></div></sc-if>
+    <sc-if value="{{ iconWarn }}" hint-placeholder-val="{{ false }}"><div style="width:60px;height:60px;border-radius:30px;margin:6px auto 16px;background:rgba(255,166,43,.14);box-shadow:inset 0 0 0 1px rgba(255,166,43,.35);display:flex;align-items:center;justify-content:center"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FFA62B" stroke-width="2.4" stroke-linecap="round"><path d="M12 7v6M12 17h.01"></path><circle cx="12" cy="12" r="9"></circle></svg></div></sc-if>
+    <sc-if value="{{ iconX }}" hint-placeholder-val="{{ false }}"><div style="width:60px;height:60px;border-radius:30px;margin:6px auto 16px;background:#26262E;display:flex;align-items:center;justify-content:center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></div></sc-if>
+    <sc-if value="{{ hasTitle }}" hint-placeholder-val="{{ true }}"><div style="font-size:21px;font-weight:650;letter-spacing:-.4px;text-align:{{ align }}">{{ title }}</div></sc-if>
+    <sc-if value="{{ hasSub }}" hint-placeholder-val="{{ true }}"><div style="font-size:14.5px;color:#9A9AA4;margin-top:6px;line-height:1.45;text-align:{{ align }};text-wrap:pretty">{{ subtitle }}</div></sc-if>
+    <div style="margin-top:20px;display:flex;flex-direction:column;gap:10px">{{ children }}</div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:400,&quot;height&quot;:460},&quot;open&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;title&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Finish recording?&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;subtitle&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Save this recording to University?&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;icon&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;none&quot;,&quot;check&quot;,&quot;warn&quot;,&quot;x&quot;],&quot;default&quot;:&quot;check&quot;,&quot;tsType&quot;:&quot;'none'|'check'|'warn'|'x'&quot;},&quot;children&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;React.ReactNode&quot;},&quot;onClose&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const p = this.props, open = p.open ?? true, icon = p.icon ?? 'none';
+    return {
+      pe: open ? 'auto' : 'none', scrimO: open ? 1 : 0, ty: open ? '0px' : 'calc(100% + 24px)',
+      title: p.title ?? '', subtitle: p.subtitle ?? '', hasTitle: !!p.title, hasSub: !!p.subtitle,
+      iconCheck: icon === 'check', iconWarn: icon === 'warn', iconX: icon === 'x',
+      align: icon === 'none' ? 'left' : 'center',
+      children: p.children ?? null,
+      close: () => p.onClose && p.onClose(),
+    };
+  }
+}
+</script>
+</body>
+</html>

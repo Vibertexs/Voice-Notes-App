@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700&amp;display=swap"><style>body{margin:0;background:#060608;color:#F4F4F6;font-family:Figtree,sans-serif;-webkit-font-smoothing:antialiased}a{color:#FF5A78;text-decoration:none}a:hover{color:#FF8A9E}*{box-sizing:border-box}::-webkit-scrollbar{display:none}@keyframes vfSpin{to{transform:rotate(360deg)}}</style></helmet>
+<div style="min-height:{{ pageMinH }};display:flex;flex-wrap:wrap;gap:56px;align-items:center;justify-content:center;padding:{{ pagePad }};background:{{ pageBg }}">
+
+<sc-if value="{{ showNav }}" hint-placeholder-val="{{ true }}">
+<div style="width:250px;display:flex;flex-direction:column;gap:22px">
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <div style="width:56px;height:56px;border-radius:16px;background:linear-gradient(145deg,#2A0B16,#12060C);box-shadow:inset 0 0 0 1px rgba(255,77,109,.25);display:flex;align-items:center;justify-content:center;gap:3px">
+      <div style="width:3px;height:12px;border-radius:2px;background:#FF2D55"></div><div style="width:3px;height:22px;border-radius:2px;background:#FF2D55"></div><div style="width:3px;height:32px;border-radius:2px;background:#F0306E"></div><div style="width:3px;height:18px;border-radius:2px;background:#D93D8F"></div><div style="width:3px;height:26px;border-radius:2px;background:#B44BD6"></div><div style="width:3px;height:14px;border-radius:2px;background:#9B5CFF"></div>
+    </div>
+    <div style="font-size:30px;font-weight:700;letter-spacing:-.8px">VoiceFlow</div>
+    <div style="font-size:13.5px;color:#8E8E98;line-height:1.5">Android prototype. Tap through the phone, or jump to a screen. Layout and tone variants are in Tweaks.</div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:1px;max-height:560px;overflow-y:auto">
+    <sc-for list="{{ nav }}" as="n" hint-placeholder-count="24">
+      <div onClick="{{ n.go }}" style="display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:9px;cursor:pointer;font-size:13px;color:{{ n.color }};background:{{ n.bg }}" style-hover="background:rgba(255,255,255,.05)">
+        <span style="font:500 10px ui-monospace,Menlo,monospace;color:#55555E;width:18px">{{ n.num }}</span><span>{{ n.label }}</span>
+      </div>
+    </sc-for>
+  </div>
+  <div style="font-size:12px;color:#6A6A74;line-height:1.6">Also: <a href="VoiceFlow Screens.dc.html">All screens</a> · <a href="VoiceFlow Components.dc.html">Components</a></div>
+</div>
+</sc-if>
+
+<div ref="{{ phoneRef }}" style="width:412px;height:892px;border-radius:46px;background:#0A0A0D;position:relative;overflow:hidden;flex:none;box-shadow:0 0 0 10px #17171B,0 0 0 11px #2A2A31,0 40px 100px rgba(0,0,0,.6);font-family:Figtree,sans-serif;color:#F4F4F6">
+
+  <div style="position:absolute;top:0;left:0;right:0;height:40px;display:flex;align-items:center;justify-content:space-between;padding:4px 26px 0 30px;z-index:70;pointer-events:none;font-size:14px;font-weight:600">
+    <span>9:41</span>
+    <div style="position:absolute;left:50%;top:12px;margin-left:-7px;width:14px;height:14px;border-radius:7px;background:#000;box-shadow:0 0 0 2px #151518"></div>
+    <div style="display:flex;align-items:center;gap:7px">
+      <svg width="15" height="12" viewBox="0 0 15 12"><path d="M7.5 12L0 3.5a11 11 0 0 1 15 0z" fill="#fff"></path></svg>
+      <svg width="13" height="13" viewBox="0 0 13 13"><path d="M13 0v13H0z" fill="#fff"></path></svg>
+      <div style="width:10px;height:16px;border-radius:2.5px;border:1.5px solid rgba(255,255,255,.9);padding:1.5px;display:flex;align-items:flex-end"><div style="width:100%;height:72%;border-radius:1px;background:#fff"></div></div>
+    </div>
+  </div>
+
+  <sc-if value="{{ isOnboard }}" hint-placeholder-val="{{ false }}">
+  <div style="position:absolute;inset:0;display:flex;flex-direction:column;padding:110px 24px 40px;background:radial-gradient(420px 360px at 50% 16%,rgba(255,45,85,.22),transparent 70%),#0A0A0D">
+    <div style="width:96px;height:96px;border-radius:28px;background:linear-gradient(145deg,#2A0B16,#12060C);box-shadow:inset 0 0 0 1px rgba(255,77,109,.3),0 20px 60px rgba(255,45,85,.25);display:flex;align-items:center;justify-content:center;gap:4px;margin:0 auto">
+      <div style="width:4px;height:20px;border-radius:2px;background:#FF2D55"></div><div style="width:4px;height:38px;border-radius:2px;background:#FF2D55"></div><div style="width:4px;height:54px;border-radius:2px;background:#F0306E"></div><div style="width:4px;height:30px;border-radius:2px;background:#D93D8F"></div><div style="width:4px;height:44px;border-radius:2px;background:#B44BD6"></div><div style="width:4px;height:22px;border-radius:2px;background:#9B5CFF"></div>
+    </div>
+    <div style="text-align:center;margin-top:30px;font-size:34px;font-weight:700;letter-spacing:-.9px">VoiceFlow</div>
+    <div style="text-align:center;margin-top:6px;font-size:17px;color:#8E8E98">{{ c.tagline }}</div>
+    <div style="display:flex;flex-direction:column;gap:22px;margin-top:48px">
+      <div style="display:flex;gap:16px;align-items:flex-start"><div style="width:42px;height:42px;border-radius:14px;background:rgba(255,45,85,.14);color:#FF5A78;display:flex;align-items:center;justify-content:center;flex:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5 11a7 7 0 0 0 14 0M12 18v3"></path></svg></div><div><div style="font-size:16px;font-weight:600">Live transcription</div><div style="font-size:14px;color:#8E8E98;margin-top:3px;line-height:1.45">Words appear as they’re spoken, right on your phone.</div></div></div>
+      <div style="display:flex;gap:16px;align-items:flex-start"><div style="width:42px;height:42px;border-radius:14px;background:rgba(47,123,255,.16);color:#5B9BFF;display:flex;align-items:center;justify-content:center;flex:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg></div><div><div style="font-size:16px;font-weight:600">Folders for everything</div><div style="font-size:14px;color:#8E8E98;margin-top:3px;line-height:1.45">Classes, meetings, ideas — each in its place.</div></div></div>
+      <div style="display:flex;gap:16px;align-items:flex-start"><div style="width:42px;height:42px;border-radius:14px;background:rgba(155,92,255,.16);color:#B28BFF;display:flex;align-items:center;justify-content:center;flex:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg></div><div><div style="font-size:16px;font-weight:600">Search what was said</div><div style="font-size:14px;color:#8E8E98;margin-top:3px;line-height:1.45">Jump to the exact moment a word was spoken.</div></div></div>
+    </div>
+    <div style="flex:1"></div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <dc-import name="VFButton" label="{{ c.allow }}" on-press="{{ askPerm }}" hint-size="100%,52px"></dc-import>
+      <dc-import name="VFButton" label="{{ c.later }}" variant="ghost" on-press="{{ goHome }}" hint-size="100%,52px"></dc-import>
+    </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isMic }}" hint-placeholder-val="{{ false }}">
+  <div style="position:absolute;inset:0;display:flex;flex-direction:column;padding:150px 24px 40px;text-align:center">
+    <div style="width:92px;height:92px;border-radius:46px;background:#1A1A20;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;margin:0 auto;color:#FF5A78"><svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5 11a7 7 0 0 0 14 0M12 18v3M4 4l16 16"></path></svg></div>
+    <div style="font-size:26px;font-weight:700;letter-spacing:-.6px;margin-top:28px">{{ c.micTitle }}</div>
+    <div style="font-size:15.5px;color:#9A9AA4;margin-top:10px;line-height:1.5;text-wrap:pretty;padding:0 8px">{{ c.micSub }}</div>
+    <div style="margin-top:28px;border-radius:18px;background:#141419;padding:14px 16px;text-align:left;display:flex;flex-direction:column;gap:6px">
+      <div style="font-size:12px;color:#6A6A74;font-weight:600;letter-spacing:.4px">IN SETTINGS</div>
+      <div style="font-size:14px;color:#C9C9D1;line-height:1.5">Apps → VoiceFlow → Permissions → Microphone → Allow</div>
+    </div>
+    <div style="flex:1"></div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <dc-import name="VFButton" label="Open Settings" on-press="{{ openSettings }}" hint-size="100%,52px"></dc-import>
+      <dc-import name="VFButton" label="Not now" variant="ghost" on-press="{{ goHome }}" hint-size="100%,52px"></dc-import>
+    </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+  <div style="position:absolute;inset:0;overflow-y:auto;padding:44px 16px 150px;scrollbar-width:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 4px 14px">
+      <div style="font-size:30px;font-weight:700;letter-spacing:-.8px">Folders</div>
+      <div style="display:flex;gap:8px">
+        <div onClick="{{ openOrganize }}" style="width:44px;height:44px;border-radius:22px;background:#1C1C22;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#fff" style-hover="background:#24242B"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M3 12h18M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3"></path></svg></div>
+        <div onClick="{{ openNewFolder }}" style="width:44px;height:44px;border-radius:22px;background:#1C1C22;display:flex;align-items:center;justify-content:center;cursor:pointer" style-hover="background:#24242B"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></div>
+      </div>
+    </div>
+    <dc-import name="VFSearchField" on-focus="{{ goSearch }}" placeholder="Search recordings &amp; transcripts" hint-size="100%,48px"></dc-import>
+    <sc-if value="{{ homeCards }}" hint-placeholder-val="{{ true }}">
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;margin-top:16px">
+        <sc-for list="{{ heroFolders }}" as="f" hint-placeholder-count="1">
+          <div style="grid-column:1 / -1"><dc-import name="VFFolderCard" layout="hero" title="{{ f.name }}" count="{{ f.count }}" meta="{{ f.meta }}" color="{{ f.color }}" on-press="{{ f.open }}" on-more="{{ f.edit }}" hint-size="100%,140px"></dc-import></div>
+        </sc-for>
+        <sc-for list="{{ pinnedRest }}" as="f" hint-placeholder-count="2">
+          <dc-import name="VFFolderCard" layout="tile" title="{{ f.name }}" count="{{ f.count }}" meta="{{ f.meta }}" color="{{ f.color }}" on-press="{{ f.open }}" on-more="{{ f.edit }}" hint-size="100%,140px"></dc-import>
+        </sc-for>
+      </div>
+      <div style="font-size:14px;font-weight:600;color:#8E8E98;margin:24px 6px 10px">Other</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <sc-for list="{{ otherFolders }}" as="f" hint-placeholder-count="3">
+          <dc-import name="VFFolderCard" layout="row" title="{{ f.name }}" count="{{ f.count }}" meta="{{ f.meta }}" color="{{ f.color }}" on-press="{{ f.open }}" hint-size="100%,68px"></dc-import>
+        </sc-for>
+      </div>
+    </sc-if>
+    <sc-if value="{{ homeGrid }}" hint-placeholder-val="{{ false }}">
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;margin-top:16px">
+        <sc-for list="{{ allFolders }}" as="f" hint-placeholder-count="6">
+          <dc-import name="VFFolderCard" title="{{ f.name }}" count="{{ f.count }}" color="{{ f.color }}" layout="tile" meta="{{ f.meta }}" on-press="{{ f.open }}" on-more="{{ f.edit }}" hint-size="100%,140px"></dc-import>
+        </sc-for>
+      </div>
+      <div style="font-size:14px;font-weight:600;color:#8E8E98;margin:24px 6px 10px">Recent</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <sc-for list="{{ recent }}" as="r" hint-placeholder-count="3">
+          <dc-import name="VFRecordingRow" title="{{ r.title }}" meta="{{ r.meta }}" playing="{{ r.playing }}" progress="{{ r.progress }}" highlight="{{ r.highlight }}" on-press="{{ r.open }}" on-play="{{ r.play }}" on-more="{{ r.more }}" hint-size="100%,70px"></dc-import>
+        </sc-for>
+      </div>
+    </sc-if>
+  </div>
+  <div style="position:absolute;left:0;right:0;bottom:0;height:160px;background:linear-gradient(to top,#0A0A0D 42%,rgba(10,10,13,0));pointer-events:none"></div>
+  <div style="position:absolute;left:50%;bottom:40px;margin-left:-36px"><dc-import name="VFRecordButton" state="idle" on-press="{{ startInbox }}" hint-size="72px,72px"></dc-import></div>
+  </sc-if>
+
+  <sc-if value="{{ isFolder }}" hint-placeholder-val="{{ false }}">
+  <div style="position:absolute;inset:0;overflow-y:auto;padding:40px 16px 170px;scrollbar-width:none;background:radial-gradient(460px 300px at 15% -5%,{{ folder.glow }},rgba(10,10,13,0) 70%),#0A0A0D">
+    <div style="display:flex;align-items:center;gap:4px;height:64px">
+      <div onClick="{{ goHome }}" style="width:44px;height:44px;border-radius:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;margin-left:-6px" style-hover="background:rgba(255,255,255,.06)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"></path></svg></div>
+      <div style="flex:1"></div>
+      <div onClick="{{ folder.organize }}" style="width:44px;height:44px;border-radius:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#fff" style-hover="background:rgba(255,255,255,.06)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M3 12h18M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3"></path></svg></div>
+      <div onClick="{{ folder.edit }}" style="width:44px;height:44px;border-radius:22px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer" style-hover="background:rgba(255,255,255,.06)"><div style="width:4px;height:4px;border-radius:2px;background:#fff"></div><div style="width:4px;height:4px;border-radius:2px;background:#fff"></div><div style="width:4px;height:4px;border-radius:2px;background:#fff"></div></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:16px;padding:6px 4px 0">
+      <div style="width:60px;height:60px;border-radius:19px;background:{{ folder.grad }};box-shadow:0 10px 28px {{ folder.shadow }},inset 0 1px 0 rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;flex:none"><svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5h3.6c.6 0 1.2.3 1.6.7L12 7h6.5A2.5 2.5 0 0 1 21 9.5v8a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"></path></svg></div>
+      <div style="flex:1;min-width:0"><div style="font-size:30px;font-weight:700;letter-spacing:-.8px;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ folder.name }}</div><div style="font-size:13.5px;color:#9A9AA4;margin-top:4px">{{ folder.meta }}</div></div>
+    </div>
+    <sc-if value="{{ folderHasItems }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:24px">
+        <sc-for list="{{ folderItems }}" as="r" hint-placeholder-count="3">
+          <dc-import name="VFRecordingRow" title="{{ r.title }}" meta="{{ r.meta }}" playing="{{ r.playing }}" progress="{{ r.progress }}" highlight="{{ r.highlight }}" on-press="{{ r.open }}" on-play="{{ r.play }}" on-more="{{ r.more }}" hint-size="100%,70px"></dc-import>
+        </sc-for>
+      </div>
+    </sc-if>
+    <sc-if value="{{ folderEmpty }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;flex-direction:column;align-items:center;text-align:center;padding:96px 30px 0">
+        <div style="display:flex;align-items:center;gap:5px;height:44px"><div style="width:5px;height:10px;border-radius:3px;background:#2E2E36"></div><div style="width:5px;height:18px;border-radius:3px;background:#34343D"></div><div style="width:5px;height:28px;border-radius:3px;background:#3A3A44"></div><div style="width:5px;height:14px;border-radius:3px;background:#34343D"></div><div style="width:5px;height:22px;border-radius:3px;background:#3A3A44"></div><div style="width:5px;height:10px;border-radius:3px;background:#2E2E36"></div></div>
+        <div style="font-size:21px;font-weight:650;margin-top:20px;letter-spacing:-.3px">{{ c.emptyTitle }}</div>
+        <div style="font-size:15px;color:#8E8E98;margin-top:6px;line-height:1.5;text-wrap:pretty">{{ c.emptySub }}</div>
+        <div style="margin-top:22px;width:1px;height:90px;background:linear-gradient(#3A3A44,rgba(58,58,68,0))"></div>
+      </div>
+    </sc-if>
+  </div>
+  <div style="position:absolute;left:0;right:0;bottom:0;height:160px;background:linear-gradient(to top,#0A0A0D 42%,rgba(10,10,13,0));pointer-events:none"></div>
+  <div style="position:absolute;left:50%;bottom:40px;margin-left:-36px"><dc-import name="VFRecordButton" state="idle" on-press="{{ startInFolder }}" hint-size="72px,72px"></dc-import></div>
+  </sc-if>
+
+  <sc-if value="{{ isOrganize }}" hint-placeholder-val="{{ false }}">
+  <div style="position:absolute;inset:0;display:flex;flex-direction:column;padding-top:40px">
+    <div style="display:flex;align-items:center;gap:6px;height:64px;padding:0 16px 0 8px;flex:none">
+      <div onClick="{{ orgBack }}" style="width:44px;height:44px;border-radius:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none" style-hover="background:rgba(255,255,255,.06)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"></path></svg></div>
+      <div style="flex:1;min-width:0"><div style="font-size:20px;font-weight:650;letter-spacing:-.3px">Organize</div><div style="font-size:12.5px;color:#8E8E98;margin-top:1px">{{ c.orgSub }}</div></div>
+      <dc-import name="VFButton" label="Done" variant="secondary" size="sm" full="{{ false }}" on-press="{{ orgBack }}" hint-size="84px,40px"></dc-import>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:6px 16px 0;flex:none">
+      <sc-for list="{{ orgTargets }}" as="t" hint-placeholder-count="6">
+        <div ref="{{ t.ref }}"><dc-import name="VFFolderCard" layout="target" title="{{ t.name }}" meta="{{ t.meta }}" color="{{ t.color }}" active="{{ t.active }}" disabled="{{ t.disabled }}" hint-size="100%,88px"></dc-import></div>
+      </sc-for>
+    </div>
+    <div style="display:flex;gap:8px;overflow-x:auto;padding:18px 16px 10px;scrollbar-width:none;flex:none">
+      <sc-for list="{{ orgChips }}" as="ch" hint-placeholder-count="5">
+        <div onClick="{{ ch.pick }}" style="height:36px;padding:0 14px;border-radius:18px;display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;white-space:nowrap;cursor:pointer;background:{{ ch.bg }};color:{{ ch.c }};flex:none"><div style="width:8px;height:8px;border-radius:4px;background:{{ ch.dot }}"></div><span>{{ ch.label }}</span><span style="color:{{ ch.nc }};font-weight:500">{{ ch.n }}</span></div>
+      </sc-for>
+    </div>
+    <div style="flex:1;min-height:0;overflow-y:auto;padding:4px 16px 170px;scrollbar-width:none">
+      <sc-if value="{{ orgHasItems }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <sc-for list="{{ orgItems }}" as="r" hint-placeholder-count="4">
+            <dc-import name="VFRecordingRow" mode="drag" title="{{ r.title }}" meta="{{ r.meta }}" dragging="{{ r.dragging }}" on-drag-start="{{ r.dragStart }}" hint-size="100%,70px"></dc-import>
+          </sc-for>
+        </div>
+      </sc-if>
+      <sc-if value="{{ orgEmpty }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:60px 30px;text-align:center;font-size:15px;color:#6A6A74">{{ c.orgEmpty }}</div>
+      </sc-if>
+    </div>
+    <sc-if value="{{ notDragging }}" hint-placeholder-val="{{ true }}">
+      <div style="position:absolute;left:0;right:0;bottom:0;height:160px;background:linear-gradient(to top,#0A0A0D 42%,rgba(10,10,13,0));pointer-events:none"></div>
+  <div style="position:absolute;left:50%;bottom:40px;margin-left:-36px"><dc-import name="VFRecordButton" state="idle" on-press="{{ orgRecord }}" hint-size="72px,72px"></dc-import></div>
+    </sc-if>
+    <sc-if value="{{ showDropOut }}" hint-placeholder-val="{{ false }}">
+      <div ref="{{ outRef }}" style="position:absolute;left:16px;right:16px;bottom:30px;height:84px;border-radius:24px;border:2px dashed {{ outBorder }};background:{{ outBg }};display:flex;align-items:center;justify-content:center;gap:10px;font-size:15px;font-weight:600;color:{{ outC }};transition:background .15s,border-color .15s,color .15s">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5M12 15V3M8 7l4-4 4 4"></path></svg>
+        <span>{{ c.dropOut }}</span>
+      </div>
+    </sc-if>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isRec }}" hint-placeholder-val="{{ false }}">
+  <div style="position:absolute;inset:0;display:flex;flex-direction:column;padding:40px 0 28px;background:radial-gradient(380px 280px at 50% 64%,rgba(255,45,85,.10),transparent 70%),#0A0A0D">
+    <div style="display:flex;align-items:center;justify-content:space-between;height:64px;padding:0 12px">
+      <div onClick="{{ openFinish }}" style="width:44px;height:44px;border-radius:22px;display:flex;align-items:center;justify-content:center;cursor:pointer" style-hover="background:rgba(255,255,255,.06)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></div>
+      <div style="text-align:center"><div style="font-size:17px;font-weight:600">{{ recTitle }}</div><div style="font-size:12.5px;color:#8E8E98;margin-top:2px">{{ recFolderName }}</div></div>
+      <div onClick="{{ goLock }}" style="width:44px;height:44px;border-radius:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#8E8E98" style-hover="background:rgba(255,255,255,.06)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg></div>
+    </div>
+    <sc-if value="{{ recT }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-top:6px">
+        <div style="width:10px;height:10px;border-radius:5px;background:#FF2D55;opacity:{{ dotO }};box-shadow:0 0 10px rgba(255,45,85,.8);transition:opacity .3s"></div>
+        <span style="font-size:22px;font-weight:600;font-variant-numeric:tabular-nums">{{ recTime }}</span>
+        <span style="font-size:11.5px;font-weight:700;color:{{ stateColor }};letter-spacing:1px">{{ stateLabel }}</span>
+      </div>
+      <div style="flex:1;min-height:0;display:flex;flex-direction:column;justify-content:flex-end;padding:0 28px 22px;overflow:hidden;-webkit-mask-image:linear-gradient(to bottom,transparent,#000 45%);mask-image:linear-gradient(to bottom,transparent,#000 45%)">
+        <div style="font-size:23px;line-height:1.28;font-weight:600;color:#4A4A53;letter-spacing:-.3px;text-wrap:pretty">{{ prevText }}</div>
+        <div style="font-size:30px;line-height:1.2;font-weight:650;color:{{ curColor }};letter-spacing:-.6px;margin-top:10px;text-wrap:pretty;min-height:72px">{{ curText }}</div>
+      </div>
+      <div style="padding:0 16px"><dc-import name="VFWaveform" levels="{{ levels }}" height="{{ 120 }}" dim="{{ paused }}" center-head="{{ paused }}" hint-size="100%,120px"></dc-import></div>
+    </sc-if>
+    <sc-if value="{{ recW }}" hint-placeholder-val="{{ false }}">
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:0 16px">
+        <div style="display:flex;align-items:center;gap:8px;height:28px;padding:0 12px;border-radius:14px;background:{{ chipBg }}"><div style="width:8px;height:8px;border-radius:4px;background:#FF2D55;opacity:{{ dotO }}"></div><span style="font-size:11.5px;font-weight:700;letter-spacing:1px;color:{{ stateColor }}">{{ stateLabel }}</span></div>
+        <div style="font-size:76px;font-weight:300;letter-spacing:-3px;font-variant-numeric:tabular-nums;line-height:1">{{ recTime }}</div>
+        <div style="width:100%;margin-top:34px"><dc-import name="VFWaveform" levels="{{ levels }}" height="{{ 190 }}" dim="{{ paused }}" center-head="{{ paused }}" hint-size="100%,190px"></dc-import></div>
+        <div style="margin-top:34px;padding:0 16px;height:48px;font-size:16px;line-height:1.5;color:#8E8E98;text-align:center;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">{{ stripText }}</div>
+      </div>
+    </sc-if>
+    <div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;height:124px;padding:0 24px">
+      <div></div>
+      <dc-import name="VFRecordButton" state="{{ recBtnState }}" on-press="{{ togglePause }}" hint-size="80px,80px"></dc-import>
+      <div style="display:flex;justify-content:flex-end">
+        <sc-if value="{{ paused }}" hint-placeholder-val="{{ false }}"><dc-import name="VFButton" label="Finish" variant="secondary" size="sm" full="{{ false }}" icon="check" on-press="{{ openFinish }}" hint-size="100px,40px"></dc-import></sc-if>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isSaving }}" hint-placeholder-val="{{ false }}">
+  <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;padding:0 40px;text-align:center">
+    {{ spinner }}
+    <div style="font-size:23px;font-weight:650;margin-top:30px;letter-spacing:-.4px">{{ c.savingTitle }}</div>
+    <div style="font-size:15px;color:#8E8E98;margin-top:6px">{{ c.savingSub }}</div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isSaved }}" hint-placeholder-val="{{ false }}">
+  <div style="position:absolute;inset:0;display:flex;flex-direction:column;padding:0 24px 40px;background:radial-gradient(360px 300px at 50% 38%,rgba(255,45,85,.16),transparent 70%),#0A0A0D">
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center">
+      <div style="width:88px;height:88px;border-radius:44px;background:#FF2D55;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 10px rgba(255,45,85,.14),0 18px 50px rgba(255,45,85,.45)"><svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></div>
+      <div style="font-size:26px;font-weight:700;letter-spacing:-.6px;margin-top:30px">{{ c.savedTitle }}</div>
+      <div style="font-size:15.5px;color:#9A9AA4;margin-top:8px;line-height:1.5;text-wrap:pretty;max-width:290px">{{ savedSub }}</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <dc-import name="VFButton" label="View Recording" icon="play" on-press="{{ viewSaved }}" hint-size="100%,52px"></dc-import>
+      <dc-import name="VFButton" label="{{ backFolderLabel }}" variant="secondary" on-press="{{ backToRecFolder }}" hint-size="100%,52px"></dc-import>
+    </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isCanceled }}" hint-placeholder-val="{{ false }}">
+  <div style="position:absolute;inset:0;display:flex;flex-direction:column;padding:0 24px 40px">
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center">
+      <div style="width:84px;height:84px;border-radius:42px;background:#24242B;display:flex;align-items:center;justify-content:center"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></div>
+      <div style="font-size:26px;font-weight:700;letter-spacing:-.6px;margin-top:28px">{{ c.canceledTitle }}</div>
+      <div style="font-size:15.5px;color:#9A9AA4;margin-top:8px;line-height:1.5;text-wrap:pretty;max-width:290px">{{ c.canceledSub }}</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <dc-import name="VFButton" label="Record again" on-press="{{ recordAgain }}" hint-size="100%,52px"></dc-import>
+      <dc-import name="VFButton" label="Back to Folders" variant="secondary" on-press="{{ goHome }}" hint-size="100%,52px"></dc-import>
+    </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isLock }}" hint-placeholder-val="{{ false }}">
+  <div style="position:absolute;inset:0;display:flex;flex-direction:column;padding:40px 16px 34px;background:radial-gradient(500px 420px at 20% 0%,rgba(155,92,255,.18),transparent 70%),radial-gradient(460px 400px at 100% 100%,rgba(255,45,85,.16),transparent 70%),#050507">
+    <div style="margin-top:56px;padding-left:12px;font-size:112px;font-weight:300;line-height:.88;letter-spacing:-5px">09<br>41</div>
+    <div style="padding-left:14px;margin-top:16px;font-size:16px;color:#C9C9D1">Wednesday, September 23</div>
+    <div onClick="{{ goRec }}" style="margin-top:40px;border-radius:28px;background:rgba(28,28,34,.92);box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);padding:16px 16px 14px;cursor:pointer">
+      <div style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:#9A9AA4">
+        <div style="width:20px;height:20px;border-radius:6px;background:#FF2D55;display:flex;align-items:center;justify-content:center;gap:1.5px"><div style="width:2px;height:6px;border-radius:1px;background:#fff"></div><div style="width:2px;height:11px;border-radius:1px;background:#fff"></div><div style="width:2px;height:8px;border-radius:1px;background:#fff"></div></div>
+        <span style="color:#F4F4F6;font-weight:600">VoiceFlow</span><span>· {{ stateWord }}</span>
+      </div>
+      <div style="display:flex;align-items:baseline;justify-content:space-between;margin-top:12px">
+        <div><div style="font-size:17px;font-weight:650">{{ recTitle }}</div><div style="font-size:13px;color:#8E8E98;margin-top:2px">{{ recFolderName }}</div></div>
+        <div style="font-size:26px;font-weight:500;font-variant-numeric:tabular-nums">{{ recTime }}</div>
+      </div>
+      <div style="margin-top:14px"><dc-import name="VFWaveform" levels="{{ lockLevels }}" height="{{ 36 }}" gap="{{ 2 }}" dim="{{ paused }}" hint-size="100%,36px"></dc-import></div>
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <dc-import name="VFButton" label="{{ lockPauseLabel }}" variant="secondary" size="sm" on-press="{{ togglePause }}" hint-size="100%,40px" style="flex:1"></dc-import>
+        <dc-import name="VFButton" label="Finish" size="sm" on-press="{{ lockFinish }}" hint-size="100%,40px" style="flex:1"></dc-import>
+      </div>
+    </div>
+    <div style="flex:1"></div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:8px;color:#8E8E98;font-size:13px">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>
+      Tap the notification to return
+    </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isDetail }}" hint-placeholder-val="{{ false }}">
+  <div style="position:absolute;inset:0;display:flex;flex-direction:column;padding-top:40px">
+    <sc-if value="{{ notTSearch }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;align-items:center;gap:2px;height:64px;padding:0 8px">
+        <div onClick="{{ detailBack }}" style="width:44px;height:44px;border-radius:22px;display:flex;align-items:center;justify-content:center;cursor:pointer" style-hover="background:rgba(255,255,255,.06)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"></path></svg></div>
+        <div style="flex:1"></div>
+        <div onClick="{{ openTSearch }}" style="width:44px;height:44px;border-radius:22px;display:flex;align-items:center;justify-content:center;cursor:pointer" style-hover="background:rgba(255,255,255,.06)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg></div>
+        <div onClick="{{ detailMore }}" style="width:44px;height:44px;border-radius:22px;display:flex;align-items:center;justify-content:center;cursor:pointer" style-hover="background:rgba(255,255,255,.06)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"></path></svg></div>
+        <div onClick="{{ detailMore }}" style="width:44px;height:44px;border-radius:22px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer" style-hover="background:rgba(255,255,255,.06)"><div style="width:4px;height:4px;border-radius:2px;background:#fff"></div><div style="width:4px;height:4px;border-radius:2px;background:#fff"></div><div style="width:4px;height:4px;border-radius:2px;background:#fff"></div></div>
+      </div>
+    </sc-if>
+    <sc-if value="{{ tsearch }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;align-items:center;gap:6px;height:64px;padding:0 12px 0 8px">
+        <div onClick="{{ closeTSearch }}" style="width:44px;height:44px;border-radius:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"></path></svg></div>
+        <div style="flex:1;min-width:0"><dc-import name="VFSearchField" value="{{ tq }}" on-change="{{ setTq }}" auto-focus="{{ true }}" placeholder="Search this transcript" hint-size="100%,48px"></dc-import></div>
+      </div>
+      <div style="padding:0 24px 4px;font-size:12.5px;color:#8E8E98">{{ matchLabel }}</div>
+    </sc-if>
+    <div style="flex:1;min-height:0;overflow-y:auto;padding:4px 16px 230px;scrollbar-width:none">
+      <div style="padding:0 4px">
+        <div style="font-size:27px;font-weight:700;letter-spacing:-.7px">{{ det.title }}</div>
+        <div style="font-size:13.5px;color:#8E8E98;margin-top:6px">{{ det.meta }}</div>
+      </div>
+      <sc-if value="{{ detailTabs }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;gap:4px;padding:4px;border-radius:24px;background:#16161B;margin:18px 0 12px">
+          <div onClick="{{ tabT }}" style="flex:1;height:40px;border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:14.5px;font-weight:600;cursor:pointer;background:{{ tabTBg }};color:{{ tabTC }};transition:background .2s">Transcript</div>
+          <div onClick="{{ tabS }}" style="flex:1;height:40px;border-radius:20px;display:flex;align-items:center;justify-content:center;gap:7px;font-size:14.5px;font-weight:600;cursor:pointer;background:{{ tabSBg }};color:{{ tabSC }};transition:background .2s"><div style="width:7px;height:7px;border-radius:4px;background:linear-gradient(135deg,#FF2D55,#9B5CFF)"></div>Summary</div>
+        </div>
+      </sc-if>
+      <sc-if value="{{ showSummaryFull }}" hint-placeholder-val="{{ false }}">
+        <div style="border-radius:24px;background:#141419;padding:20px;box-shadow:inset 0 0 0 1px rgba(155,92,255,.16)">
+          <div style="display:flex;align-items:center;justify-content:space-between"><div style="display:flex;align-items:center;gap:8px;font-size:11.5px;font-weight:700;letter-spacing:1px;color:#B28BFF"><div style="width:8px;height:8px;border-radius:4px;background:linear-gradient(135deg,#FF2D55,#9B5CFF)"></div>OVERVIEW</div><div style="font-size:12px;color:#6A6A74">Generated on device</div></div>
+          <div style="font-size:16px;line-height:1.55;margin-top:12px;color:#E6E6EA;text-wrap:pretty">{{ det.sum.overview }}</div>
+          <div style="font-size:11.5px;font-weight:700;letter-spacing:1px;color:#6A6A74;margin-top:22px">KEY POINTS</div>
+          <div style="display:flex;flex-direction:column;gap:10px;margin-top:10px">
+            <sc-for list="{{ det.sum.points }}" as="pt" hint-placeholder-count="3">
+              <div style="display:flex;gap:12px;font-size:15px;line-height:1.5;color:#C9C9D1"><div style="width:6px;height:6px;border-radius:3px;background:#FF5A78;margin-top:8px;flex:none"></div><div>{{ pt }}</div></div>
+            </sc-for>
+          </div>
+          <sc-if value="{{ hasActions }}" hint-placeholder-val="{{ true }}">
+            <div style="font-size:11.5px;font-weight:700;letter-spacing:1px;color:#6A6A74;margin-top:22px">ACTION ITEMS</div>
+            <div style="display:flex;flex-direction:column;gap:4px;margin-top:8px">
+              <sc-for list="{{ actions }}" as="a" hint-placeholder-count="2">
+                <div onClick="{{ a.toggle }}" style="display:flex;align-items:center;gap:12px;padding:8px 0;cursor:pointer">
+                  <div style="width:22px;height:22px;border-radius:7px;box-shadow:inset 0 0 0 2px {{ a.ring }};background:{{ a.bg }};display:flex;align-items:center;justify-content:center;flex:none;transition:background .2s"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="{{ a.tick }}" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></div>
+                  <div style="font-size:15px;color:{{ a.c }};text-decoration:{{ a.td }}">{{ a.text }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>
+      <sc-if value="{{ detailStacked }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ toggleSumOpen }}" style="margin-top:18px;border-radius:22px;background:linear-gradient(135deg,rgba(255,45,85,.14),rgba(155,92,255,.14));box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);padding:16px 18px;cursor:pointer">
+          <div style="display:flex;align-items:center;justify-content:space-between"><div style="font-size:11.5px;font-weight:700;letter-spacing:1px;color:#FF8AA0">SUMMARY</div><div style="font-size:12.5px;color:#C9C9D1;font-weight:600">{{ sumToggleLabel }}</div></div>
+          <div style="font-size:15px;line-height:1.5;margin-top:8px;color:#EDEDF0;text-wrap:pretty">{{ det.sum.overview }}</div>
+          <sc-if value="{{ sumOpen }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px">
+              <sc-for list="{{ det.sum.points }}" as="pt" hint-placeholder-count="3"><div style="display:flex;gap:10px;font-size:14px;line-height:1.45;color:#C9C9D1"><div style="width:5px;height:5px;border-radius:3px;background:#fff;margin-top:7px;flex:none"></div><div>{{ pt }}</div></div></sc-for>
+            </div>
+          </sc-if>
+        </div>
+        <div style="font-size:14px;font-weight:600;color:#8E8E98;margin:22px 4px 6px">Transcript</div>
+      </sc-if>
+      <sc-if value="{{ showTranscript }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <sc-for list="{{ segs }}" as="sg" hint-placeholder-count="6">
+            <div onClick="{{ sg.seek }}" style="display:flex;gap:14px;padding:10px 12px;border-radius:16px;background:{{ sg.bg }};cursor:pointer;transition:background .25s" style-hover="background:rgba(255,255,255,.035)">
+              <div style="font:500 12px ui-monospace,Menlo,monospace;color:{{ sg.tc }};width:40px;padding-top:4px;flex:none">{{ sg.time }}</div>
+              <div style="flex:1;font-size:16px;line-height:1.55;color:{{ sg.c }};transition:color .25s"><sc-for list="{{ sg.parts }}" as="pp" hint-placeholder-count="1"><span style="background:{{ pp.bg }};color:{{ pp.c }};border-radius:4px">{{ pp.t }}</span></sc-for></div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+    </div>
+    <div style="position:absolute;left:0;right:0;bottom:0;padding:40px 20px 30px;background:linear-gradient(to top,#0A0A0D 72%,rgba(10,10,13,0))">
+      <dc-import name="VFWaveform" seed="{{ det.seed }}" count="{{ 72 }}" gap="{{ 2 }}" height="{{ 44 }}" progress="{{ progress }}" on-seek="{{ seek }}" hint-size="100%,44px"></dc-import>
+      <div style="display:flex;justify-content:space-between;margin-top:10px;font:500 12px ui-monospace,Menlo,monospace;color:#8E8E98"><span>{{ posLabel }}</span><span>{{ durLabel }}</span></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding:0 6px">
+        <div onClick="{{ cycleSpeed }}" style="width:52px;height:36px;border-radius:18px;background:#1C1C22;display:flex;align-items:center;justify-content:center;font-size:13.5px;font-weight:700;cursor:pointer">{{ speedLabel }}</div>
+        <div onClick="{{ back15 }}" style="width:48px;height:48px;border-radius:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative" style-hover="background:rgba(255,255,255,.06)"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 0 2.5-5.8M4 4v4h4"></path></svg><span style="position:absolute;font-size:9px;font-weight:700;top:19px">15</span></div>
+        <div onClick="{{ togglePlay }}" style="width:68px;height:68px;border-radius:34px;background:#FF2D55;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 10px 30px rgba(255,45,85,.4)" style-active="transform:scale(.94)">
+          <sc-if value="{{ playing }}" hint-placeholder-val="{{ false }}"><div style="display:flex;gap:6px"><div style="width:6px;height:22px;border-radius:3px;background:#fff"></div><div style="width:6px;height:22px;border-radius:3px;background:#fff"></div></div></sc-if>
+          <sc-if value="{{ notPlaying }}" hint-placeholder-val="{{ true }}"><svg width="26" height="26" viewBox="0 0 24 24" fill="#fff" style="margin-left:3px"><path d="M7 4.5v15l13-7.5z"></path></svg></sc-if>
+        </div>
+        <div onClick="{{ fwd15 }}" style="width:48px;height:48px;border-radius:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative" style-hover="background:rgba(255,255,255,.06)"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.5-5.8M20 4v4h-4"></path></svg><span style="position:absolute;font-size:9px;font-weight:700;top:19px">15</span></div>
+        <div onClick="{{ openTSearch }}" style="width:52px;height:36px;border-radius:18px;background:#1C1C22;display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg></div>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isSearch }}" hint-placeholder-val="{{ false }}">
+  <div style="position:absolute;inset:0;display:flex;flex-direction:column;padding:40px 0 0">
+    <div style="display:flex;align-items:center;gap:6px;height:72px;padding:0 16px 0 8px">
+      <div onClick="{{ goHome }}" style="width:44px;height:44px;border-radius:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none" style-hover="background:rgba(255,255,255,.06)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"></path></svg></div>
+      <div style="flex:1;min-width:0"><dc-import name="VFSearchField" value="{{ q }}" on-change="{{ setQ }}" auto-focus="{{ true }}" hint-size="100%,48px"></dc-import></div>
+    </div>
+    <div style="flex:1;min-height:0;overflow-y:auto;padding:8px 16px 40px;scrollbar-width:none">
+      <sc-if value="{{ qEmpty }}" hint-placeholder-val="{{ true }}">
+        <div style="font-size:14px;font-weight:600;color:#8E8E98;margin:6px 4px 12px">Recent searches</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          <sc-for list="{{ recentQs }}" as="rq" hint-placeholder-count="4">
+            <div onClick="{{ rq.go }}" style="height:36px;padding:0 14px;border-radius:18px;background:#1A1A20;display:flex;align-items:center;gap:8px;font-size:14px;color:#C9C9D1;cursor:pointer" style-hover="background:#22222A"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7A7A84" stroke-width="2.4" stroke-linecap="round"><path d="M12 7v5l3 2"></path><circle cx="12" cy="12" r="9"></circle></svg>{{ rq.q }}</div>
+          </sc-for>
+        </div>
+        <div style="font-size:14px;color:#6A6A74;margin:28px 4px 0;line-height:1.5">{{ c.searchHint }}</div>
+      </sc-if>
+      <sc-if value="{{ hasResults }}" hint-placeholder-val="{{ false }}">
+        <div style="font-size:13px;color:#8E8E98;margin:4px 4px 10px">{{ resultLabel }}</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <sc-for list="{{ results }}" as="rs" hint-placeholder-count="4">
+            <div onClick="{{ rs.open }}" style="border-radius:20px;background:#16161B;padding:14px 16px;cursor:pointer" style-hover="background:#1B1B21">
+              <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px"><div style="font-size:15.5px;font-weight:600">{{ rs.title }}</div><div style="font:500 12px ui-monospace,Menlo,monospace;color:#FF5A78;flex:none">{{ rs.time }}</div></div>
+              <div style="font-size:12.5px;color:#7A7A84;margin-top:2px">{{ rs.sub }}</div>
+              <div style="font-size:14.5px;line-height:1.5;color:#B4B4BE;margin-top:8px"><sc-for list="{{ rs.parts }}" as="pp" hint-placeholder-count="1"><span style="background:{{ pp.bg }};color:{{ pp.c }};border-radius:4px">{{ pp.t }}</span></sc-for></div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+      <sc-if value="{{ noResults }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;align-items:center;text-align:center;padding:120px 30px 0">
+          <div style="width:72px;height:72px;border-radius:36px;background:#16161B;display:flex;align-items:center;justify-content:center"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#6A6A74" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5M8.5 11h5"></path></svg></div>
+          <div style="font-size:21px;font-weight:650;margin-top:22px;letter-spacing:-.3px">{{ c.noResTitle }}</div>
+          <div style="font-size:15px;color:#8E8E98;margin-top:6px;line-height:1.5;text-wrap:pretty">{{ noResSub }}</div>
+        </div>
+      </sc-if>
+    </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ permDialog }}" hint-placeholder-val="{{ false }}">
+  <div style="position:absolute;inset:0;z-index:45;background:rgba(0,0,0,.62);display:flex;align-items:center;justify-content:center;padding:28px">
+    <div style="width:100%;border-radius:28px;background:#25242A;padding:26px 22px 18px;text-align:center">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#E6E1FF" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5 11a7 7 0 0 0 14 0M12 18v3"></path></svg>
+      <div style="font-size:20px;line-height:1.35;margin-top:14px;padding:0 6px">Allow <b>VoiceFlow</b> to record audio?</div>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-top:22px">
+        <div onClick="{{ permAllow }}" style="height:48px;border-radius:24px;background:#35343C;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;color:#E6E1FF;cursor:pointer" style-hover="background:#3E3D46">While using the app</div>
+        <div onClick="{{ permAllow }}" style="height:48px;border-radius:24px;background:#35343C;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;color:#E6E1FF;cursor:pointer" style-hover="background:#3E3D46">Only this time</div>
+        <div onClick="{{ permDeny }}" style="height:48px;border-radius:24px;background:#35343C;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;color:#E6E1FF;cursor:pointer" style-hover="background:#3E3D46">Don’t allow</div>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+  <dc-import name="VFBottomSheet" open="{{ sheetFinish }}" icon="check" title="{{ c.finishTitle }}" subtitle="{{ finishSub }}" on-close="{{ closeSheet }}" style="position:absolute;inset:0;z-index:40;pointer-events:none" hint-size="100%,100%">
+    <dc-import name="VFButton" label="{{ c.finishBtn }}" on-press="{{ finish }}" hint-size="100%,52px"></dc-import>
+    <dc-import name="VFSlideToCancel" label="{{ c.slide }}" release-label="{{ c.release }}" on-cancel="{{ cancelRec }}" hint-size="100%,56px"></dc-import>
+  </dc-import>
+
+  <dc-import name="VFBottomSheet" open="{{ sheetStorage }}" icon="warn" title="{{ c.storageTitle }}" subtitle="{{ c.storageSub }}" on-close="{{ keepRecording }}" style="position:absolute;inset:0;z-index:40;pointer-events:none" hint-size="100%,100%">
+    <div style="border-radius:16px;background:#1F1F26;padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;justify-content:space-between;font-size:13px;color:#9A9AA4"><span>62.6 GB of 64 GB used</span><span style="color:#FFA62B;font-weight:600">1.4 GB free</span></div>
+      <div style="height:8px;border-radius:4px;background:#2E2E36;overflow:hidden;display:flex"><div style="width:71%;background:#5A5A64"></div><div style="width:27%;background:#FF2D55"></div></div>
+      <div style="display:flex;gap:14px;font-size:12px;color:#8E8E98"><span style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:4px;background:#FF2D55"></span>VoiceFlow 17.2 GB</span><span style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:4px;background:#5A5A64"></span>Other apps</span></div>
+    </div>
+    <dc-import name="VFButton" label="Free up space" on-press="{{ manageStorage }}" hint-size="100%,52px"></dc-import>
+    <dc-import name="VFButton" label="Keep recording" variant="secondary" on-press="{{ keepRecording }}" hint-size="100%,52px"></dc-import>
+  </dc-import>
+
+  <dc-import name="VFBottomSheet" open="{{ sheetMore }}" title="{{ sheetRec.title }}" subtitle="{{ sheetRec.meta }}" on-close="{{ closeSheet }}" style="position:absolute;inset:0;z-index:40;pointer-events:none" hint-size="100%,100%">
+    <div style="display:flex;flex-direction:column;border-radius:20px;background:#1E1E25;overflow:hidden;margin-top:-6px">
+      <div onClick="{{ shareAudio }}" style="display:flex;align-items:center;gap:14px;height:56px;padding:0 18px;cursor:pointer;font-size:16px" style-hover="background:rgba(255,255,255,.04)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C9C9D1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"></path></svg>Share audio</div>
+      <div onClick="{{ shareText }}" style="display:flex;align-items:center;gap:14px;height:56px;padding:0 18px;cursor:pointer;font-size:16px;border-top:1px solid rgba(255,255,255,.05)" style-hover="background:rgba(255,255,255,.04)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C9C9D1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l4 4v14H6zM9 12h7M9 16h5"></path></svg>Share transcript</div>
+      <div onClick="{{ openMove }}" style="display:flex;align-items:center;gap:14px;height:56px;padding:0 18px;cursor:pointer;font-size:16px;border-top:1px solid rgba(255,255,255,.05)" style-hover="background:rgba(255,255,255,.04)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C9C9D1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM10 13h6M13 10l3 3-3 3"></path></svg>Move to folder</div>
+      <div onClick="{{ deleteRec }}" style="display:flex;align-items:center;gap:14px;height:56px;padding:0 18px;cursor:pointer;font-size:16px;color:#FF5A78;border-top:1px solid rgba(255,255,255,.05)" style-hover="background:rgba(255,45,85,.06)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"></path></svg>Delete recording</div>
+    </div>
+  </dc-import>
+
+  <dc-import name="VFBottomSheet" open="{{ sheetMove }}" title="Move to folder" subtitle="{{ moveSub }}" on-close="{{ closeSheet }}" style="position:absolute;inset:0;z-index:40;pointer-events:none" hint-size="100%,100%">
+    <div style="display:flex;flex-direction:column;gap:2px;margin-top:-6px">
+      <sc-for list="{{ moveOpts }}" as="mo" hint-placeholder-count="5">
+        <div onClick="{{ mo.pick }}" style="display:flex;align-items:center;gap:14px;height:52px;padding:0 12px;border-radius:14px;cursor:pointer;background:{{ mo.bg }}" style-hover="background:rgba(255,255,255,.04)">
+          <div style="width:12px;height:12px;border-radius:4px;background:{{ mo.swatch }}"></div>
+          <div style="flex:1;font-size:16px">{{ mo.name }}</div>
+          <div style="font-size:12px;color:#6A6A74">{{ mo.note }}</div>
+          <div style="width:22px;height:22px;border-radius:11px;box-shadow:inset 0 0 0 2px {{ mo.ring }};display:flex;align-items:center;justify-content:center"><div style="width:10px;height:10px;border-radius:5px;background:{{ mo.dot }}"></div></div>
+        </div>
+      </sc-for>
+    </div>
+    <dc-import name="VFButton" label="{{ moveBtn }}" disabled="{{ moveDisabled }}" on-press="{{ confirmMove }}" hint-size="100%,52px"></dc-import>
+  </dc-import>
+
+  <dc-import name="VFBottomSheet" open="{{ sheetFolder }}" title="{{ formTitle }}" on-close="{{ closeSheet }}" style="position:absolute;inset:0;z-index:40;pointer-events:none" hint-size="100%,100%">
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:-4px">
+      <div style="font-size:12.5px;font-weight:600;color:#8E8E98;padding-left:4px">Name</div>
+      <input value="{{ form.name }}" onChange="{{ setFormName }}" placeholder="e.g. Biology 101" style="height:52px;border-radius:16px;background:#1F1F26;border:0;outline:0;padding:0 16px;color:#F4F4F6;font-family:Figtree,sans-serif;font-size:16px;caret-color:#FF2D55;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)">
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;margin:6px 0 8px">
+      <div style="font-size:12.5px;font-weight:600;color:#8E8E98;padding-left:4px">Color</div>
+      <div style="display:flex;gap:14px;padding-left:4px">
+        <sc-for list="{{ swatches }}" as="sw" hint-placeholder-count="5">
+          <div onClick="{{ sw.pick }}" style="width:40px;height:40px;border-radius:20px;background:{{ sw.grad }};cursor:pointer;box-shadow:{{ sw.ring }};transition:box-shadow .15s"></div>
+        </sc-for>
+      </div>
+    </div>
+    <dc-import name="VFFolderCard" title="{{ formPreviewName }}" count="{{ formCount }}" color="{{ form.color }}" layout="wide" hint-size="100%,88px"></dc-import>
+    <dc-import name="VFButton" label="{{ formBtn }}" disabled="{{ formDisabled }}" on-press="{{ submitFolder }}" hint-size="100%,52px"></dc-import>
+    <sc-if value="{{ formIsEdit }}" hint-placeholder-val="{{ false }}"><dc-import name="VFButton" label="Delete folder" variant="danger" on-press="{{ deleteFolder }}" hint-size="100%,52px"></dc-import></sc-if>
+  </dc-import>
+
+  <sc-if value="{{ isDragging }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:{{ ghostX }};top:{{ ghostY }};width:300px;margin-left:-150px;margin-top:-35px;z-index:65;pointer-events:none;transform:rotate(-2deg) scale(1.03);border-radius:20px;background:#24242C;box-shadow:0 24px 50px rgba(0,0,0,.6),0 0 0 1.5px rgba(255,45,85,.65);padding:12px 14px;display:flex;align-items:center;gap:12px">
+      <div style="width:46px;height:46px;border-radius:23px;background:#FF2D55;display:flex;align-items:center;justify-content:center;gap:2px;flex:none"><div style="width:3px;height:10px;border-radius:2px;background:#fff"></div><div style="width:3px;height:18px;border-radius:2px;background:#fff"></div><div style="width:3px;height:13px;border-radius:2px;background:#fff"></div><div style="width:3px;height:7px;border-radius:2px;background:#fff"></div></div>
+      <div style="min-width:0"><div style="font-size:16px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ ghost.title }}</div><div style="font-size:13px;color:{{ ghost.c }};margin-top:2px;font-weight:500">{{ ghost.hint }}</div></div>
+    </div>
+  </sc-if>
+
+  <dc-import name="VFToast" visible="{{ toastVis }}" kind="{{ toast.kind }}" message="{{ toast.message }}" action="{{ toast.action }}" on-action="{{ toastAct }}" style="position:absolute;left:14px;right:14px;bottom:{{ toastBottom }};z-index:55;pointer-events:none" hint-size="100%,50px"></dc-import>
+
+  <div style="position:absolute;left:50%;bottom:9px;margin-left:-54px;width:108px;height:4px;border-radius:2px;background:rgba(255,255,255,.55);z-index:70;pointer-events:none"></div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;screen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;onboard&quot;,&quot;perm&quot;,&quot;mic&quot;,&quot;home&quot;,&quot;folder&quot;,&quot;emptyFolder&quot;,&quot;newFolder&quot;,&quot;editFolder&quot;,&quot;rec&quot;,&quot;recPaused&quot;,&quot;finish&quot;,&quot;storage&quot;,&quot;saving&quot;,&quot;saved&quot;,&quot;canceled&quot;,&quot;lock&quot;,&quot;detail&quot;,&quot;summary&quot;,&quot;tsearch&quot;,&quot;search&quot;,&quot;results&quot;,&quot;noResults&quot;,&quot;more&quot;,&quot;move&quot;],&quot;default&quot;:&quot;home&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Start&quot;},&quot;homeLayout&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;cards&quot;,&quot;grid&quot;],&quot;default&quot;:&quot;cards&quot;,&quot;tsType&quot;:&quot;'cards'|'grid'&quot;,&quot;section&quot;:&quot;Layout&quot;},&quot;recLayout&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;transcript&quot;,&quot;waveform&quot;],&quot;default&quot;:&quot;transcript&quot;,&quot;tsType&quot;:&quot;'transcript'|'waveform'&quot;,&quot;section&quot;:&quot;Layout&quot;},&quot;detailLayout&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;tabs&quot;,&quot;stacked&quot;],&quot;default&quot;:&quot;tabs&quot;,&quot;tsType&quot;:&quot;'tabs'|'stacked'&quot;,&quot;section&quot;:&quot;Layout&quot;},&quot;tone&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;plain&quot;,&quot;warm&quot;],&quot;default&quot;:&quot;plain&quot;,&quot;tsType&quot;:&quot;'plain'|'warm'&quot;,&quot;section&quot;:&quot;Copy&quot;},&quot;showNav&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Start&quot;}}">
+const LIVE = ['The whole point is to understand how this works.', 'So first we start with the basic idea of a system.', 'And then we can look at some examples.', 'A system is just parts that affect each other over time.', 'Feedback loops are where it gets interesting.', 'When the output feeds back in, small changes grow quickly.', 'That’s why a thermostat and a population behave so differently.', 'Let’s write that down before we move on.'];
+const LIVE_W = LIVE.map(s => s.split(' '));
+const LIVE_TOTAL = LIVE_W.reduce((a, b) => a + b.length, 0);
+const COPY = {
+  plain: { tagline: 'Record. Learn. Revisit.', allow: 'Allow microphone', later: 'Not now', finishTitle: 'Finish recording?', finishSub: 'Save this recording to {folder}?', finishBtn: 'Finish Recording', slide: 'Slide to cancel', release: 'Release to cancel', savingTitle: 'Saving recording…', savingSub: 'Please wait a moment.', savedTitle: 'Recording saved', savedSub: '“{title}” has been saved to {folder}.', canceledTitle: 'Recording canceled', canceledSub: 'Your recording has been discarded.', emptyTitle: 'No recordings yet', emptySub: 'Tap record below — new recordings land here.', noResTitle: 'No results', noResSub: 'Nothing matches “{q}”. Try a different word.', micTitle: 'Microphone access is off', micSub: 'VoiceFlow needs the microphone to record and transcribe. Turn it on in Settings.', storageTitle: 'Storage almost full', storageSub: 'About 9 minutes of recording space left on this device.', searchHint: 'Search titles and everything that was said.', paused: 'PAUSED', live: 'REC', orgSub: 'Drag a recording onto a folder', orgEmpty: 'No recordings here.', dropOut: 'Drop to remove from folder' },
+  warm: { tagline: 'Catch every word.', allow: 'Let’s do it', later: 'Maybe later', finishTitle: 'Wrap it up?', finishSub: 'We’ll tuck this into {folder}.', finishBtn: 'Save it', slide: 'Slide to toss it', release: 'Let go to toss', savingTitle: 'Saving…', savingSub: 'Tidying up your transcript.', savedTitle: 'Got it.', savedSub: '“{title}” is safe in {folder}.', canceledTitle: 'Tossed.', canceledSub: 'Nothing was saved. Fresh start whenever you’re ready.', emptyTitle: 'Quiet in here', emptySub: 'Hit record — your first one lands right here.', noResTitle: 'Nobody said that', noResSub: 'No one said “{q}” — yet.', micTitle: 'We can’t hear you', micSub: 'Mic access is off. Flip it on in Settings and we’re good to go.', storageTitle: 'Running low on space', storageSub: 'Room for about 9 more minutes. Free some up to keep going.', searchHint: 'Find any moment by what was said.', paused: 'PAUSED', live: 'LIVE', orgSub: 'Pick it up, drop it in', orgEmpty: 'Nothing to move here.', dropOut: 'Drop to send back to Inbox' },
+};
+const SW = { red: '#FF2D55', blue: '#2F7BFF', violet: '#9B4BFF', amber: '#FF8A2E', green: '#1FC78A', graphite: '#4A4A54' };
+const GR = { red: 'linear-gradient(135deg,#FF2D55,#C42A88)', blue: 'linear-gradient(135deg,#2F86FF,#3D3AE0)', violet: 'linear-gradient(135deg,#B04BFF,#6A2BD8)', amber: 'linear-gradient(135deg,#FF9A2E,#E0452E)', green: 'linear-gradient(135deg,#22CC8E,#0C876C)' };
+const pad = n => String(n).padStart(2, '0');
+const clock = s => { s = Math.max(0, Math.floor(s)); return pad(Math.floor(s / 60)) + ':' + pad(s % 60); };
+const dur = s => { s = Math.floor(s); return Math.floor(s / 60) + ':' + pad(s % 60); };
+const mk = (ts, tx) => tx.map((t, i) => ({ t: ts[i], text: t }));
+const gen = segs => ({ overview: segs.slice(0, 2).map(s => s.text).join(' '), points: segs.slice(1, 4).map(s => s.text), actions: [] });
+const speech = () => { const r = Math.random(); return r < .12 ? .05 + Math.random() * .1 : .22 + Math.random() * .78; };
+const lvInit = (n, loud) => Array.from({ length: n }, () => loud ? speech() : .05 + Math.random() * .06);
+function parts(text, q) {
+  const N = (t) => ({ t, bg: 'transparent', c: 'inherit' });
+  if (!q || q.length < 2) return [N(text)];
+  const out = [], lo = text.toLowerCase(), ql = q.toLowerCase(); let i = 0;
+  for (;;) { const j = lo.indexOf(ql, i); if (j < 0) { out.push(N(text.slice(i))); break; } if (j > i) out.push(N(text.slice(i, j))); out.push({ t: text.slice(j, j + q.length), bg: 'rgba(255,45,85,.38)', c: '#fff' }); i = j + q.length; }
+  return out;
+}
+function seedFolders() {
+  return [
+    { id: 'uni', name: 'University', color: 'red', top: true },
+    { id: 'icloud', name: 'All iCloud', color: 'blue', top: true },
+    { id: 'shared', name: 'Shared', color: 'violet', top: true },
+    { id: 'inbox', name: 'Inbox', color: 'graphite' },
+    { id: 'work', name: 'Work', color: 'graphite' },
+    { id: 'personal', name: 'Personal', color: 'graphite' },
+  ];
+}
+function seedRecs() {
+  const L = mk([0, 140, 310, 470, 640, 820, 990, 1150, 1300, 1450, 1600], ['Okay, let’s get started. Today is really about one idea.', 'The whole point is to understand how this works, not to memorise it.', 'So first we start with the basic idea of a system.', 'A system is just parts that affect each other over time.', 'And then we can look at some examples. A thermostat is the classic one.', 'It measures the room, compares it to a target, and switches the heat on or off.', 'That’s a feedback loop. The output feeds back in as the next input.', 'Balancing loops keep things steady. Reinforcing loops make things grow.', 'Population is a reinforcing loop. More people, more births, more people.', 'Most real systems have both, and the interesting part is which loop wins.', 'For Thursday, read chapter three and sketch one loop from your own life.']);
+  const R = [
+    { id: 'r1', f: 'uni', title: 'Lecture 1', date: 'Sep 16, 2026', dur: 1697, seed: 11, segs: L, sum: { overview: 'An introduction to systems thinking: what a system is, how feedback loops work, and why balancing and reinforcing loops behave so differently.', points: ['A system is a set of parts that influence each other over time.', 'Feedback loops feed a system’s output back in as its next input.', 'Balancing loops stabilise (thermostat); reinforcing loops amplify (population).', 'Real systems mix both — behaviour depends on which loop dominates.'], actions: ['Read chapter three before Thursday', 'Sketch one feedback loop from your own life'] } },
+    { id: 'r2', f: 'uni', title: 'Study Notes', date: 'Sep 14, 2026', dur: 763, seed: 23, segs: mk([0, 95, 240, 410], ['Chapter two recap: stocks and flows.', 'A stock is anything that accumulates — water in a tub, money in an account.', 'Flows change the stock. Inflows add, outflows drain.', 'Delays between a flow and its stock are why systems overshoot, like a feedback loop that reacts too late.']) },
+    { id: 'r3', f: 'uni', title: 'Discussion', date: 'Sep 12, 2026', dur: 512, seed: 31, segs: mk([0, 130, 300], ['Group discussion on the reading.', 'Maya argued most policy fails because it ignores delays in the loop.', 'We agreed to bring one real example each next week.']) },
+    { id: 'r4', f: 'work', title: 'Standup', date: 'Sep 22, 2026', dur: 845, seed: 41, segs: mk([0, 200, 480], ['Quick standup. Sync is shipping Friday.', 'Blocked on waveform export — needs design sign-off.', 'Priya is picking up the onboarding copy.']) },
+    { id: 'r5', f: 'work', title: 'Design review', date: 'Sep 18, 2026', dur: 1960, seed: 53, segs: mk([0, 400, 900], ['Reviewing the recording flow end to end.', 'Slide to cancel tested well — nobody discarded a recording by accident.', 'Next up: the summary tab and transcript search.']) },
+    { id: 'r6', f: 'inbox', title: 'Voice memo', date: 'Sep 21, 2026', dur: 72, seed: 61, segs: mk([0, 30], ['Idea: auto-title recordings from the first sentence.', 'Could also suggest a folder based on the calendar.']) },
+    { id: 'r7', f: 'personal', title: 'Guitar idea', date: 'Sep 10, 2026', dur: 130, seed: 71, segs: mk([0], ['(Music — no speech detected)']) },
+    { id: 'r8', f: 'icloud', title: 'Podcast notes', date: 'Sep 19, 2026', dur: 1210, seed: 83, segs: mk([0, 300], ['Notes on the episode about habit loops.', 'Cue, routine, reward — it’s just another feedback system.']) },
+    { id: 'r9', f: 'shared', title: 'Team retro', date: 'Sep 17, 2026', dur: 2280, seed: 97, segs: mk([0, 600], ['What went well: the new recording screen.', 'What to improve: search was hard to find.']) },
+  ];
+  return R.map(r => ({ ...r, sum: r.sum || gen(r.segs) }));
+}
+const FC = { red: ['255,45,85', 'linear-gradient(145deg,#FF5A7A,#E0286C)'], blue: ['47,123,255', 'linear-gradient(145deg,#5B9BFF,#2A5CFF)'], violet: ['155,75,255', 'linear-gradient(145deg,#B983FF,#7B3CF2)'], amber: ['255,138,46', 'linear-gradient(145deg,#FFAE5C,#F2662C)'], green: ['31,199,138', 'linear-gradient(145deg,#4BDDA6,#0FA57A)'], graphite: ['140,140,155', 'linear-gradient(145deg,#4E4E5A,#32323B)'] };
+const NAV = [['onboard', 'Onboarding'], ['perm', 'Mic permission dialog'], ['mic', 'Mic access denied'], ['home', 'Folders (home)'], ['folder', 'Folder'], ['emptyFolder', 'Empty folder'], ['newFolder', 'New folder'], ['editFolder', 'Edit folder'], ['rec', 'Recording'], ['recPaused', 'Paused'], ['finish', 'Finish sheet'], ['storage', 'Storage almost full'], ['saving', 'Saving'], ['saved', 'Saved'], ['canceled', 'Canceled'], ['lock', 'Lock screen'], ['detail', 'Recording + playback'], ['summary', 'AI summary'], ['tsearch', 'Transcript search'], ['search', 'Global search'], ['results', 'Search results'], ['noResults', 'No results'], ['more', 'Recording actions'], ['move', 'Move to folder'], ['organize', 'Organize (drag & drop)'], ['organizeDrag', 'Organize — mid-drag']];
+
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    const base = { folders: seedFolders(), recs: seedRecs(), folderId: 'uni', recFolder: 'uni', recTitle: 'Lecture 2', recSec: 0, wordIdx: 0, paused: false, levels: lvInit(64, false), detailId: 'r1', tab: 'transcript', pos: 0, playing: false, speed: 1, tsearch: false, tq: '', q: '', sheet: null, sheetRecId: 'r1', moveTarget: null, form: { name: '', color: 'red', mode: 'new', id: null }, toast: null, toastVis: false, newId: null, rowPlaying: null, rowPos: 0, checked: {}, lastSaved: 'r1', sumOpen: false, permDialog: false, orgSource: 'all', orgFrom: 'home', drag: null, screen: 'home', navKey: 'home' };
+    const key = props.screen ?? 'home';
+    this.state = { ...base, ...this.preset(key, base), navKey: key };
+    this.t = 0; this.phoneRef = React.createRef(); this.outRef = React.createRef(); this.trefs = {};
+  }
+  preset(k, s) {
+    const clean = { sheet: null, permDialog: false, tsearch: false, tq: '', playing: false, toastVis: false, newId: null, drag: null };
+    const rec = { recFolder: 'uni', recTitle: 'Lecture 2', recSec: 43, wordIdx: 17, paused: false, levels: lvInit(64, true) };
+    const folders = s.folders.some(f => f.id === 'ideas') || k !== 'emptyFolder' ? s.folders : [...s.folders.slice(0, 3), { id: 'ideas', name: 'Ideas', color: 'amber', top: true }, ...s.folders.slice(3)];
+    const M = {
+      onboard: { screen: 'onboard' }, perm: { screen: 'onboard', permDialog: true }, mic: { screen: 'mic' },
+      home: { screen: 'home' }, folder: { screen: 'folder', folderId: 'uni' },
+      emptyFolder: { screen: 'folder', folderId: 'ideas', folders },
+      newFolder: { screen: 'home', sheet: 'folder', form: { name: '', color: 'green', mode: 'new', id: null } },
+      editFolder: { screen: 'folder', folderId: 'uni', sheet: 'folder', form: { name: 'University', color: 'red', mode: 'edit', id: 'uni' } },
+      rec: { screen: 'rec', ...rec }, recPaused: { screen: 'rec', ...rec, paused: true },
+      finish: { screen: 'rec', ...rec, paused: true, sheet: 'finish' }, storage: { screen: 'rec', ...rec, recSec: 2531, paused: true, sheet: 'storage' },
+      saving: { screen: 'saving', ...rec }, saved: { screen: 'saved', ...rec, recTitle: 'Lecture 1', lastSaved: 'r1' }, canceled: { screen: 'canceled' },
+      lock: { screen: 'lock', ...rec, recSec: 252 },
+      detail: { screen: 'detail', detailId: 'r1', tab: 'transcript', pos: 655 }, summary: { screen: 'detail', detailId: 'r1', tab: 'summary', pos: 655 },
+      tsearch: { screen: 'detail', detailId: 'r1', tab: 'transcript', pos: 990, tsearch: true, tq: 'loop' },
+      search: { screen: 'search', q: '' }, results: { screen: 'search', q: 'loop' }, noResults: { screen: 'search', q: 'quantum' },
+      more: { screen: 'folder', folderId: 'uni', sheet: 'more', sheetRecId: 'r1' }, move: { screen: 'folder', folderId: 'uni', sheet: 'move', sheetRecId: 'r1', moveTarget: 'work' },
+      organize: { screen: 'organize', orgSource: 'all', orgFrom: 'home' }, organizeDrag: { screen: 'organize', orgSource: 'uni', orgFrom: 'home', drag: { id: 'r1', x: 206, y: 262, over: 'work', static: true } },
+    };
+    return { ...clean, ...(M[k] || M.home) };
+  }
+  componentDidMount() { this.iv = setInterval(() => this.tick(), 100); this._mv = e => this.onMove(e); this._up = () => this.onUp(); window.addEventListener('pointermove', this._mv); window.addEventListener('pointerup', this._up); window.addEventListener('pointercancel', this._up); }
+  componentWillUnmount() { window.removeEventListener('pointermove', this._mv); window.removeEventListener('pointerup', this._up); window.removeEventListener('pointercancel', this._up); clearInterval(this.iv); clearTimeout(this.tt); clearTimeout(this.st); }
+  componentDidUpdate(pp) { if (pp.screen !== this.props.screen && this.props.screen) this.jump(this.props.screen); }
+  tick() {
+    const s = this.state, up = {};
+    const recOn = (s.screen === 'rec' || s.screen === 'lock') && !s.paused && !s.sheet;
+    if (recOn) { this.t++; up.levels = [...s.levels.slice(1), speech()]; if (this.t % 10 === 0) up.recSec = s.recSec + 1; if (this.t % 3 === 0) up.wordIdx = s.wordIdx + 1; }
+    if (s.screen === 'detail' && s.playing) { const r = this.rec(s.detailId); const np = s.pos + .1 * s.speed; if (np >= r.dur) { up.pos = r.dur; up.playing = false; } else up.pos = np; }
+    if (s.rowPlaying) { const r = this.rec(s.rowPlaying); const np = s.rowPos + .1 / Math.max(20, r.dur) * 8; if (np >= 1) { up.rowPlaying = null; up.rowPos = 0; } else up.rowPos = np; }
+    if (Object.keys(up).length) this.setState(up);
+  }
+  tref(id) { return this.trefs[id] || (this.trefs[id] = React.createRef()); }
+  toPhone(e) { const el = this.phoneRef.current; if (!el) return { x: 0, y: 0 }; const r = el.getBoundingClientRect(), sc = r.width / 412; return { x: (e.clientX - r.left) / sc, y: (e.clientY - r.top) / sc }; }
+  startDrag(id, e) { if (e && e.preventDefault) e.preventDefault(); const pt = this.toPhone(e); this.setState({ drag: { id, x: pt.x, y: pt.y, over: null } }); }
+  onMove(e) {
+    const d = this.state.drag; if (!d || d.static) return;
+    const pt = this.toPhone(e), rec = this.rec(d.id);
+    const hit = el => { if (!el) return false; const b = el.getBoundingClientRect(); return e.clientX >= b.left && e.clientX <= b.right && e.clientY >= b.top && e.clientY <= b.bottom; };
+    let over = null;
+    this.state.folders.forEach(f => { if (f.id !== rec.f && this.trefs[f.id] && hit(this.trefs[f.id].current)) over = f.id; });
+    if (!over && rec.f !== 'inbox' && hit(this.outRef.current)) over = '__out';
+    this.setState({ drag: { ...d, x: pt.x, y: pt.y, over } });
+  }
+  onUp() {
+    const d = this.state.drag; if (!d || d.static) return;
+    if (!d.over) { this.setState({ drag: null }); return; }
+    const out = d.over === '__out', to = out ? 'inbox' : d.over, rec = this.rec(d.id), from = rec.f, prev = this.state.recs;
+    this.setState({ drag: null, recs: prev.map(r => r.id === d.id ? { ...r, f: to } : r) });
+    this.toast(out ? 'Removed “' + rec.title + '” from ' + this.fName(from) : 'Moved “' + rec.title + '” to ' + this.fName(to), 'success', 'Undo', () => this.setState({ recs: prev, toastVis: false }));
+  }
+  rec(id) { return this.state.recs.find(r => r.id === id) || this.state.recs[0]; }
+  fName(id) { return (this.state.folders.find(f => f.id === id) || { name: 'Inbox' }).name; }
+  jump(k) { this.setState(s => ({ ...this.preset(k, s), navKey: k })); }
+  toast(message, kind, action, onAction) {
+    clearTimeout(this.tt);
+    this.setState({ toast: { message, kind: kind || 'success', action: action || '' }, toastVis: true });
+    this.toastFn = onAction;
+    this.tt = setTimeout(() => this.setState({ toastVis: false }), 3000);
+  }
+  live(w) {
+    w = w % LIVE_TOTAL; let acc = 0; const done = []; let cur = '';
+    for (let i = 0; i < LIVE_W.length; i++) { const L = LIVE_W[i].length; if (w >= acc + L) { done.push(LIVE[i]); acc += L; } else { cur = LIVE_W[i].slice(0, w - acc).join(' '); break; } }
+    return { prev: done.slice(-2).join(' '), cur, done };
+  }
+  startRec(fid) {
+    const n = this.state.recs.filter(r => r.f === fid).length + 1;
+    const title = fid === 'uni' ? 'Lecture ' + (this.state.recs.filter(r => r.f === 'uni' && /^Lecture/.test(r.title)).length + 1) : (fid === 'inbox' ? 'Voice memo ' + n : 'Recording ' + n);
+    this.t = 0;
+    this.setState({ screen: 'rec', recFolder: fid, recTitle: title, recSec: 0, wordIdx: 0, paused: false, levels: lvInit(64, false), sheet: null, rowPlaying: null, navKey: 'rec' });
+  }
+  saveRec() {
+    const s = this.state, lv = this.live(s.wordIdx), texts = lv.done.length ? [...lv.done] : [LIVE[0]];
+    if (lv.cur) texts.push(lv.cur + '…');
+    const d = Math.max(s.recSec, 3), segs = texts.map((t, i) => ({ t: Math.floor(d * i / texts.length), text: t }));
+    const id = 'n' + Date.now();
+    const r = { id, f: s.recFolder, title: s.recTitle, date: 'Sep 23, 2026', dur: d, seed: Math.floor(Math.random() * 90) + 5, segs, sum: gen(segs) };
+    this.setState({ recs: [r, ...s.recs], lastSaved: id, newId: id, screen: 'saved', navKey: 'saved' });
+  }
+  renderVals() {
+    const s = this.state, p = this.props, C = COPY[p.tone ?? 'plain'] || COPY.plain;
+    const fill = (t, m) => t.replace('{folder}', m.folder || '').replace('{title}', m.title || '').replace('{q}', m.q || '');
+    const embedded = (p.showNav ?? true) === false;
+    const cnt = id => s.recs.filter(r => r.f === id).length;
+    const cl = n => n === 1 ? '1 recording' : n + ' recordings';
+    const fmeta = id => { const rs = s.recs.filter(r => r.f === id); if (!rs.length) return 'Empty'; const m = Math.round(rs.reduce((a, r) => a + r.dur, 0) / 60); return cl(rs.length) + ' · ' + (m < 60 ? Math.max(1, m) + ' min' : Math.floor(m / 60) + 'h ' + (m % 60) + 'm'); };
+    const latestOf = id => { const l = s.recs.find(r => r.f === id); return { latest: l ? l.title : '', latestMeta: l ? l.date.replace(', 2026', '') + ' · ' + dur(l.dur) : '', playLatest: () => l && this.setState({ screen: 'detail', detailId: l.id, pos: 0, playing: true, tab: 'transcript', tsearch: false, navKey: 'detail' }) }; };
+    const F = s.folders.map(f => ({ ...f, count: cnt(f.id), countLabel: cl(cnt(f.id)), meta: fmeta(f.id), ...latestOf(f.id), open: () => this.setState({ screen: 'folder', folderId: f.id, newId: null }), edit: () => this.setState({ sheet: 'folder', form: { name: f.name, color: f.color === 'graphite' ? 'red' : f.color, mode: 'edit', id: f.id } }) }));
+    const others = F.filter(f => !f.top).map((f, i) => ({ ...f, border: i ? '1px solid rgba(255,255,255,.05)' : '0' }));
+    const row = r => ({ id: r.id, title: r.title, meta: r.date + ' · ' + dur(r.dur), playing: s.rowPlaying === r.id, progress: s.rowPlaying === r.id ? s.rowPos : -1, highlight: s.newId === r.id,
+      open: () => this.setState({ screen: 'detail', detailId: r.id, pos: 0, playing: false, tab: 'transcript', tsearch: false, tq: '', rowPlaying: null, sumOpen: false }),
+      play: () => this.setState(st => ({ rowPlaying: st.rowPlaying === r.id ? null : r.id, rowPos: st.rowPlaying === r.id ? 0 : 0 })),
+      more: () => this.setState({ sheet: 'more', sheetRecId: r.id }) });
+    const cur = F.find(f => f.id === s.folderId) || F[0];
+    const items = s.recs.filter(r => r.f === cur.id).map(row);
+    const lv = this.live(s.wordIdx);
+    const det = this.rec(s.detailId);
+    let activeIdx = 0; det.segs.forEach((g, i) => { if (g.t <= s.pos) activeIdx = i; });
+    const tq = s.tsearch ? s.tq : '';
+    let matches = 0; if (tq.length >= 2) det.segs.forEach(g => { matches += parts(g.text, tq).filter(x => x.bg !== 'transparent').length; });
+    const segs = det.segs.map((g, i) => { const a = i === activeIdx; return { time: clock(g.t), bg: a ? 'rgba(255,255,255,.05)' : 'transparent', c: a ? '#F4F4F6' : '#80808A', tc: a ? '#FF5A78' : '#55555E', parts: parts(g.text, tq), seek: () => this.setState({ pos: g.t }) }; });
+    const ql = s.q.trim();
+    const results = [];
+    if (ql.length >= 2) s.recs.forEach(r => { r.segs.forEach(g => { if (g.text.toLowerCase().includes(ql.toLowerCase()) || (g === r.segs[0] && r.title.toLowerCase().includes(ql.toLowerCase()))) results.push({ title: r.title, sub: this.fName(r.f) + ' · ' + r.date, time: clock(g.t), parts: parts(g.text, ql), open: () => this.setState({ screen: 'detail', detailId: r.id, pos: g.t, playing: false, tab: 'transcript', tsearch: true, tq: ql }) }); }); });
+    const sr = this.rec(s.sheetRecId);
+    const tab = s.tab, stacked = (p.detailLayout ?? 'tabs') === 'stacked';
+    const recLayoutW = (p.recLayout ?? 'transcript') === 'waveform';
+    const dg = s.drag, dragRec = dg ? this.rec(dg.id) : null, src = s.orgSource;
+    const orgRecs = s.recs.filter(r => src === 'all' || r.f === src);
+    const org = {
+      phoneRef: this.phoneRef, outRef: this.outRef,
+      openOrganize: () => this.setState({ screen: 'organize', orgSource: 'all', orgFrom: 'home', navKey: 'organize' }),
+      orgBack: () => this.setState({ screen: s.orgFrom === 'folder' ? 'folder' : 'home', drag: null }),
+      orgRecord: () => this.startRec(src === 'all' ? 'inbox' : src),
+      orgTargets: F.map(f => { const curF = !!(dragRec && dragRec.f === f.id), on = !!(dg && dg.over === f.id); return { name: f.name, color: f.color, active: on, disabled: curF, meta: curF ? 'Current' : on ? 'Drop to move' : f.countLabel, ref: this.tref(f.id) }; }),
+      orgChips: [{ id: 'all', name: 'All' }, ...s.folders].map(f => { const on = src === f.id; return { label: f.name, n: String(f.id === 'all' ? s.recs.length : cnt(f.id)), pick: () => this.setState({ orgSource: f.id }), bg: on ? '#F4F4F6' : '#1A1A20', c: on ? '#0A0A0D' : '#C9C9D1', nc: on ? '#6A6A74' : '#6A6A74', dot: f.color ? (SW[f.color] || SW.graphite) : (on ? '#0A0A0D' : '#8E8E98') }; }),
+      orgItems: orgRecs.map(r => ({ title: r.title, meta: (src === 'all' ? this.fName(r.f) + ' · ' : '') + r.date + ' · ' + dur(r.dur), dragging: !!(dg && dg.id === r.id), dragStart: e => this.startDrag(r.id, e) })),
+      orgHasItems: orgRecs.length > 0, orgEmpty: orgRecs.length === 0,
+      isDragging: !!dg, notDragging: !dg, showDropOut: !!(dragRec && dragRec.f !== 'inbox'),
+      outBorder: dg && dg.over === '__out' ? '#FF2D55' : '#3A3A44', outBg: dg && dg.over === '__out' ? 'rgba(255,45,85,.14)' : 'rgba(20,20,25,.94)', outC: dg && dg.over === '__out' ? '#FF5A78' : '#9A9AA4',
+      ghostX: (dg ? dg.x : 0) + 'px', ghostY: (dg ? dg.y : 0) + 'px',
+      ghost: { title: dragRec ? dragRec.title : '', hint: !dg ? '' : dg.over === '__out' ? 'Remove from ' + this.fName(dragRec.f) : dg.over ? 'Move to ' + this.fName(dg.over) : 'Drop on a folder', c: dg && dg.over ? '#FF7A93' : '#8E8E98' },
+      toastBottom: s.screen === 'detail' ? '250px' : '128px',
+    };
+    const spinner = React.createElement('div', { style: { width: 60, height: 60, borderRadius: 30, border: '3px solid #24242B', borderTopColor: '#FF2D55', borderRightColor: '#C43A9A', animation: 'vfSpin .9s linear infinite' } });
+    const dotO = s.paused ? .35 : (Math.floor(this.t / 6) % 2 ? 1 : .35);
+    return {
+      ...org, c: C, showNav: !embedded, pageMinH: embedded ? '0' : '100vh', pagePad: embedded ? '12px' : '48px 32px', pageBg: embedded ? 'transparent' : 'radial-gradient(900px 600px at 70% 110%,rgba(255,45,85,.10),transparent 60%),#060608',
+      nav: NAV.map(([k, l], i) => ({ num: pad(i + 1), label: l, go: () => this.jump(k), color: s.navKey === k ? '#fff' : '#9A9AA4', bg: s.navKey === k ? 'rgba(255,45,85,.14)' : 'transparent' })),
+      isOnboard: s.screen === 'onboard', isMic: s.screen === 'mic', isHome: s.screen === 'home', isFolder: s.screen === 'folder', isRec: s.screen === 'rec', isSaving: s.screen === 'saving', isSaved: s.screen === 'saved', isCanceled: s.screen === 'canceled', isLock: s.screen === 'lock', isDetail: s.screen === 'detail', isSearch: s.screen === 'search', isOrganize: s.screen === 'organize',
+      permDialog: s.permDialog,
+      askPerm: () => this.setState({ permDialog: true }), permAllow: () => { this.setState({ permDialog: false, screen: 'home', navKey: 'home' }); this.toast('Microphone on. You’re ready to record.'); }, permDeny: () => this.setState({ permDialog: false, screen: 'mic', navKey: 'mic' }),
+      openSettings: () => this.toast('Opening system settings…', 'info'),
+      goHome: () => this.setState({ screen: 'home', sheet: null, navKey: 'home', q: '' }), goSearch: () => this.setState({ screen: 'search', q: '', navKey: 'search' }),
+      homeCards: (p.homeLayout ?? 'cards') !== 'grid', homeGrid: (p.homeLayout ?? 'cards') === 'grid',
+      topFolders: F.filter(f => f.top), otherFolders: others, allFolders: F, recent: s.recs.slice(0, 3).map(row), heroFolders: F.filter(f => f.top).slice(0, 1), pinnedRest: F.filter(f => f.top).slice(1),
+      openNewFolder: () => this.setState({ sheet: 'folder', form: { name: '', color: 'green', mode: 'new', id: null } }),
+      startInbox: () => this.startRec('inbox'), startInFolder: () => this.startRec(cur.id),
+      folder: { name: cur.name, countLabel: cur.countLabel, meta: cur.meta, edit: cur.edit, grad: (FC[cur.color] || FC.graphite)[1], glow: 'rgba(' + (FC[cur.color] || FC.graphite)[0] + ',' + (cur.color === 'graphite' ? .14 : .26) + ')', shadow: 'rgba(' + (FC[cur.color] || FC.graphite)[0] + ',.4)', organize: () => this.setState({ screen: 'organize', orgSource: cur.id, orgFrom: 'folder', navKey: 'organize' }) }, folderItems: items, folderHasItems: items.length > 0, folderEmpty: items.length === 0,
+      recT: !recLayoutW, recW: recLayoutW, recTitle: s.recTitle, recFolderName: this.fName(s.recFolder), recTime: clock(s.recSec),
+      paused: s.paused, recBtnState: s.paused ? 'paused' : 'recording', dotO, stateLabel: s.paused ? C.paused : C.live, stateColor: s.paused ? '#8E8E98' : '#FF5A78', chipBg: s.paused ? '#1C1C22' : 'rgba(255,45,85,.12)',
+      prevText: lv.prev, curText: lv.cur || '…', curColor: s.paused ? '#6A6A74' : '#F4F4F6', stripText: (lv.prev.split('. ').slice(-1)[0] + ' ' + lv.cur).trim() || 'Listening…',
+      levels: s.levels, lockLevels: s.levels.slice(-40),
+      togglePause: () => this.setState(st => ({ paused: !st.paused })),
+      openFinish: () => this.setState({ paused: true, sheet: 'finish' }),
+      goLock: () => this.setState({ screen: 'lock', navKey: 'lock' }), goRec: () => this.setState({ screen: 'rec', navKey: 'rec' }),
+      lockFinish: () => this.setState({ screen: 'rec', paused: true, sheet: 'finish' }), stateWord: s.paused ? 'Paused' : 'Recording', lockPauseLabel: s.paused ? 'Resume' : 'Pause',
+      sheetFinish: s.sheet === 'finish', finishSub: fill(C.finishSub, { folder: this.fName(s.recFolder) }),
+      closeSheet: () => this.setState({ sheet: null }),
+      finish: () => { this.setState({ sheet: null, screen: 'saving', navKey: 'saving' }); clearTimeout(this.st); this.st = setTimeout(() => this.saveRec(), 1500); },
+      cancelRec: () => this.setState({ sheet: null, screen: 'canceled', navKey: 'canceled' }),
+      recordAgain: () => this.startRec(s.recFolder),
+      sheetStorage: s.sheet === 'storage', keepRecording: () => this.setState({ sheet: null, paused: false }), manageStorage: () => this.toast('Opening storage settings…', 'info'),
+      spinner,
+      savedSub: fill(C.savedSub, { title: s.screen === 'saved' ? this.rec(s.lastSaved).title : s.recTitle, folder: this.fName(this.rec(s.lastSaved).f) }),
+      viewSaved: () => this.setState({ screen: 'detail', detailId: s.lastSaved, pos: 0, playing: true, tab: 'transcript', tsearch: false, navKey: 'detail' }),
+      backFolderLabel: 'Back to ' + this.fName(this.rec(s.lastSaved).f), backToRecFolder: () => this.setState({ screen: 'folder', folderId: this.rec(s.lastSaved).f, navKey: 'folder' }),
+      det: { title: det.title, meta: this.fName(det.f) + ' · ' + det.date + ' · ' + dur(det.dur), sum: det.sum, seed: det.seed },
+      detailTabs: !stacked, detailStacked: stacked, showSummaryFull: !stacked && tab === 'summary', showTranscript: stacked || tab === 'transcript',
+      tabT: () => this.setState({ tab: 'transcript' }), tabS: () => this.setState({ tab: 'summary', tsearch: false }),
+      tabTBg: tab === 'transcript' ? '#26262E' : 'transparent', tabTC: tab === 'transcript' ? '#fff' : '#8E8E98', tabSBg: tab === 'summary' ? '#26262E' : 'transparent', tabSC: tab === 'summary' ? '#fff' : '#8E8E98',
+      hasActions: det.sum.actions.length > 0,
+      actions: det.sum.actions.map((a, i) => { const k = det.id + i, on = !!s.checked[k]; return { text: a, ring: on ? '#FF2D55' : '#4A4A54', bg: on ? '#FF2D55' : 'transparent', tick: on ? '#fff' : 'transparent', c: on ? '#6A6A74' : '#E6E6EA', td: on ? 'line-through' : 'none', toggle: () => this.setState(st => ({ checked: { ...st.checked, [k]: !on } })) }; }),
+      sumOpen: s.sumOpen, sumToggleLabel: s.sumOpen ? 'Less' : 'Key points', toggleSumOpen: () => this.setState(st => ({ sumOpen: !st.sumOpen })),
+      segs, tsearch: s.tsearch, notTSearch: !s.tsearch, tq: s.tq, setTq: v => this.setState({ tq: v }),
+      matchLabel: tq.length < 2 ? 'Type to find words in this recording' : (matches ? matches + (matches === 1 ? ' match' : ' matches') + ' in ' + det.title : 'No matches'),
+      openTSearch: () => this.setState({ tsearch: true, tab: 'transcript' }), closeTSearch: () => this.setState({ tsearch: false, tq: '' }),
+      detailBack: () => this.setState({ screen: 'folder', folderId: det.f, playing: false, tsearch: false, navKey: 'folder' }),
+      detailMore: () => this.setState({ sheet: 'more', sheetRecId: det.id }),
+      progress: Math.min(1, s.pos / det.dur), seek: r => this.setState({ pos: r * det.dur }), posLabel: clock(s.pos), durLabel: clock(det.dur),
+      playing: s.playing, notPlaying: !s.playing, togglePlay: () => this.setState(st => ({ playing: !st.playing, pos: st.pos >= det.dur ? 0 : st.pos })),
+      back15: () => this.setState(st => ({ pos: Math.max(0, st.pos - 15) })), fwd15: () => this.setState(st => ({ pos: Math.min(det.dur, st.pos + 15) })),
+      speedLabel: s.speed + '×', cycleSpeed: () => this.setState(st => ({ speed: st.speed === 1 ? 1.5 : st.speed === 1.5 ? 2 : 1 })),
+      q: s.q, setQ: v => this.setState({ q: v }), qEmpty: ql.length < 2, hasResults: ql.length >= 2 && results.length > 0, noResults: ql.length >= 2 && results.length === 0,
+      results: results.slice(0, 12), resultLabel: results.length + (results.length === 1 ? ' moment' : ' moments') + ' mention “' + ql + '”', noResSub: fill(C.noResSub, { q: ql }),
+      recentQs: ['feedback loop', 'thermostat', 'standup', 'chapter three'].map(q => ({ q, go: () => this.setState({ q }) })),
+      sheetMore: s.sheet === 'more', sheetRec: { title: sr.title, meta: this.fName(sr.f) + ' · ' + sr.date + ' · ' + dur(sr.dur) },
+      shareAudio: () => { this.setState({ sheet: null }); this.toast('Exported “' + sr.title + '.m4a”'); },
+      shareText: () => { this.setState({ sheet: null }); this.toast('Transcript copied to clipboard'); },
+      openMove: () => this.setState({ sheet: 'move', moveTarget: null }),
+      deleteRec: () => { const prev = s.recs; this.setState({ sheet: null, recs: s.recs.filter(r => r.id !== sr.id), screen: s.screen === 'detail' ? 'folder' : s.screen, folderId: s.screen === 'detail' ? sr.f : s.folderId }); this.toast('“' + sr.title + '” deleted', 'error', 'Undo', () => this.setState({ recs: prev, toastVis: false })); },
+      sheetMove: s.sheet === 'move', moveSub: '“' + sr.title + '” is in ' + this.fName(sr.f),
+      moveOpts: s.folders.map(f => { const here = f.id === sr.f, sel = s.moveTarget === f.id; return { name: f.name, swatch: SW[f.color] || SW.graphite, note: here ? 'Current' : '', bg: sel ? 'rgba(255,45,85,.08)' : 'transparent', ring: sel ? '#FF2D55' : '#4A4A54', dot: sel ? '#FF2D55' : 'transparent', pick: () => { if (!here) this.setState({ moveTarget: f.id }); } }; }),
+      moveBtn: s.moveTarget ? 'Move to ' + this.fName(s.moveTarget) : 'Choose a folder', moveDisabled: !s.moveTarget,
+      confirmMove: () => { const to = s.moveTarget; this.setState({ sheet: null, recs: s.recs.map(r => r.id === sr.id ? { ...r, f: to } : r) }); this.toast('Moved to ' + this.fName(to), 'success', 'View', () => this.setState({ screen: 'folder', folderId: to, toastVis: false, newId: sr.id })); },
+      sheetFolder: s.sheet === 'folder', form: s.form, formIsEdit: s.form.mode === 'edit', formTitle: s.form.mode === 'edit' ? 'Edit folder' : 'New folder', formBtn: s.form.mode === 'edit' ? 'Save changes' : 'Create folder',
+      formDisabled: !s.form.name.trim(), formPreviewName: s.form.name.trim() || 'Folder name', formCount: s.form.id ? cnt(s.form.id) : 0,
+      setFormName: e => { const v = e.target.value; this.setState(st => ({ form: { ...st.form, name: v } })); },
+      swatches: Object.keys(GR).map(k => ({ grad: GR[k], ring: s.form.color === k ? '0 0 0 3px #17171C,0 0 0 5px #fff' : 'none', pick: () => this.setState(st => ({ form: { ...st.form, color: k } })) })),
+      submitFolder: () => {
+        const fm = s.form, name = fm.name.trim(); if (!name) return;
+        if (fm.mode === 'edit') { this.setState({ sheet: null, folders: s.folders.map(f => f.id === fm.id ? { ...f, name, color: f.top ? fm.color : f.color } : f) }); this.toast('Folder updated'); }
+        else { const id = 'f' + Date.now(); this.setState({ sheet: null, folders: [...s.folders.filter(f => f.top), { id, name, color: fm.color, top: true }, ...s.folders.filter(f => !f.top)], screen: 'folder', folderId: id }); this.toast('Created “' + name + '”'); }
+      },
+      deleteFolder: () => { const id = s.form.id, nm = this.fName(id); this.setState({ sheet: null, folders: s.folders.filter(f => f.id !== id), recs: s.recs.map(r => r.f === id ? { ...r, f: 'inbox' } : r), screen: 'home', navKey: 'home' }); this.toast('Deleted “' + nm + '”. Recordings moved to Inbox.', 'error'); },
+      toast: s.toast || { kind: 'success', message: '', action: '' }, toastVis: s.toastVis, toastAct: () => this.toastFn && this.toastFn(),
+    };
+  }
+}
+</script>
+</body>
+</html>

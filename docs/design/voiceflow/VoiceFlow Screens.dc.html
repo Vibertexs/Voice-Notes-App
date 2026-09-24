@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><meta name="design_doc_mode" content="canvas"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;display=swap"><style>body{margin:0;background:#060608;font-family:Figtree,sans-serif;color:#F4F4F6}a{color:#FF5A78;text-decoration:none}a:hover{color:#FF8A9E}.dv-turn{padding:40px 44px 32px;border-bottom:1px solid rgba(255,255,255,.06);scroll-margin-top:16px}.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 8px}.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#FF2D55;color:#fff;border-radius:4px;text-decoration:none}.dv-tname{font:600 15px/1.2 Figtree,sans-serif;color:#F4F4F6}.dv-sub{font-size:13px;color:#8E8E98;margin:0 0 8px;max-width:760px;line-height:1.5}.dv-group{font:600 12px Figtree,sans-serif;letter-spacing:1px;text-transform:uppercase;color:#8E8E98;margin:34px 0 14px}.dv-opts{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start}.dv-opt{flex:none;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px}.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(255,255,255,.08);color:#F4F4F6;border-radius:5px;text-decoration:none}.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 12px/1.3 Figtree,sans-serif;color:#9A9AA4}.dv-card{max-width:100%;overflow:hidden;border-radius:58px}.dv-opt:target .dv-oid{background:#FF2D55;color:#fff}.dv-next{margin:30px 0 0;font:13px/1.5 Figtree,sans-serif;color:#8E8E98}</style></helmet>
+<section class="dv-turn" id="t2">
+<div class="dv-thd"><a class="dv-tid" href="#t2">2</a><span class="dv-tname">Modern folders, persistent record button, drag to organize</span></div>
+<p class="dv-sub">Round 1 below uses the same live screens, so it also shows these changes.</p>
+<div class="dv-opts">
+<div class="dv-opt" id="2a"><div class="dv-olabel"><a class="dv-oid" href="#2a">2a</a>Home — bento folders</div><div class="dv-card" style="width:436px"><dc-import name="VoiceFlow" screen="home" show-nav="{{ false }}"  hint-size="436px,916px"></dc-import></div></div>
+<div class="dv-opt" id="2b"><div class="dv-olabel"><a class="dv-oid" href="#2b">2b</a>Home — all tiles</div><div class="dv-card" style="width:436px"><dc-import name="VoiceFlow" screen="home" show-nav="{{ false }}" home-layout="grid" hint-size="436px,916px"></dc-import></div></div>
+<div class="dv-opt" id="2c"><div class="dv-olabel"><a class="dv-oid" href="#2c">2c</a>Folder — record button at bottom</div><div class="dv-card" style="width:436px"><dc-import name="VoiceFlow" screen="folder" show-nav="{{ false }}"  hint-size="436px,916px"></dc-import></div></div>
+<div class="dv-opt" id="2d"><div class="dv-olabel"><a class="dv-oid" href="#2d">2d</a>Empty folder</div><div class="dv-card" style="width:436px"><dc-import name="VoiceFlow" screen="emptyFolder" show-nav="{{ false }}"  hint-size="436px,916px"></dc-import></div></div>
+<div class="dv-opt" id="2e"><div class="dv-olabel"><a class="dv-oid" href="#2e">2e</a>Organize</div><div class="dv-card" style="width:436px"><dc-import name="VoiceFlow" screen="organize" show-nav="{{ false }}"  hint-size="436px,916px"></dc-import></div></div>
+<div class="dv-opt" id="2f"><div class="dv-olabel"><a class="dv-oid" href="#2f">2f</a>Organize — dragging onto Work</div><div class="dv-card" style="width:436px"><dc-import name="VoiceFlow" screen="organizeDrag" show-nav="{{ false }}"  hint-size="436px,916px"></dc-import></div></div>
+</div>
+</section>
+<section class="dv-turn" id="t1">
+<div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">VoiceFlow for Android — all screens</span></div>
+<p class="dv-sub">Every screen is a live instance of the prototype, so waveforms move and sheets work. Variants: layout (<a class="dv-oid" href="#1d">1d</a> vs <a class="dv-oid" href="#1e">1e</a>, <a class="dv-oid" href="#1k">1k</a> vs <a class="dv-oid" href="#1l">1l</a>) and copy tone (plain vs warm). Open <a href="VoiceFlow.dc.html">the prototype</a> to click through the flow, or <a href="VoiceFlow Components.dc.html">the components</a>.</p>
+<div class="dv-group">Onboarding &amp; permissions</div>
+<div class="dv-opts">
+<div class="dv-opt" id="1a"><div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a>Onboarding</div><div class="dv-card" style="width:436px"><dc-import name="VoiceFlow" screen="onboard" show-nav="{{ false }}"  hint-size="436px,916px"></dc-import></div></div>
+<div class="dv-opt" id="1b"><div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a>Android mic permission</div><div class="dv-card" style="width:436px"><dc-import name="VoiceFlow" screen="perm" show-nav="{{ false }}"  hint-size="436px,916px"></dc-import></div></div>
+<div class="dv-opt" id="1c"><div class="dv-olabel"><a class="dv-oid" href="#1c">1c</a>Mic access denied</div><div class="dv-card" style="width:436px"><dc-import name="VoiceFlow" screen="mic" show-nav="{{ false }}"  hint-size="436px,916px"></dc-import></div></div>
+</div>
+<div class="dv-group">Folders</div>
+<div class="dv-opts">
+<div class="dv-opt" id="1d"><div class="dv-olabel"><a class="dv-oid" href="#1d">1d</a>Home — cards (reference layout)</div><div class="dv-card" style="width:436px"><dc-import name="VoiceFlow" screen="home" show-nav="{{ false }}"  hint-size="436px,916px"></dc-import></div></div>
+<div class="dv-opt" id="1e"><div class="dv-olabel"><a class="dv-oid" href="#1e">1e</a>Home — grid + recent</div><div class="dv-card" style="width:436px"><dc-import name="VoiceFlow" screen="home" show-nav="{{ false }}" home-layout="grid" hint-size="436px,916px"></dc-import></div></div>
+<div class="dv-opt" id="1f"><div class="dv-olabel"><a class="dv-oid" href="#1f">1f</a>Folder</div><div class="dv-card" style="width:436px"><dc-import name="VoiceFlow" screen="folder" show-nav="{{ false }}"  hint-size="436px,916px"></dc-import></div></div>
+<div class="dv-opt" id="1g"><div class="dv-olabel"><a class="dv-oid" href="#1g">1g</a>Empty folder</div><div class="dv-card" style="width:436px"><dc-import name="VoiceFlow" screen="emptyFolder" show-nav="{{ false }}"  hint-size="436px,916px"></dc-import></div></div>
+<div class="dv-opt" id="1h"><div class="dv-olabel"><a class="dv-oid" href="#1h">1h</a>Empty folder — warm copy</div><div class="dv-card" style="width:436px"><dc-import name="VoiceFlow" screen="emptyFolder" show-nav="{{ false }}" tone="warm" hint-size="436px,916px"></dc-import></div></div>
+<div class="dv-opt" id="1i"><div class="dv-olabel"><a class="dv-oid" href="#1i">1i</a>New folder sheet</div><div class="dv-card" style="width:436px"><dc-import name="VoiceFlow" screen="newFolder" show-nav="{{ false }}"  hint-size="436px,916px"></dc-import></div></div>
+<div class="dv-opt" id="1j"><div class="dv-olabel"><a class="dv-oid" href="#1j">1j</a>Edit folder sheet</div><div class="dv-card" style="width:436px"><dc-import name="VoiceFlow" screen="editFolder" show-nav="{{ false }}"  hint-size="436px,916px"></dc-import></div></div>
+</div>
+<div class="dv-group">Recording</div>
+<div class="dv-opts">
+<div class="dv-opt" id="1k"><div class="dv-olabel"><a class="dv-oid" href="#1k">1k</a>Recording — transcript-first</div><div class="dv-card" style="width:436px"><dc-import name="VoiceFlow" screen="rec" show-nav="{{ false }}"  hint-size="436px,916px"></dc-import></div></div>
+<div class="dv-opt" id="1l"><div class="dv-olabel"><a class="dv-oid" href="#1l">1l</a>Recording — waveform-first</div><div class="dv-card" style="width:436px"><dc-import name="VoiceFlow" screen="rec" show-nav="{{ false }}" rec-layout="waveform" hint-size="436px,916px"></dc-import></div></div>
+<div class="dv-opt" id="1m"><div class="dv-olabel"><a class="dv-oid" href="#1m">1m</a>Finish / slide to cancel</div><div class="dv-card" style="width:436px"><dc-import name="VoiceFlow" screen="finish" show-nav="{{ false }}"  hint-size="436px,916px"></dc-import></div></div>
+<div class="dv-opt" id="1n"><div class="dv-olabel"><a class="dv-oid" href="#1n">1n</a>Finish — warm copy</div><div class="dv-card" style="width:436px"><dc-import name="VoiceFlow" screen="finish" show-nav="{{ false }}" tone="warm" hint-size="436px,916px"></dc-import></div></div>
+<div class="dv-opt" id="1o"><div class="dv-olabel"><a class="dv-oid" href="#1o">1o</a>Storage almost full</div><div class="dv-card" style="width:436px"><dc-import name="VoiceFlow" screen="storage" show-nav="{{ false }}"  hint-size="436px,916px"></dc-import></div></div>
+<div class="dv-opt" id="1p"><div class="dv-olabel"><a class="dv-oid" href="#1p">1p</a>Lock screen notification</div><div class="dv-card" style="width:436px"><dc-import name="VoiceFlow" screen="lock" show-nav="{{ false }}"  hint-size="436px,916px"></dc-import></div></div>
+</div>
+<div class="dv-group">Outcomes</div>
+<div class="dv-opts">
+<div class="dv-opt" id="1q"><div class="dv-olabel"><a class="dv-oid" href="#1q">1q</a>Saving</div><div class="dv-card" style="width:436px"><dc-import name="VoiceFlow" screen="saving" show-nav="{{ false }}"  hint-size="436px,916px"></dc-import></div></div>
+<div class="dv-opt" id="1r"><div class="dv-olabel"><a class="dv-oid" href="#1r">1r</a>Saved</div><div class="dv-card" style="width:436px"><dc-import name="VoiceFlow" screen="saved" show-nav="{{ false }}"  hint-size="436px,916px"></dc-import></div></div>
+<div class="dv-opt" id="1s"><div class="dv-olabel"><a class="dv-oid" href="#1s">1s</a>Saved — warm copy</div><div class="dv-card" style="width:436px"><dc-import name="VoiceFlow" screen="saved" show-nav="{{ false }}" tone="warm" hint-size="436px,916px"></dc-import></div></div>
+<div class="dv-opt" id="1t"><div class="dv-olabel"><a class="dv-oid" href="#1t">1t</a>Canceled</div><div class="dv-card" style="width:436px"><dc-import name="VoiceFlow" screen="canceled" show-nav="{{ false }}"  hint-size="436px,916px"></dc-import></div></div>
+<div class="dv-opt" id="1u"><div class="dv-olabel"><a class="dv-oid" href="#1u">1u</a>Canceled — warm copy</div><div class="dv-card" style="width:436px"><dc-import name="VoiceFlow" screen="canceled" show-nav="{{ false }}" tone="warm" hint-size="436px,916px"></dc-import></div></div>
+</div>
+<div class="dv-group">Playback &amp; AI summary</div>
+<div class="dv-opts">
+<div class="dv-opt" id="1v"><div class="dv-olabel"><a class="dv-oid" href="#1v">1v</a>Detail — transcript tab</div><div class="dv-card" style="width:436px"><dc-import name="VoiceFlow" screen="detail" show-nav="{{ false }}"  hint-size="436px,916px"></dc-import></div></div>
+<div class="dv-opt" id="1w"><div class="dv-olabel"><a class="dv-oid" href="#1w">1w</a>Detail — summary tab</div><div class="dv-card" style="width:436px"><dc-import name="VoiceFlow" screen="summary" show-nav="{{ false }}"  hint-size="436px,916px"></dc-import></div></div>
+<div class="dv-opt" id="1x"><div class="dv-olabel"><a class="dv-oid" href="#1x">1x</a>Detail — stacked summary</div><div class="dv-card" style="width:436px"><dc-import name="VoiceFlow" screen="detail" show-nav="{{ false }}" detail-layout="stacked" hint-size="436px,916px"></dc-import></div></div>
+<div class="dv-opt" id="1y"><div class="dv-olabel"><a class="dv-oid" href="#1y">1y</a>Search inside transcript</div><div class="dv-card" style="width:436px"><dc-import name="VoiceFlow" screen="tsearch" show-nav="{{ false }}"  hint-size="436px,916px"></dc-import></div></div>
+</div>
+<div class="dv-group">Search &amp; actions</div>
+<div class="dv-opts">
+<div class="dv-opt" id="1z"><div class="dv-olabel"><a class="dv-oid" href="#1z">1z</a>Global search</div><div class="dv-card" style="width:436px"><dc-import name="VoiceFlow" screen="search" show-nav="{{ false }}"  hint-size="436px,916px"></dc-import></div></div>
+<div class="dv-opt" id="1aa"><div class="dv-olabel"><a class="dv-oid" href="#1aa">1aa</a>Search results</div><div class="dv-card" style="width:436px"><dc-import name="VoiceFlow" screen="results" show-nav="{{ false }}"  hint-size="436px,916px"></dc-import></div></div>
+<div class="dv-opt" id="1ab"><div class="dv-olabel"><a class="dv-oid" href="#1ab">1ab</a>No results</div><div class="dv-card" style="width:436px"><dc-import name="VoiceFlow" screen="noResults" show-nav="{{ false }}"  hint-size="436px,916px"></dc-import></div></div>
+<div class="dv-opt" id="1ac"><div class="dv-olabel"><a class="dv-oid" href="#1ac">1ac</a>Recording actions</div><div class="dv-card" style="width:436px"><dc-import name="VoiceFlow" screen="more" show-nav="{{ false }}"  hint-size="436px,916px"></dc-import></div></div>
+<div class="dv-opt" id="1ad"><div class="dv-olabel"><a class="dv-oid" href="#1ad">1ad</a>Move to folder</div><div class="dv-card" style="width:436px"><dc-import name="VoiceFlow" screen="move" show-nav="{{ false }}"  hint-size="436px,916px"></dc-import></div></div>
+</div>
+<p class="dv-next">Try next: "use the grid home from <a class="dv-oid" href="#1e">1e</a> with warm copy everywhere" · "add a settings screen" · "more options for the detail screen"</p>
+</section>
+</x-dc>
+</body>
+</html>

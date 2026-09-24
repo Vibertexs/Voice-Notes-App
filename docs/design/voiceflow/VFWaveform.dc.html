@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div onClick="{{ seek }}" style="position:relative;width:100%;height:{{ hPx }};display:flex;align-items:center;gap:{{ gap }};cursor:{{ cursor }}">
+  <sc-for list="{{ bars }}" as="b" hint-placeholder-count="56">
+    <div style="flex:1 1 0;min-width:1px;border-radius:3px;height:{{ b.h }}px;background:{{ b.c }};transition:height .12s ease-out"></div>
+  </sc-for>
+  <sc-if value="{{ showHead }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;top:-6px;bottom:-6px;left:{{ headLeft }};width:2px;margin-left:-1px;border-radius:1px;background:#fff;box-shadow:0 0 10px rgba(255,255,255,.6)"></div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:360,&quot;height&quot;:120},&quot;levels&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;number[]&quot;},&quot;count&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:56,&quot;min&quot;:8,&quot;max&quot;:120,&quot;tsType&quot;:&quot;number&quot;},&quot;seed&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:7,&quot;tsType&quot;:&quot;number&quot;},&quot;height&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:96,&quot;min&quot;:16,&quot;max&quot;:240,&quot;unit&quot;:&quot;px&quot;,&quot;tsType&quot;:&quot;number&quot;},&quot;gap&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:3,&quot;min&quot;:1,&quot;max&quot;:8,&quot;unit&quot;:&quot;px&quot;,&quot;tsType&quot;:&quot;number&quot;},&quot;progress&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;min&quot;:-1,&quot;max&quot;:1,&quot;step&quot;:0.01,&quot;default&quot;:-1,&quot;tsType&quot;:&quot;number&quot;},&quot;dim&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;centerHead&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;onSeek&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;(ratio: number) =&gt; void&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const p = this.props, n = p.count ?? 56, h = p.height ?? 96;
+    let lv = p.levels;
+    if (!lv || !lv.length) {
+      lv = []; let s = ((p.seed ?? 7) * 7919) % 233280;
+      for (let i = 0; i < n; i++) {
+        s = (s * 9301 + 49297) % 233280; const r = s / 233280;
+        const env = .35 + .65 * Math.sin(Math.PI * (i + .5) / n);
+        lv.push(Math.max(.07, Math.min(1, (.2 + r * .8) * env)));
+      }
+    }
+    const N = lv.length, prog = p.progress ?? -1, dim = !!p.dim;
+    const A = [255, 45, 85], B = [155, 92, 255];
+    const mix = (t) => 'rgb(' + A.map((a, k) => Math.round(a + (B[k] - a) * t)).join(',') + ')';
+    const bars = lv.map((v, i) => {
+      const t = N > 1 ? i / (N - 1) : 0, played = prog < 0 || t <= prog;
+      return { h: Math.max(3, Math.round(v * h)), c: dim ? '#3A3A44' : played ? mix(t) : '#34343D' };
+    });
+    return {
+      bars, hPx: h + 'px', gap: (p.gap ?? 3) + 'px',
+      showHead: prog >= 0 || !!p.centerHead, headLeft: (prog >= 0 ? prog * 100 : 50) + '%',
+      cursor: p.onSeek ? 'pointer' : 'default',
+      seek: (e) => { if (!p.onSeek) return; const r = e.currentTarget.getBoundingClientRect(); p.onSeek(Math.max(0, Math.min(1, (e.clientX - r.left) / r.width))); },
+    };
+  }
+}
+</script>
+</body>
+</html>

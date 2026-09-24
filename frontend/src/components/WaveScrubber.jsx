@@ -22,9 +22,22 @@ const SECONDS_PER_BAR = 0.4;
 const MIN_BARS = 28;
 const MAX_BARS = 8000;
 
-/** Played audio runs coral into purple; what is still ahead is grey. */
-const PLAYED = ['#FF375F', '#FF2D8D', '#A855F7'];
-const AHEAD = 'rgba(255,255,255,.16)';
+/**
+ * Canvas cannot read a CSS custom property, so the colours are looked up from
+ * the stylesheet once rather than written out here a second time. styles.css
+ * stays the only place the palette lives.
+ */
+function palette() {
+  const read = (name, fallback) => {
+    const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return value || fallback;
+  };
+  return {
+    hot: read('--primary', '#FF2D55'),
+    cold: read('--violet', '#9B5CFF'),
+    ahead: read('--wave-idle', '#34343D'),
+  };
+}
 
 /** Deterministic per-bar jitter, so the trace has texture but never reshuffles. */
 function noise(index) {
@@ -55,6 +68,7 @@ export default function WaveScrubber({
 }) {
   const canvasRef = useRef(null);
   const cacheRef = useRef(null);
+  const colourRef = useRef(null);
   const draggingRef = useRef(false);
   const startXRef = useRef(0);
   const startSecondsRef = useRef(0);
@@ -84,6 +98,9 @@ export default function WaveScrubber({
     context.setTransform(ratio, 0, 0, ratio, 0, 0);
     context.clearRect(0, 0, width, height);
 
+    if (!colourRef.current) colourRef.current = palette();
+    const colours = colourRef.current;
+
     const signature = `${count}|${duration}|${segments?.length ?? 0}`;
     if (cacheRef.current?.signature !== signature) {
       cacheRef.current = { signature, values: buildBars(count, duration, segments) };
@@ -93,7 +110,8 @@ export default function WaveScrubber({
     const head = Math.min(1, Math.max(0, (currentSeconds || 0) / duration)) * count;
     const mid = height / 2;
     const played = context.createLinearGradient(0, 0, width, 0);
-    PLAYED.forEach((stop, index) => played.addColorStop(index / (PLAYED.length - 1), stop));
+    played.addColorStop(0, colours.hot);
+    played.addColorStop(1, colours.cold);
 
     // A hairline the full width of the strip, so the timeline reads as tape
     // running past the head rather than as empty space before the first bar.
@@ -105,7 +123,7 @@ export default function WaveScrubber({
     for (let i = first; i <= last; i += 1) {
       const barHeight = Math.max(2, bars[i] * height * 0.92);
       const x = width / 2 + (i - head) * STEP;
-      context.fillStyle = i <= head ? played : AHEAD;
+      context.fillStyle = i <= head ? played : colours.ahead;
       context.beginPath();
       if (context.roundRect) context.roundRect(x, mid - barHeight / 2, BAR, barHeight, BAR / 2);
       else context.rect(x, mid - barHeight / 2, BAR, barHeight);

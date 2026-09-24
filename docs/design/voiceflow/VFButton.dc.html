@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;display=swap"></helmet>
+<div onClick="{{ press }}" style="display:flex;width:{{ w }};height:{{ h }};padding:0 22px;box-sizing:border-box;border-radius:999px;align-items:center;justify-content:center;gap:8px;cursor:pointer;user-select:none;font-family:Figtree,sans-serif;font-size:{{ fs }};font-weight:600;letter-spacing:-.1px;background:{{ bg }};color:{{ fg }};box-shadow:{{ sh }};opacity:{{ op }};pointer-events:{{ pe }};transition:transform .12s,filter .2s" style-hover="filter:brightness(1.12)" style-active="transform:scale(.97)">
+  <sc-if value="{{ iconPlus }}" hint-placeholder-val="{{ false }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></sc-if>
+  <sc-if value="{{ iconCheck }}" hint-placeholder-val="{{ false }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if>
+  <sc-if value="{{ iconPlay }}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"></path></svg></sc-if>
+  <span>{{ label }}</span>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:320,&quot;height&quot;:80},&quot;label&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Finish Recording&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;variant&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;primary&quot;,&quot;secondary&quot;,&quot;ghost&quot;,&quot;danger&quot;],&quot;default&quot;:&quot;primary&quot;,&quot;tsType&quot;:&quot;'primary'|'secondary'|'ghost'|'danger'&quot;},&quot;size&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;md&quot;,&quot;sm&quot;],&quot;default&quot;:&quot;md&quot;,&quot;tsType&quot;:&quot;'md'|'sm'&quot;},&quot;icon&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;none&quot;,&quot;plus&quot;,&quot;check&quot;,&quot;play&quot;],&quot;default&quot;:&quot;none&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;full&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;disabled&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;onPress&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const p = this.props, v = p.variant ?? 'primary', sm = (p.size ?? 'md') === 'sm';
+    const V = {
+      primary: ['#FF2D55', '#fff', '0 8px 24px rgba(255,45,85,.32)'],
+      secondary: ['#22222A', '#F4F4F6', 'none'],
+      ghost: ['transparent', '#A8A8B2', 'none'],
+      danger: ['rgba(255,45,85,.12)', '#FF5A78', 'none'],
+    }[v] || ['#FF2D55', '#fff', 'none'];
+    const icon = p.icon ?? 'none';
+    return {
+      label: p.label ?? 'Button', bg: V[0], fg: V[1], sh: V[2],
+      h: sm ? '40px' : '52px', fs: sm ? '14px' : '16px', w: (p.full ?? true) ? '100%' : 'auto',
+      op: p.disabled ? .38 : 1, pe: p.disabled ? 'none' : 'auto',
+      iconPlus: icon === 'plus', iconCheck: icon === 'check', iconPlay: icon === 'play',
+      press: (e) => { e && e.stopPropagation && e.stopPropagation(); p.onPress && p.onPress(); },
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -9,7 +9,7 @@
 
 const PATHS = {
   /* ---- navigation and chrome ---- */
-  folder: <><path d="M3.8 8.2A2.2 2.2 0 0 1 6 6h3.1a2 2 0 0 1 1.5.7l1.1 1.3h6.5a2.1 2.1 0 0 1 2.1 2.1v7.7a2.2 2.2 0 0 1-2.2 2.2H5.9a2.1 2.1 0 0 1-2.1-2.1Z" /></>,
+  folder: <><path d="M3.8 7.6A2.2 2.2 0 0 1 6 5.4h3.4a2 2 0 0 1 1.5.7l1.6 1.9h6.3a2.1 2.1 0 0 1 2.1 2.1v7.8a2.2 2.2 0 0 1-2.2 2.2H5.9a2.1 2.1 0 0 1-2.1-2.1Z" /></>,
   search: <><circle cx="11" cy="11" r="6.5" /><path d="m19.5 19.5-3.8-3.8" /></>,
   back: <><path d="M14.5 5 8 12l6.5 7" /></>,
   chev: <><path d="m9.5 5.5 6.5 6.5-6.5 6.5" /></>,
@@ -17,6 +17,14 @@ const PATHS = {
   close: <><path d="m6.5 6.5 11 11M17.5 6.5l-11 11" /></>,
   plus: <><path d="M12 5.5v13M5.5 12h13" /></>,
   more: <><circle cx="6" cy="12" r="1.5" fill="currentColor" stroke="none" /><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" /><circle cx="18" cy="12" r="1.5" fill="currentColor" stroke="none" /></>,
+  /* A folder with no gap in it: the only filled glyph outside transport,
+     because it sits on a saturated tile where an outline disappears. */
+  folderSolid: <><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5h3.6c.6 0 1.2.3 1.6.7L12 7h6.5A2.5 2.5 0 0 1 21 9.5v8a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5Z" fill="currentColor" stroke="none" /></>,
+  lock: <><rect x="4.8" y="10.2" width="14.4" height="9.6" rx="2.6" /><path d="M8.2 10.2V7.6a3.8 3.8 0 0 1 7.6 0v2.6" /></>,
+  warn: <><circle cx="12" cy="12" r="9" /><path d="M12 7v6M12 17h.01" /></>,
+  move: <><path d="M12 3.4 14.4 6M12 3.4 9.6 6M12 3.4v17.2M12 20.6 9.6 18M12 20.6l2.4-2.6M3.4 12 6 9.6M3.4 12 6 14.4M3.4 12h17.2M20.6 12 18 9.6M20.6 12 18 14.4" /></>,
+  micOff: <><path d="M9 9v2a3 3 0 0 0 4.6 2.5" /><path d="M15 10.6V6a3 3 0 0 0-5.7-1.3" /><path d="M18.5 11v.4a6.5 6.5 0 0 1-9.6 5.7M5.5 11v.4a6.5 6.5 0 0 0 2 4.7" /><path d="M12 17.9V21" /><path d="m4 3.6 16.4 16.8" /></>,
+  sparkle: <><path d="M12 3.6 13.7 9l5.4 1.7-5.4 1.7L12 17.8l-1.7-5.4L4.9 10.7 10.3 9Z" /><path d="M18.4 15.6l.7 2.1 2.1.7-2.1.7-.7 2.1-.7-2.1-2.1-.7 2.1-.7Z" /></>,
   gear: <><circle cx="12" cy="12" r="3" /><path d="M19.1 14.2a1.4 1.4 0 0 0 .3 1.5l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.4 1.4 0 0 0-1.5-.3 1.4 1.4 0 0 0-.9 1.3V20a2 2 0 1 1-4 0v-.2a1.4 1.4 0 0 0-.9-1.3 1.4 1.4 0 0 0-1.5.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.4 1.4 0 0 0 .3-1.5 1.4 1.4 0 0 0-1.3-.9H4a2 2 0 1 1 0-4h.2a1.4 1.4 0 0 0 1.3-.9 1.4 1.4 0 0 0-.3-1.5l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.4 1.4 0 0 0 1.5.3h.1a1.4 1.4 0 0 0 .8-1.3V4a2 2 0 1 1 4 0v.2a1.4 1.4 0 0 0 .9 1.3 1.4 1.4 0 0 0 1.5-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.4 1.4 0 0 0-.3 1.5v.1a1.4 1.4 0 0 0 1.3.8H20a2 2 0 1 1 0 4h-.2a1.4 1.4 0 0 0-1.3.9Z" /></>,
 
   /* ---- transport ---- */
@@ -58,7 +66,7 @@ const PATHS = {
   favourite: <><path d="M12 19.7S4 15 4 9.9a4 4 0 0 1 7.3-2.3l.7 1 .7-1A4 4 0 0 1 20 9.9c0 5.1-8 9.8-8 9.8Z" /></>,
 };
 
-export function Icon({ name, size, className = '' }) {
+export function Icon({ name, size, className = '', strokeWidth = 1.8 }) {
   const glyph = PATHS[name];
   if (!glyph) return null;
   return (
@@ -67,7 +75,7 @@ export function Icon({ name, size, className = '' }) {
       viewBox="0 0 24 24"
       width={size} height={size}
       fill="none" stroke="currentColor"
-      strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
+      strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round"
       aria-hidden="true" focusable="false"
     >{glyph}</svg>
   );

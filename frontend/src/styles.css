@@ -1,93 +1,285 @@
 /* =========================================================
    VOICEFLOW — the visual system
-   Record. Learn. Revisit.
 
-   One system, taken from the design board: a near-black canvas,
-   a coral primary, saturated folder cards, large type, and
-   controls that stay out of the way.
+   Every value below comes from docs/design/voiceflow/README.md,
+   whose colours, type, radii and spacing are final, cross-checked
+   against the inline styles in the .dc.html references beside it.
+   Where the handoff gives a range (meta 12.5-13.5, gaps 8-10),
+   both ends are tokens and the component picks.
 
-   Everything in the interface is built from the tokens below.
+   This file IS the handoff's "mobile/src/theme.js". The phone
+   screen is this page running in a WebView (see CLAUDE.md), so
+   the tokens are CSS custom properties, and the handoff's
+   expo-font step is the @font-face below.
+
    If a value is not here, it does not belong in a component.
    ========================================================= */
 
+/* ---- Figtree ----------------------------------------------
+   Shipped, not requested: the page runs from a file:// origin
+   inside a WebView with no network guarantee, where a webfont
+   link silently falls back to Roboto. One variable file, Latin
+   subset, 300-700, 20KB, inlined as a data URI by the rule in
+   vite.config.js so the bundle stays a single file.          */
+@font-face {
+  font-family: 'Figtree';
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: block;
+  src: url('./fonts/figtree-latin.woff2') format('woff2');
+}
+
 :root {
-  /* ---- Canvas and surfaces --------------------------------
-     Most of the interface disappears into the background. A
-     surface is only raised enough to read as tappable.       */
-  --bg:         #0A0A0F;
-  --surface:    #15171A;
-  --surface-2:  #1A1A22;
-  --card:       #22232B;
-  --card-hi:    #2A2A35;
-  --hairline:   rgba(255,255,255,.07);
-  --hairline-2: rgba(255,255,255,.12);
+  /* ---- Canvas and surfaces -------------------------------- */
+  --bg:           #0A0A0D;  /* app                            */
+  --bg-deep:      #060608;  /* deepest                        */
+  --group:        #141419;  /* list group                     */
+  --surface:      #16161B;  /* row, card                      */
+  --sheet:        #17171C;  /* bottom sheet                   */
+  --field:        #1A1A20;  /* search field                   */
+  --chip:         #1C1C22;  /* chips                          */
+  --input:        #1F1F26;  /* inputs, slide track            */
+  --raised:       #26262E;  /* play circle, selected tab      */
+  --toast-bg:     #2A2A32;
+  --secondary:    #22222A;  /* VFButton secondary             */
+  --folder-card:  #131318;  /* VFFolderCard surface           */
+  --ghost:        #24242C;  /* drag ghost                     */
+  --hairline:     rgba(255,255,255,.05);
+  --hairline-2:   rgba(255,255,255,.06);
 
   /* ---- Accent ---------------------------------------------
-     Coral is the recording colour and the primary action. The
-     gradient runs coral -> magenta -> purple -> blue and is
-     spent only on the record button, the waveforms and primary
-     pills. Nothing else in the interface is saturated.       */
-  --primary:    #FF375F;
-  --primary-hi: #FF5C7C;
-  --primary-lo: #D81742;
-  --magenta:    #FF2D8D;
-  --purple:     #A855F7;
-  --blue:       #3882F6;
-  --spectrum:   linear-gradient(94deg, var(--primary), var(--magenta) 34%, var(--purple) 68%, var(--blue));
-  --danger:     #FF453A;
+     One red does every primary action. The violet is only ever
+     the far end of the signature gradient - it is not a second
+     accent, and nothing is tinted with it on its own.        */
+  --primary:      #FF2D55;
+  --primary-rgb:  255,45,85;
+  --primary-txt:  #FF5A78;  /* red type on dark               */
+  --violet:       #9B5CFF;
+  --danger-bg:    rgba(255,45,85,.12);
+  --spectrum:     linear-gradient(90deg, #FF2D55, #9B5CFF);
+  --mark:         rgba(255,45,85,.38);  /* transcript search  */
 
-  /* ---- Type ----------------------------------------------- */
-  --text:   #FFFFFF;
-  --text-2: rgba(255,255,255,.56);
-  --text-3: rgba(255,255,255,.34);
-  --text-4: rgba(255,255,255,.18);
+  /* ---- Status --------------------------------------------- */
+  --success:      #2BD48F;
+  --warning:      #FFA62B;
+  --info:         #8E8EFF;
 
-  /* SF Pro on Apple hardware, which is what this is designed
-     for; Inter or the platform sans everywhere else. */
-  --font: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text',
-          'Inter', 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
+  /* ---- Text ----------------------------------------------- */
+  --text:         #F4F4F6;
+  --text-2:       #C9C9D1;
+  --text-3:       #8E8E98;  /* muted; all metadata            */
+  --text-4:       #6A6A74;
+  --text-5:       #55555E;
+  --transcript-past: #4A4A53;
+  /* Greys the component references use that the palette list does not
+     name. They are here so no component has to invent one. */
+  --text-ghost:   #A8A8B2;  /* ghost button label             */
+  --text-sub:     #9A9AA4;  /* sheet subtitle, card meta      */
+  --text-snip:    #B4B4BE;  /* row snippet                    */
+  --icon-dim:     #7A7A84;  /* search glyph                   */
+  --icon-mid:     #A0A0AA;  /* clear, menu dots               */
+  --grab:         #3A3A44;  /* sheet handle, paused ring      */
+  --row-hover:    #1B1B21;
 
-  --t-title:  2rem;                            /* page titles, 32px      */
-  --t-head:   1.375rem;                        /* screen headers, 22px   */
-  --t-timer:  clamp(3.25rem, 15.5vw, 4rem);    /* the take clock, 52-64px */
-  --t-lyric:  clamp(1.75rem, 7.6vw, 2.125rem); /* transcript, 28-34px    */
-  --t-row:    1.0625rem;                       /* list titles, 17px      */
-  --t-body:   .9375rem;
-  --t-meta:   .8125rem;                        /* metadata, 13px         */
-  --t-micro:  .6875rem;
+  /* ---- Waveform ------------------------------------------- */
+  --wave-idle:    #34343D;  /* unplayed                       */
+  --wave-paused:  #3A3A44;
+  --wave-bar:     3px;
+  --wave-gap:     3px;
+  --r-wave:       3px;
 
-  /* ---- Shape ---------------------------------------------- */
-  --r-card:  1.5rem;   /* folder cards        */
-  --r-sheet: 1.375rem; /* sheets, big panels  */
-  --r-row:   1rem;     /* list rows           */
-  --r-btn:   1.25rem;  /* buttons             */
-  --r-field: .875rem;  /* inputs              */
-  --r-full:  999px;
+  /* ---- Type ------------------------------------------------
+     Figtree carries 300-700, so the 650 the handoff asks for on
+     sheet titles and the live transcript is a real weight here,
+     not one rounded to the nearest hundred.                  */
+  --font: 'Figtree', -apple-system, BlinkMacSystemFont,
+          'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: ui-monospace, 'Roboto Mono', SFMono-Regular, Menlo, monospace;
 
-  /* ---- Space ---------------------------------------------- */
-  --gut: 1.25rem;
-  --record-space: 6rem;
+  --t-title:      30px;   --ls-title:    -.8px;  /* screen title  700 */
+  --t-detail:     27px;   --ls-detail:   -.7px;  /* detail title  700 */
+  --t-sheet:      21px;   --ls-sheet:    -.4px;  /* sheet title   650 */
+  --t-row:        16px;   --ls-row:      -.2px;  /* row title     600 */
+  --t-body:       15px;                          /* body          400 */
+  --t-body-lg:    16px;
+  --lh-body:      1.5;
+  --t-meta:       12.5px;                        /* meta          400 */
+  --t-meta-lg:    13.5px;
+  --t-label:      11.5px; --ls-label:     1px;   /* section label 700 */
+  --t-lyric:      30px;   --ls-lyric:    -.6px;  /* live, current 650 */
+  --t-lyric-past: 23px;                          /* live, past    600 */
+  --t-timer:      22px;                          /* timer         600 */
+  --t-timer-xl:   76px;   --ls-timer-xl:  -3px;  /* waveform-first 300 */
+
+  /* ---- Radii ---------------------------------------------- */
+  --r-full:    999px;  /* pill buttons                         */
+  --r-row:     20px;
+  --r-card:    22px;   /* folder card                          */
+  --r-tile:    26px;  /* the component spec; the radii line says 24 */
+  --r-hero:    28px;
+  --r-sheet:   32px;
+  --r-field:   24px;
+  --r-input:   16px;
+  --r-toast:   18px;
+  --r-icon:    14px;   /* icon tiles, 12-14                    */
+  --r-icon-sm: 12px;
+
+  /* ---- Spacing -------------------------------------------- */
+  --gut:         16px;  /* screen padding                      */
+  --gut-wide:    24px;  /* full-bleed flows                    */
+  --gap:         8px;   /* list gaps, 8-10                     */
+  --gap-lg:      10px;
+  --hit:         44px;  /* minimum target                      */
+  --sheet-inset: 8px;   /* sheet inset from the screen edges   */
+
+  /* ---- Shadows -------------------------------------------- */
+  --sh-primary: 0 8px 24px rgba(255,45,85,.32);
+  --sh-record:  0 0 0 6px rgba(255,45,85,.16), 0 12px 36px rgba(255,45,85,.5);
+  --sh-sheet:   0 -20px 60px rgba(0,0,0,.5);
+  --sh-toast:   0 14px 36px rgba(0,0,0,.5);
+
+  /* ---- Component metrics ---------------------------------- */
+  --btn-h:        52px;   --btn-h-sm:      40px;
+  --record-d:     72px;   /* idle                              */
+  --record-d-lg:  80px;   /* recording and paused rings        */
+  --record-dot:   24px;   --record-dot-lg: 30px;
+  --slide-h:      56px;   --slide-knob:    48px;
+  --field-h:      48px;
+  --grab-w:       36px;   --grab-h:        4px;
+  --status-d:     60px;   /* sheet status icon                 */
+  --card-hero-h:  140px;  --card-tile-h:   140px;
+  --card-row-h:   68px;   --card-target-h: 88px;
+  --icon-hero:    48px;   --icon-tile:     42px;  --icon-row: 40px;
+  --icon-head:    60px;   /* folder screen header tile         */
+  --play-d:       46px;   --play-d-lg:     68px;
+
+  /* The record button is persistent on Home, Folder and
+     Organize, so its clearance is a layout constant rather than
+     a property of any one screen. */
+  --record-lift:     40px;   /* above the bottom edge          */
+  --record-fade:     160px;  /* fade-to-background over it     */
+  --record-space:    170px;  /* bottom padding it demands      */
+  --toast-lift:      128px;  /* clears the record button       */
+  --toast-lift-play: 250px;
+  --toast-edge:      36px;   /* where no record button sits    */
+
+  /* ---- Motion --------------------------------------------- */
+  --ease:     cubic-bezier(.2,.8,.2,1);
+  --spring:   cubic-bezier(.2,.8,.2,1);
+  --d-sheet:  400ms;  /* sheet in from the bottom              */
+  --d-spring: 350ms;  /* slide-to-cancel knob springing back   */
+  --d-press:  120ms;
+
   --top: env(safe-area-inset-top, 0px);
   --bot: env(safe-area-inset-bottom, 0px);
 
-  /* ---- Motion --------------------------------------------- */
-  --ease:   cubic-bezier(.32,.72,0,1);
-  --spring: cubic-bezier(.34,1.26,.64,1);
+  /* ---- Compatibility ---------------------------------------
+     Names the current components still read. They point at the
+     new system so the app keeps rendering while the screens are
+     rebuilt, and each one goes away as its component is
+     replaced in steps 2 and 3.                               */
+  --surface-2:   var(--field);
+  --card:        var(--chip);
+  --card-hi:     var(--input);
+  --grabber:     var(--text-5);
+  --danger:      var(--primary);
+  --primary-hi:  var(--primary-txt);
+  --primary-lo:  #E6286C;
+  --magenta:     #E6286C;
+  --purple:      var(--violet);
+  --blue:        var(--violet);
+  --pill:        var(--spectrum);
+  --text-1:      var(--text-2);
+  --t-head:      var(--t-detail);
+  --t-sub:       var(--t-body-lg);
+  --t-micro:     var(--t-label);
+  --card-gap:    var(--gap);
+  --card-h:      var(--card-hero-h);
+  --row-h:       var(--card-row-h);
+  --wave-h:      120px;
+  --transport-d: var(--record-d-lg);
+  --lh-lyric:    1.2;
+  --r-btn:       var(--r-full);
 }
 
-/* ---- Folder tones ----------------------------------------
-   One gradient per stored colour name. The artwork over them is
-   always translucent white, so a card needs two values, never a
-   third.                                                     */
-[data-tone="rose"]   { --g1:#FF375F; --g2:#C4123F; }
-[data-tone="coral"]  { --g1:#FF6A3D; --g2:#D6350F; }
-[data-tone="amber"]  { --g1:#FFA524; --g2:#D06A05; }
-[data-tone="lime"]   { --g1:#3ED860; --g2:#12813A; }
-[data-tone="mint"]   { --g1:#2FD6B5; --g2:#088173; }
-[data-tone="sky"]    { --g1:#38BDF8; --g2:#0A77BD; }
-[data-tone="blue"]   { --g1:#3B8AF8; --g2:#1046C9; }
-[data-tone="violet"] { --g1:#A855F7; --g2:#6417CC; }
-[data-tone="slate"]  { --g1:#7C879E; --g2:#3D4658; }
+/* ---- Folder tones -----------------------------------------
+   Six colours, and each carries four things: the card gradient
+   (135deg), the icon-tile gradient (145deg), and the raw colour
+   plus its alphas for the card's corner glow and inner ring.
+   Graphite is deliberately quieter - .10 for both, where the
+   others get .20 and .18.
+
+   The old names at the bottom are aliases, so folders already
+   stored under them keep rendering until the data is migrated.
+   ========================================================= */
+[data-tone="red"] {
+  --tone:#FF2D55; --tone-rgb:255,45,85; --tone-light:#FF7A93; --glow-a:.20; --ring-a:.18;
+  --tone-card:linear-gradient(135deg,#FF2D55,#E6286C,#C42A88);
+  --tone-icon:linear-gradient(145deg,#FF5A7A,#E0286C);
+  --g1:#FF2D55; --g2:#C42A88;
+}
+[data-tone="blue"] {
+  --tone:#2F86FF; --tone-rgb:47,123,255; --tone-light:#7FAEFF; --glow-a:.20; --ring-a:.18;
+  --tone-card:linear-gradient(135deg,#2F86FF,#2A5CFF,#3D3AE0);
+  --tone-icon:linear-gradient(145deg,#5B9BFF,#2A5CFF);
+  --g1:#2F86FF; --g2:#3D3AE0;
+}
+[data-tone="violet"] {
+  --tone:#B04BFF; --tone-rgb:155,75,255; --tone-light:#C39BFF; --glow-a:.20; --ring-a:.18;
+  --tone-card:linear-gradient(135deg,#B04BFF,#8B3CF2,#6A2BD8);
+  --tone-icon:linear-gradient(145deg,#B983FF,#7B3CF2);
+  --g1:#B04BFF; --g2:#6A2BD8;
+}
+[data-tone="amber"] {
+  --tone:#FF9A2E; --tone-rgb:255,138,46; --tone-light:#FFB672; --glow-a:.20; --ring-a:.18;
+  --tone-card:linear-gradient(135deg,#FF9A2E,#F2662C,#E0452E);
+  --tone-icon:linear-gradient(145deg,#FFAE5C,#F2662C);
+  --g1:#FF9A2E; --g2:#E0452E;
+}
+[data-tone="green"] {
+  --tone:#22CC8E; --tone-rgb:31,199,138; --tone-light:#5FE3B2; --glow-a:.20; --ring-a:.18;
+  --tone-card:linear-gradient(135deg,#22CC8E,#12A87C,#0C876C);
+  --tone-icon:linear-gradient(145deg,#4BDDA6,#0FA57A);
+  --g1:#22CC8E; --g2:#0C876C;
+}
+[data-tone="graphite"] {
+  --tone:#34343D; --tone-rgb:140,140,155; --tone-light:#A8A8B4; --glow-a:.10; --ring-a:.10;
+  --tone-card:linear-gradient(135deg,#34343D,#24242B);
+  --tone-icon:linear-gradient(145deg,#4E4E5A,#32323B);
+  --g1:#34343D; --g2:#24242B;
+}
+
+[data-tone="rose"] {
+  --tone:#FF2D55; --tone-rgb:255,45,85; --tone-light:#FF7A93; --glow-a:.20; --ring-a:.18;
+  --tone-card:linear-gradient(135deg,#FF2D55,#E6286C,#C42A88);
+  --tone-icon:linear-gradient(145deg,#FF5A7A,#E0286C);
+  --g1:#FF2D55; --g2:#C42A88;
+}
+[data-tone="coral"] {
+  --tone:#FF9A2E; --tone-rgb:255,138,46; --tone-light:#FFB672; --glow-a:.20; --ring-a:.18;
+  --tone-card:linear-gradient(135deg,#FF9A2E,#F2662C,#E0452E);
+  --tone-icon:linear-gradient(145deg,#FFAE5C,#F2662C);
+  --g1:#FF9A2E; --g2:#E0452E;
+}
+[data-tone="lime"],
+[data-tone="mint"] {
+  --tone:#22CC8E; --tone-rgb:31,199,138; --tone-light:#5FE3B2; --glow-a:.20; --ring-a:.18;
+  --tone-card:linear-gradient(135deg,#22CC8E,#12A87C,#0C876C);
+  --tone-icon:linear-gradient(145deg,#4BDDA6,#0FA57A);
+  --g1:#22CC8E; --g2:#0C876C;
+}
+[data-tone="sky"] {
+  --tone:#2F86FF; --tone-rgb:47,123,255; --tone-light:#7FAEFF; --glow-a:.20; --ring-a:.18;
+  --tone-card:linear-gradient(135deg,#2F86FF,#2A5CFF,#3D3AE0);
+  --tone-icon:linear-gradient(145deg,#5B9BFF,#2A5CFF);
+  --g1:#2F86FF; --g2:#3D3AE0;
+}
+[data-tone="slate"] {
+  --tone:#34343D; --tone-rgb:140,140,155; --tone-light:#A8A8B4; --glow-a:.10; --ring-a:.10;
+  --tone-card:linear-gradient(135deg,#34343D,#24242B);
+  --tone-icon:linear-gradient(145deg,#4E4E5A,#32323B);
+  --g1:#34343D; --g2:#24242B;
+}
 
 /* =========================================================
    Base
@@ -123,669 +315,20 @@ h1, h2, h3, p { margin: 0; }
 .app-shell { position: relative; min-height: 100dvh; background: var(--bg); }
 
 /* =========================================================
-   Screens and headers
-
-   Every screen is the same box: the safe area at the top, one
-   gutter either side, and room at the bottom for the navigation
-   while it is showing. Immersive screens - recording, playback -
-   opt out and own the full height themselves.
-   ========================================================= */
-.screen {
-  min-height: 100dvh;
-  padding: calc(var(--top) + 1rem) var(--gut) calc(var(--record-space) + var(--bot) + 1.5rem);
-}
-
-/* The title block: a large bold title, metadata under it when
-   there is any, and icon buttons pinned to the right. */
-.head {
-  display: flex; align-items: center; justify-content: space-between; gap: .75rem;
-  min-height: 2.5rem;
-}
-.head-title { min-width: 0; }
-.head-title h1 {
-  font-size: var(--t-head); font-weight: 600; line-height: 1.12; letter-spacing: -.022em;
-}
-.head-title p { margin-top: .25rem; color: var(--text-2); font-size: var(--t-meta); }
-.head-actions { display: flex; flex: 0 0 auto; align-items: center; gap: .5rem; }
-
-/* A header that carries the screen's name in the middle, for screens with no
-   title block under it - an empty folder, a take being recorded. */
-.head.titled { display: grid; grid-template-columns: 1fr auto 1fr; }
-.head.titled > :last-child { justify-self: end; }
-.head-name {
-  overflow: hidden; font-size: var(--t-row); font-weight: 600;
-  letter-spacing: -.017em; text-align: center; text-overflow: ellipsis; white-space: nowrap;
-}
-
-/* The big title under a back row, as the folder screen uses it. */
-.page-title { margin-top: 1.15rem; }
-.page-title h1 { font-size: var(--t-title); font-weight: 700; line-height: 1.1; letter-spacing: -.028em; }
-.page-title p { margin-top: .3rem; color: var(--text-2); font-size: var(--t-meta); }
-.page-title.compact { margin-top: .9rem; }
-.page-title.compact h1 { font-size: var(--t-head); }
-.page-title.compact p { margin-top: .2rem; font-variant-numeric: tabular-nums; }
-
-.section { margin-top: 1.75rem; }
-.section-head {
-  display: flex; align-items: baseline; justify-content: space-between; gap: 1rem;
-  margin-bottom: .7rem;
-}
-.section-head h2 { color: var(--text-2); font-size: var(--t-meta); font-weight: 600; }
-.section-head button { color: var(--primary); font-size: var(--t-meta); font-weight: 600; }
 
 /* =========================================================
-   IconButton — the only circular control in the interface
-   ========================================================= */
-.icon-btn {
-  display: grid; place-items: center; flex: 0 0 auto;
-  width: 2.375rem; height: 2.375rem; border-radius: var(--r-full);
-  color: var(--text); background: var(--surface-2);
-  transition: transform .18s var(--spring), background .18s var(--ease), color .18s var(--ease);
-}
-.icon-btn svg { width: 1.125rem; height: 1.125rem; }
-.icon-btn:active { transform: scale(.9); }
-.icon-btn.plain { background: transparent; }
-.icon-btn.on { color: var(--primary); }
-.icon-btn.lg { width: 2.75rem; height: 2.75rem; }
-.icon-btn.lg svg { width: 1.3rem; height: 1.3rem; }
-.icon-btn:disabled { color: var(--text-4); }
+   Modal furniture
 
-/* =========================================================
-   SearchBar
-   ========================================================= */
-.search-bar {
-  display: flex; align-items: center; gap: .6rem;
-  height: 2.75rem; margin-top: 1rem; padding: 0 .9rem;
-  border-radius: var(--r-field); color: var(--text-3); background: var(--surface-2);
-}
-.search-bar svg { flex: 0 0 auto; width: 1.0625rem; height: 1.0625rem; }
-.search-bar input {
-  min-width: 0; flex: 1; border: 0; outline: 0; background: transparent;
-  color: var(--text); font-size: var(--t-body);
-}
-.search-bar input::placeholder { color: var(--text-3); }
-.search-bar button { display: grid; place-items: center; color: var(--text-3); }
-
-/* =========================================================
-   FolderCard — the loudest object in the app
-
-   A wide gradient panel, a translucent folder sitting behind the
-   text, the name and count bottom-left, the menu bottom-right.
-   ========================================================= */
-.folder-cards { display: grid; gap: .75rem; margin-top: 1rem; }
-.new-recording { margin-top: .85rem; }
-
-.folder-card {
-  position: relative; isolation: isolate;
-  aspect-ratio: 3.8 / 1; min-height: 5.5rem; overflow: hidden;
-  border-radius: var(--r-row);
-  background: linear-gradient(152deg, var(--g1, #3B8AF8), var(--g2, #1046C9));
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.16);
-  transition: transform .2s var(--spring);
-}
-.folder-card:active { transform: scale(.978); }
-.folder-card > .folder-open {
-  position: absolute; inset: 0; z-index: 2;
-  display: flex; align-items: center;
-  width: 100%; padding: .85rem 1rem; text-align: left;
-}
-/* The artwork is an illustration, not a watermark: it sits inside the card,
-   right of centre, translucent white over the gradient but plainly there. */
-.folder-art {
-  position: absolute; top: 50%; right: 2.25rem; left: auto; z-index: 0;
-  width: 7.5rem; height: 82%;
-  transform: translateY(-50%); pointer-events: none;
-}
-.folder-art .sheet-l, .folder-art .sheet-r { fill: rgba(255,255,255,.13); }
-.folder-art .body  { fill: rgba(255,255,255,.22); }
-.folder-art .tab   { fill: rgba(255,255,255,.28); }
-.folder-art .badge { color: rgba(255,255,255,.55); }
-.folder-card::after {
-  content: ''; position: absolute; inset: 40% 0 0; z-index: 1;
-  background: linear-gradient(180deg, transparent, rgba(0,0,0,.2));
-  pointer-events: none;
-}
-.folder-copy { display: grid; gap: .1rem; min-width: 0; }
-.folder-copy strong {
-  overflow: hidden; color: #fff; font-size: 1.0625rem; font-weight: 700;
-  letter-spacing: -.02em; text-overflow: ellipsis; white-space: nowrap;
-}
-.folder-copy small { color: rgba(255,255,255,.75); font-size: .75rem; font-weight: 500; }
-.folder-card > .folder-menu {
-  position: absolute; top: 50%; right: .35rem; z-index: 3;
-  display: grid; place-items: center; width: 2.25rem; height: 2.25rem;
-  border-radius: var(--r-full); color: rgba(255,255,255,.9);
-  transform: translateY(-50%);
-}
-.folder-card > .folder-menu svg { width: 1.1rem; height: 1.1rem; }
-.folder-card > .folder-menu:active { background: rgba(0,0,0,.16); }
-
-/* =========================================================
-   CompactFolderRow — the "Other" list
-   ========================================================= */
-.compact-rows { display: grid; gap: .5rem; }
-.compact-row {
-  display: grid; grid-template-columns: 2rem minmax(0,1fr) auto;
-  align-items: center; gap: .85rem;
-  width: 100%; min-height: 3.75rem; padding: .5rem .9rem;
-  border-radius: var(--r-row); background: var(--surface-2); text-align: left;
-  transition: transform .18s var(--spring);
-}
-.compact-row:active { transform: scale(.985); }
-.compact-row .tone-mark { color: var(--text-2); }
-.compact-row .tone-mark svg { width: 1.5rem; height: 1.5rem; }
-.compact-copy { display: grid; gap: .08rem; min-width: 0; }
-.compact-copy strong {
-  overflow: hidden; font-size: var(--t-row); font-weight: 600;
-  letter-spacing: -.017em; text-overflow: ellipsis; white-space: nowrap;
-}
-.compact-copy small { color: var(--text-2); font-size: var(--t-meta); }
-.compact-row .chev { color: var(--text-3); }
-.compact-row .chev svg { width: 1.0625rem; height: 1.0625rem; }
-
-/* =========================================================
-   RecordingRow — one row, wherever a recording is listed
-   ========================================================= */
-.recording-rows { display: grid; gap: .5rem; }
-.recording-row {
-  position: relative;
-  display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center;
-  min-height: 4.25rem; padding: .5rem .75rem .5rem .8rem;
-  border-radius: var(--r-row); background: var(--surface-2);
-}
-.recording-row > .row-open {
-  display: grid; grid-template-columns: 2.75rem minmax(0,1fr);
-  align-items: center; gap: .85rem; min-width: 0; text-align: left;
-  transition: transform .18s var(--spring);
-}
-.recording-row > .row-open:active { transform: scale(.985); }
-.row-play {
-  display: grid; place-items: center;
-  width: 2.75rem; height: 2.75rem; border-radius: var(--r-full);
-  color: var(--text); background: var(--card-hi);
-}
-.row-play svg { width: 1rem; height: 1rem; margin-left: .1rem; }
-.row-copy { display: grid; gap: .15rem; min-width: 0; }
-.row-copy strong {
-  overflow: hidden; font-size: var(--t-row); font-weight: 600;
-  letter-spacing: -.017em; text-overflow: ellipsis; white-space: nowrap;
-}
-.row-copy small { color: var(--text-2); font-size: var(--t-meta); font-variant-numeric: tabular-nums; }
-.recording-row > .row-menu {
-  display: grid; place-items: center; width: 2.25rem; height: 2.25rem;
-  border-radius: var(--r-full); color: var(--text-3);
-}
-.recording-row > .row-menu svg { width: 1.15rem; height: 1.15rem; }
-
-/* =========================================================
-   Filing by hand
-
-   A row lifts off the list, the folder under the finger lights
-   up, and everything else stays exactly where it was.
-   ========================================================= */
-/* While carrying something, nothing else should respond to a
-   finger - and the page must not scroll itself away underneath. */
-body.is-dragging { touch-action: none; user-select: none; -webkit-user-select: none; }
-body.is-dragging .recording-row > .row-menu,
-body.is-dragging .folder-card > .folder-menu { opacity: 0; pointer-events: none; }
-
-.recording-row.lifted { opacity: .35; }
-
-.drop-over { position: relative; }
-.folder-card.drop-over, .compact-row.drop-over {
-  outline: 2px solid var(--primary); outline-offset: 2px;
-  transform: scale(1.015);
-}
-.drop-out.drop-over { color: var(--text); border-color: var(--primary); background: rgba(255,55,95,.14); }
-
-.drag-ghost {
-  position: fixed; z-index: 80; pointer-events: none;
-  display: flex; align-items: center; gap: .55rem;
-  max-width: 15rem; padding: .6rem .9rem;
-  border-radius: var(--r-row); color: var(--text); background: var(--card-hi);
-  box-shadow: 0 .9rem 2rem rgba(0,0,0,.55);
-  font-size: var(--t-meta); font-weight: 600;
-  transform: translate(-50%, -140%) rotate(-1.5deg);
-}
-.drag-ghost svg { flex: 0 0 auto; width: .9rem; height: .9rem; color: var(--text-2); }
-.drag-ghost span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.drag-ghost.armed { background: var(--primary); box-shadow: 0 .9rem 2rem rgba(255,55,95,.45); }
-.drag-ghost.armed svg { color: rgba(255,255,255,.8); }
-
-/* The way out of a folder, shown only while something is being carried. */
-.drop-out {
-  position: fixed; left: var(--gut); right: var(--gut); z-index: 45;
-  bottom: calc(1.25rem + var(--bot));
-  display: flex; align-items: center; justify-content: center; gap: .5rem;
-  min-height: 3.5rem; padding: 0 1rem;
-  border: 1.5px dashed var(--hairline-2); border-radius: var(--r-sheet);
-  color: var(--text-2); background: rgba(21,23,26,.92);
-  font-size: var(--t-meta); font-weight: 600; text-align: center;
-  animation: rise .2s var(--ease);
-}
-.drop-out svg { width: 1.1rem; height: 1.1rem; }
-
-/* =========================================================
-   RecordButton — the only persistent control
-
-   Not a tab bar with one tab in it: a single floating action,
-   over a short fade so rows scrolling underneath dissolve into
-   the background rather than collide with it.
-   ========================================================= */
-.record-dock {
-  position: fixed; inset: auto 0 0; z-index: 40;
-  display: grid; place-items: center;
-  height: calc(var(--record-space) + var(--bot));
-  padding-bottom: var(--bot);
-  background: linear-gradient(180deg, transparent, rgba(10,10,15,.86) 45%, var(--bg) 78%);
-  pointer-events: none;
-}
-.record-fab {
-  pointer-events: auto;
-  display: grid; place-items: center;
-  width: 4rem; height: 4rem; border-radius: var(--r-full);
-  color: #fff; background: linear-gradient(150deg, var(--primary-hi), var(--primary) 46%, var(--primary-lo));
-  box-shadow: 0 0 0 .4rem rgba(255,55,95,.1), 0 .7rem 1.6rem rgba(255,55,95,.38);
-  transition: transform .2s var(--spring);
-}
-.record-fab svg { width: 1.625rem; height: 1.625rem; }
-.record-fab:active { transform: scale(.92); }
-
-/* =========================================================
-   Recording screen
-
-   Nothing on it but the take: a clock, the trace, three
-   controls. No navigation, no panels, no fields.
-   ========================================================= */
-.rec {
-  display: grid; grid-template-rows: auto minmax(0,1fr) auto;
-  height: 100dvh; overflow: hidden;
-  padding: calc(var(--top) + 1rem) var(--gut) calc(2rem + var(--bot));
-  background:
-    radial-gradient(74% 42% at 50% 46%, rgba(255,55,95,.07), transparent 72%),
-    var(--bg);
-}
-.rec-stage { display: grid; align-content: center; justify-items: center; min-height: 0; }
-.rec-clock {
-  font-size: var(--t-timer); font-weight: 700; line-height: 1;
-  letter-spacing: -.045em; font-variant-numeric: tabular-nums;
-}
-.rec-state {
-  display: inline-flex; align-items: center; gap: .45rem; margin-top: 1rem;
-  color: var(--primary); font-size: var(--t-body); font-weight: 500;
-}
-.rec-state i {
-  width: .5rem; height: .5rem; border-radius: var(--r-full);
-  background: currentColor; animation: pulse 1.9s var(--ease) infinite;
-}
-.rec-state.idle { color: var(--text-2); }
-.rec-state.idle i { animation: none; }
-.rec-trace { width: 100%; height: 8rem; margin-top: 2.5rem; }
-
-/* The live transcript takes the screen over the moment there are
-   words, because the words are the point. */
-.rec-lyrics { display: grid; grid-template-rows: auto minmax(0,1fr); min-height: 0; }
-.rec-lyrics .rec-state {
-  justify-self: center; margin: 0 0 .5rem;
-  color: var(--text-2); font-size: var(--t-meta); font-variant-numeric: tabular-nums;
-}
-/* The dot stays the recording colour even when the words around it do not. */
-.rec-lyrics .rec-state i { background: var(--primary); }
-.rec-lyrics .rec-trace { height: 3rem; margin: 0; }
-
-/* The bottom area owns a fixed reservation for paused-only actions. Floating
-   bookmark UI is anchored to it, so neither pausing nor opening a label field
-   can reflow the timer, waveform, or primary recording control. */
-.rec-bottom { position: relative; }
-.bookmark-composer,
-.bookmark-rack {
-  position: absolute; z-index: 3; left: 0; right: 0; bottom: calc(100% + .7rem);
-}
-.bookmark-composer {
-  display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: .45rem;
-  min-height: 3.3rem; padding: .38rem .45rem .38rem .7rem; border: 1px solid var(--hairline-2);
-  border-radius: var(--r-row); background: rgba(28,30,38,.92); box-shadow: 0 .8rem 1.8rem rgba(0,0,0,.34);
-  backdrop-filter: blur(1rem); -webkit-backdrop-filter: blur(1rem);
-}
-.bookmark-at { display: inline-flex; align-items: center; gap: .3rem; color: var(--primary-hi); font-size: var(--t-meta); font-variant-numeric: tabular-nums; font-weight: 700; }
-.bookmark-at svg { width: .9rem; height: .9rem; }
-.bookmark-composer input { min-width: 0; height: 2.25rem; padding: 0 .15rem; color: var(--text); background: transparent; border: 0; outline: 0; font-size: var(--t-body); }
-.bookmark-composer input::placeholder { color: var(--text-3); }
-.bookmark-close { display: grid; place-items: center; width: 2.15rem; height: 2.15rem; border-radius: var(--r-full); color: var(--text-2); }
-.bookmark-close:active { background: var(--hairline); }
-.bookmark-close svg { width: 1rem; height: 1rem; }
-.bookmark-save { height: 2.15rem; padding: 0 .7rem; border-radius: var(--r-full); color: #fff; background: var(--primary); font-size: var(--t-meta); font-weight: 700; }
-.bookmark-save:active { transform: scale(.96); }
-.bookmark-rack { display: grid; justify-items: center; gap: .35rem; pointer-events: none; }
-.bookmark-chip { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: .35rem; max-width: min(20rem, 100%); padding: .38rem .62rem; border: 1px solid var(--hairline); border-radius: var(--r-full); color: var(--text-2); background: rgba(28,30,38,.82); box-shadow: 0 .5rem 1.2rem rgba(0,0,0,.2); font-size: var(--t-micro); backdrop-filter: blur(.75rem); -webkit-backdrop-filter: blur(.75rem); }
-.bookmark-chip svg { width: .75rem; height: .75rem; color: var(--primary-hi); }
-.bookmark-chip b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); font-weight: 600; }
-.bookmark-chip small { color: var(--text-3); font-variant-numeric: tabular-nums; }
-
-/* The centre is always the record/pause/resume action. Saving and cancelling
-   are deliberately revealed only after a pause, so they cannot interrupt a
-   lecture in progress by mistake. */
-.rec-controls {
-  display: grid; grid-template-columns: 1fr auto 1fr;
-  align-items: center; justify-items: center; gap: 1.5rem;
-}
-.rec-controls .icon-btn { width: 3rem; height: 3rem; }
-.rec-controls .side-l { justify-self: end; }
-.rec-controls .side-r { justify-self: start; }
-.rec-main-control { display: grid; justify-items: center; gap: .55rem; }
-.rec-main-control > span { min-height: 1rem; color: var(--text-2); font-size: var(--t-meta); font-weight: 600; }
-.record-action {
-  display: grid; place-items: center;
-  width: 5rem; height: 5rem; border-radius: var(--r-full);
-  color: #fff; background: linear-gradient(150deg, var(--primary-hi), var(--primary) 48%, var(--primary-lo));
-  box-shadow: 0 0 0 .45rem rgba(255,55,95,.1), 0 .9rem 2rem rgba(255,55,95,.3);
-  transition: transform .2s var(--spring), width .24s var(--spring), height .24s var(--spring);
-}
-.record-action svg { width: 1.75rem; height: 1.75rem; }
-.record-action:active { transform: scale(.94); }
-.record-action.idle { width: 5.5rem; height: 5.5rem; }
-.finish-side {
-  display: grid; justify-items: center; gap: .35rem;
-  transition: opacity .18s var(--ease);
-}
-.finish-side small { min-height: 1rem; color: var(--text-2); font-size: var(--t-micro); font-weight: 600; }
-/* Still occupying its space, just not offering itself. */
-.finish-side.hidden { opacity: 0; pointer-events: none; }
-.rec-hint {
-  /* Two lines' worth, always: the wording changes between states and a wrap
-     would otherwise move everything under it. */
-  min-height: 2.4rem; margin-top: 1.1rem;
-  color: var(--text-3); font-size: var(--t-meta); text-align: center;
-}
-.rec-cancel-slot {
-  display: grid; align-items: center; min-height: 4.4rem; height: 4.4rem; margin-top: .55rem;
-  overflow: hidden;
-}
-.slide-cancel {
-  --slide-progress: 0;
-  position: relative; display: grid; place-items: center;
-  width: min(20rem, 100%); height: 3.45rem; margin: 0 auto; overflow: hidden;
-  border-radius: var(--r-full); color: var(--text-3); background: var(--surface-2);
-  box-shadow: inset 0 0 0 1px var(--hairline); touch-action: none; user-select: none;
-  font-size: var(--t-meta); font-weight: 600; letter-spacing: .01em;
-}
-.slide-cancel::before {
-  content: ''; position: absolute; inset: 0 auto 0 0; width: calc(var(--slide-progress) * 100%);
-  background: rgba(255,55,95,.16); transition: width .12s linear;
-}
-.slide-cancel > span:last-child { position: relative; pointer-events: none; }
-.slide-cancel-thumb {
-  position: absolute; z-index: 1; left: .24rem; top: .24rem; display: grid; place-items: center;
-  width: 2.97rem; height: 2.97rem; border-radius: var(--r-full); color: var(--danger); background: #fff;
-  box-shadow: 0 .3rem .75rem rgba(0,0,0,.3);
-  transform: translateX(calc(var(--slide-travel) * var(--slide-progress)));
-  transition: transform .12s linear;
-}
-.slide-cancel-thumb svg { width: 1.1rem; height: 1.1rem; }
-.rec-error {
-  margin-top: 1rem; padding: .7rem .9rem; border-radius: var(--r-field);
-  color: #FFD9DC; background: rgba(255,69,58,.12); font-size: var(--t-meta); text-align: center;
-}
-
-@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .28; } }
-
-/* =========================================================
-   TranscriptView — words first
-
-   The line being spoken is white and large; everything around it
-   recedes. The same component follows a live take and a replay.
-   ========================================================= */
-.transcript {
-  min-height: 0; height: 100%; overflow-y: auto; overscroll-behavior: contain;
-  padding: 8vh 0 12vh; scrollbar-width: none;
-  -webkit-mask-image: linear-gradient(180deg, transparent, #000 9%, #000 88%, transparent);
-          mask-image: linear-gradient(180deg, transparent, #000 9%, #000 88%, transparent);
-}
-.transcript::-webkit-scrollbar { display: none; }
-.transcript .line {
-  display: block; width: 100%; padding: .34rem 0;
-  font-size: var(--t-lyric); font-weight: 700; line-height: 1.24;
-  letter-spacing: -.026em; text-align: left;
-  /* Short: a long fade on the line that just became current reads as the
-     words arriving late, which is the one thing this screen must not do. */
-  transition: color .12s linear;
-}
-.transcript .line.active { color: var(--text); }
-.transcript .line.past   { color: var(--text-3); }
-.transcript .line.future { color: var(--text-4); }
-.transcript .line.active .w { color: rgba(255,255,255,.62); }
-.transcript .line.active .w.on { color: var(--text); }
-.transcript.live { padding-top: 1vh; }
-.transcript-empty {
-  padding: 2rem 0; color: var(--text-4);
-  font-size: var(--t-lyric); font-weight: 700; letter-spacing: -.026em;
-}
-
-/* =========================================================
-   Playback
-   ========================================================= */
-.play-screen {
-  display: grid; grid-template-rows: auto auto minmax(0,1fr) auto;
-  height: 100dvh; overflow: hidden;
-  padding: calc(var(--top) + 1rem) var(--gut) calc(1.25rem + var(--bot));
-  background: var(--bg);
-}
-.play-body { min-height: 0; }
-/* The transport is opaque and reserves room above the scrubber, because the
-   time pill sits above the playhead and would otherwise land on the last line
-   of the transcript scrolling behind it. */
-.play-transport {
-  position: relative; z-index: 1;
-  padding-top: 2rem; background: var(--bg);
-}
-
-/* ---- ScrubbableWaveform ----------------------------------
-   The playhead is a fixed white line in the middle; the timeline
-   moves under it. The whole strip is the handle - there is no
-   small dot to find.                                          */
-.scrubber {
-  position: relative; height: 4.5rem; margin-top: .25rem;
-  touch-action: none; cursor: ew-resize;
-}
-.scrubber canvas { display: block; width: 100%; height: 100%; }
-.playhead {
-  position: absolute; top: .35rem; bottom: .35rem; left: 50%; z-index: 2;
-  width: 2px; border-radius: var(--r-full); background: #fff;
-  box-shadow: 0 0 .75rem rgba(255,255,255,.45);
-  transform: translateX(-50%); pointer-events: none;
-}
-.playhead em {
-  position: absolute; left: 50%; bottom: calc(100% + .45rem);
-  padding: .2rem .5rem; border-radius: .5rem;
-  color: var(--text); background: var(--card-hi);
-  font-size: var(--t-micro); font-style: normal; font-weight: 600;
-  font-variant-numeric: tabular-nums; white-space: nowrap;
-  transform: translateX(-50%);
-}
-.scrub-times {
-  display: grid; grid-template-columns: auto minmax(0,1fr) auto; gap: .75rem;
-  margin-top: .3rem; color: var(--text-3);
-  font-size: var(--t-meta); font-variant-numeric: tabular-nums;
-}
-.scrub-times .status { overflow: hidden; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
-
-/* ---- PlaybackControls ----------------------------------- */
-.play-controls {
-  display: grid; grid-template-columns: repeat(5, 1fr);
-  align-items: center; justify-items: center; margin-top: 1rem;
-}
-.play-controls .icon-btn { background: transparent; color: var(--text-2); }
-.play-controls .icon-btn svg { width: 1.375rem; height: 1.375rem; }
-.play-controls .speed { font-size: var(--t-meta); font-weight: 600; font-variant-numeric: tabular-nums; }
-.play-btn {
-  display: grid; place-items: center;
-  width: 4rem; height: 4rem; border-radius: var(--r-full);
-  color: var(--bg); background: #fff;
-  box-shadow: 0 .6rem 1.5rem rgba(0,0,0,.5);
-  transition: transform .2s var(--spring);
-}
-.play-btn svg { width: 1.6rem; height: 1.6rem; }
-.play-btn:active { transform: scale(.93); }
-.play-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; margin-top: .9rem; }
-.play-actions .btn { min-height: 2.875rem; gap: .35rem; padding: 0 .4rem; font-size: var(--t-meta); }
-.play-actions .btn svg { width: 1rem; height: 1rem; color: var(--text-2); }
-
-/* =========================================================
-   ActionSheet — one sheet, iOS behaviour
+   The full-screen dialog Settings still uses. The redesign moved
+   everything else onto VFBottomSheet; this stays until Settings
+   is rebuilt with it.
    ========================================================= */
 .scrim {
   position: fixed; inset: 0; z-index: 60;
-  display: flex; flex-direction: column; justify-content: flex-end;
-  background: rgba(0,0,0,.6); animation: fade .2s var(--ease);
+  display: flex; flex-direction: column; justify-content: center;
+  padding: var(--gut);
+  background: rgba(0,0,0,.6);
 }
-.sheet {
-  max-height: 88dvh; overflow-y: auto;
-  padding: .5rem var(--gut) calc(1rem + var(--bot));
-  background: var(--bg);
-  border-radius: var(--r-sheet) var(--r-sheet) 0 0;
-  box-shadow: 0 -1px 0 var(--hairline);
-  animation: rise .3s var(--ease);
-}
-.sheet-grip { width: 2.25rem; height: .25rem; margin: .25rem auto .9rem; border-radius: var(--r-full); background: var(--text-4); }
-
-/* The header card: the object the sheet is about, and the way out of it. */
-.sheet-head {
-  display: grid; grid-template-columns: auto minmax(0,1fr) auto;
-  align-items: center; gap: .85rem; padding: .55rem .2rem .95rem;
-}
-.sheet-thumb {
-  display: grid; place-items: center; width: 2.75rem; height: 2.75rem;
-  border-radius: var(--r-field); color: #fff;
-  background: linear-gradient(152deg, var(--g1, var(--primary)), var(--g2, var(--primary-lo)));
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.18);
-}
-.sheet-thumb svg { width: 1.25rem; height: 1.25rem; }
-.sheet-copy { display: grid; gap: .12rem; min-width: 0; }
-.sheet-copy strong {
-  overflow: hidden; font-size: var(--t-row); font-weight: 700;
-  letter-spacing: -.017em; text-overflow: ellipsis; white-space: nowrap;
-}
-.sheet-copy small { color: var(--text-2); font-size: var(--t-meta); font-variant-numeric: tabular-nums; }
-.sheet-group { overflow: hidden; border-radius: var(--r-sheet); background: var(--surface-2); }
-.sheet-group + .sheet-group { margin-top: .6rem; }
-.sheet-item {
-  display: grid; grid-template-columns: 1.5rem minmax(0,1fr) auto;
-  align-items: center; gap: .9rem;
-  width: 100%; min-height: 3.5rem; padding: 0 1.1rem;
-  font-size: var(--t-row); font-weight: 500; text-align: left;
-}
-.sheet-item + .sheet-item { box-shadow: inset 0 1px 0 var(--hairline); }
-.sheet-item svg { width: 1.3rem; height: 1.3rem; }
-.sheet-item .chev { color: var(--text-3); }
-.sheet-item .chev svg { width: 1rem; height: 1rem; }
-.sheet-item:active { background: var(--card); }
-.sheet-item.danger { color: var(--danger); }
-.sheet-item.on > svg { color: var(--primary); }
-.sheet-cancel {
-  width: 100%; min-height: 3.5rem; margin-top: .6rem;
-  border-radius: var(--r-sheet); background: var(--surface-2);
-  font-size: var(--t-row); font-weight: 600;
-}
-.sheet-swatches { display: flex; flex-wrap: wrap; gap: .8rem; justify-content: center; padding: 1rem 1.1rem; }
-
-/* A sheet carrying content rather than a menu. */
-.sheet.tall { display: grid; grid-template-rows: auto minmax(0,1fr); height: 88dvh; }
-.sheet-body { min-height: 0; overflow-y: auto; padding-bottom: 1rem; }
-.sheet-lines { display: grid; gap: .9rem; }
-.sheet-lines button {
-  display: grid; grid-template-columns: 3rem minmax(0,1fr); gap: .75rem;
-  text-align: left; font-size: var(--t-body); line-height: 1.5;
-}
-.sheet-lines button time { color: var(--text-3); font-size: var(--t-meta); font-variant-numeric: tabular-nums; }
-
-/* =========================================================
-   Create folder — a full-screen sheet
-   ========================================================= */
-.create-screen {
-  min-height: 100dvh;
-  padding: calc(var(--top) + .85rem) var(--gut) calc(1.5rem + var(--bot));
-  background: var(--bg);
-}
-.create-head { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; min-height: 2.5rem; }
-.create-head h2 { font-size: var(--t-row); font-weight: 600; }
-.create-head button { font-size: var(--t-row); font-weight: 500; }
-.create-head button:first-of-type { text-align: left; }
-.create-head button:last-of-type { color: var(--primary); font-weight: 600; text-align: right; }
-.create-head button:disabled { color: var(--text-4); }
-.create-preview {
-  display: grid; place-items: center;
-  width: 5.5rem; height: 5.5rem; margin: 2.5rem auto 1.75rem;
-  border-radius: var(--r-card); background: var(--surface-2);
-  box-shadow: inset 0 0 0 1px var(--hairline);
-}
-.create-preview svg { width: 2.5rem; height: 2.5rem; color: var(--g1); }
-.create-parent { margin: -1rem 0 1.25rem; color: var(--text-2); font-size: var(--t-meta); text-align: center; }
-.create-name {
-  width: 100%; height: 3.25rem; padding: 0 1rem;
-  border: 0; border-radius: var(--r-field); outline: 0;
-  background: var(--surface-2); color: var(--text); font-size: var(--t-row); font-weight: 500;
-}
-.create-name::placeholder { color: var(--text-3); }
-.create-label { margin: 1.75rem 0 .85rem; color: var(--text-2); font-size: var(--t-meta); font-weight: 600; }
-fieldset + fieldset .create-label { margin-top: 0; }
-.swatch-row { display: flex; gap: .55rem; justify-content: space-between; padding: .25rem; }
-.swatch {
-  flex: 0 0 auto; width: 2.25rem; height: 2.25rem; border-radius: var(--r-full);
-  background: var(--g1);
-  transition: transform .18s var(--spring), box-shadow .18s var(--ease);
-}
-.swatch.on { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px #fff; }
-.swatch:active { transform: scale(.88); }
-.icon-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: .75rem; }
-.icon-pick {
-  display: grid; place-items: center; height: 3.25rem;
-  border-radius: var(--r-field); color: var(--text-2); background: var(--surface-2);
-  transition: transform .18s var(--spring);
-}
-.icon-pick svg { width: 1.375rem; height: 1.375rem; }
-.icon-pick.on { color: var(--primary); box-shadow: inset 0 0 0 1.5px var(--primary); }
-.icon-pick:active { transform: scale(.94); }
-
-/* =========================================================
-   Saved and empty states
-   ========================================================= */
-.centred {
-  display: grid; align-content: center; justify-items: center; gap: .5rem;
-  min-height: 100dvh; padding: 2rem var(--gut) calc(2rem + var(--bot)); text-align: center;
-}
-.saved-mark {
-  display: grid; place-items: center;
-  width: 5rem; height: 5rem; margin-bottom: 1.5rem; border-radius: var(--r-full);
-  color: #fff; background: linear-gradient(150deg, var(--primary-hi), var(--primary) 48%, var(--primary-lo));
-  box-shadow: 0 1rem 2.5rem rgba(255,55,95,.3);
-  animation: pop .38s var(--spring);
-}
-.saved-mark svg { width: 2.25rem; height: 2.25rem; }
-.centred h2 { font-size: 1.5rem; font-weight: 700; letter-spacing: -.024em; }
-.centred p { max-width: 17rem; color: var(--text-2); font-size: var(--t-body); }
-.centred .stack { display: grid; gap: .65rem; width: min(20rem, 100%); margin-top: 2rem; }
-.saved-note {
-  display: flex; align-items: center; justify-content: center; gap: .45rem;
-  max-width: 19rem; margin-top: .9rem;
-  color: var(--text-2); font-size: var(--t-meta); line-height: 1.45;
-}
-.saved-note i {
-  flex: 0 0 auto; width: .45rem; height: .45rem; border-radius: var(--r-full);
-  background: var(--primary); animation: pulse 1.9s var(--ease) infinite;
-}
-.saved-note.quiet { color: var(--text-3); }
-
-.empty { display: grid; align-content: center; justify-items: center; gap: .4rem; padding: 4rem 0; text-align: center; }
-.empty .folder-art {
-  position: relative; top: auto; right: auto; left: auto;
-  width: 11rem; height: 7rem; margin-bottom: 1.5rem; transform: none;
-}
-.empty .folder-art .sheet-l, .empty .folder-art .sheet-r { fill: rgba(255,255,255,.04); }
-.empty .folder-art .body  { fill: rgba(255,255,255,.08); }
-.empty .folder-art .tab   { fill: rgba(255,255,255,.11); }
-.empty .folder-art .badge { color: rgba(255,255,255,.12); }
-.empty strong { font-size: 1.1875rem; font-weight: 700; letter-spacing: -.022em; }
-.empty p { max-width: 15rem; color: var(--text-2); font-size: var(--t-meta); line-height: 1.5; }
 
 /* =========================================================
    Buttons, fields, panels — the shared furniture, used inside
@@ -934,4 +477,926 @@ select.field { appearance: none; }
   .record-dock { left: 50%; width: 100%; max-width: 30rem; transform: translateX(-50%); }
   .scrim { align-items: center; }
   .sheet, .modal { width: min(30rem, 100%); margin: 0 auto; }
+}
+
+/* =========================================================
+   SCREENS
+
+   Every screen is the same box: the safe area at the top, one
+   gutter either side, and - on the three that carry the record
+   button - the space it demands at the bottom.
+   ========================================================= */
+.screen {
+  min-height: 100dvh;
+  padding: calc(var(--top) + 12px) var(--gut) calc(var(--bot) + 32px);
+}
+.screen--dock, .screen--folder, .screen--organize { padding-bottom: calc(var(--record-space) + var(--bot)); }
+
+.boot {
+  display: grid; place-content: center; justify-items: center; gap: 14px;
+  text-align: center; color: var(--text-3);
+}
+.boot h1 { color: var(--text); font-size: var(--t-detail); font-weight: 700; letter-spacing: var(--ls-detail); }
+
+/* The saving arc: red into the violet end of the signature sweep. */
+.spinner {
+  width: 46px; height: 46px; border-radius: var(--r-full);
+  background: conic-gradient(from 0deg, var(--primary), var(--violet) 55%, transparent 86%);
+  mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 4px));
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 4px));
+  animation: spin 1s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.banner {
+  display: flex; align-items: center; gap: 12px;
+  margin: 0 var(--gut) 8px; padding: 10px 14px;
+  border-radius: var(--r-input); background: var(--danger-bg); color: var(--primary-txt);
+  font-size: var(--t-meta-lg);
+}
+.banner button { margin-left: auto; color: inherit; font-size: 18px; }
+
+/* ---- Headers ---------------------------------------------- */
+.vf-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.vf-head h1 { font-size: var(--t-title); font-weight: 700; letter-spacing: var(--ls-title); }
+.vf-head-actions { display: flex; gap: var(--gap); }
+
+.vf-round {
+  display: grid; place-items: center; flex: none;
+  width: var(--hit); height: var(--hit); border-radius: var(--r-full);
+  color: var(--text); background: var(--chip);
+  transition: transform var(--d-press), background .2s;
+}
+.vf-round:active { transform: scale(.94); }
+.vf-round svg { width: 20px; height: 20px; }
+.vf-round--plain { background: transparent; color: var(--text-2); }
+.vf-round--plain:hover { background: rgba(255,255,255,.06); }
+
+.vf-bar { display: flex; align-items: center; gap: var(--gap); min-height: var(--hit); }
+.vf-bar .vf-search { flex: 1; }
+.vf-bar-spacer { flex: 1; }
+.vf-bar-copy { flex: 1; min-width: 0; text-align: center; }
+.vf-bar-copy strong {
+  display: block; font-size: var(--t-row); font-weight: 650; letter-spacing: var(--ls-row);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.vf-bar-copy small { display: block; margin-top: 1px; color: var(--text-3); font-size: var(--t-meta); }
+.vf-done {
+  flex: none; height: var(--btn-h-sm); padding: 0 18px; border-radius: var(--r-full);
+  background: var(--text); color: var(--bg); font-size: 14px; font-weight: 700;
+}
+
+/* ---- Shared blocks ---------------------------------------- */
+.vf-section { margin-top: 26px; }
+.vf-label {
+  margin-bottom: 10px; color: var(--text-3);
+  font-size: var(--t-label); font-weight: 700;
+  letter-spacing: var(--ls-label); text-transform: uppercase;
+}
+.vf-rows { display: grid; gap: var(--gap); }
+.vf-bento { display: grid; gap: var(--gap); margin-top: 14px; }
+.vf-bento-pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--gap); }
+.vf-empty-line { margin-top: 24px; color: var(--text-4); font-size: var(--t-body); line-height: var(--lh-body); }
+.vf-empty { margin-top: 48px; text-align: center; }
+.vf-empty strong { display: block; font-size: 19px; font-weight: 700; letter-spacing: -.3px; }
+.vf-empty p { margin: 6px auto 0; max-width: 17rem; color: var(--text-3); font-size: var(--t-body); line-height: var(--lh-body); }
+
+/* ---- 3. Home ---------------------------------------------- */
+.screen .vf-head + .vf-search { margin-top: 14px; }
+
+/* ---- 4. Folder -------------------------------------------- */
+.screen--folder { position: relative; overflow-x: hidden; }
+.folder-glow {
+  position: absolute; top: -5%; left: 15%; z-index: 0;
+  width: 460px; height: 300px; margin-left: -230px;
+  background: radial-gradient(closest-side, rgba(var(--tone-rgb), .26), transparent);
+  pointer-events: none;
+}
+/* The glow is the one child that must stay out of the flow: raising the rest
+   above it with `position: relative` also caught the glow itself, which then
+   took 300px of layout and pushed the whole screen down. */
+.screen--folder > *:not(.folder-glow) { position: relative; z-index: 1; }
+.folder-head { margin: 18px 0 20px; }
+.folder-head-icon {
+  display: grid; place-items: center;
+  width: var(--icon-head); height: var(--icon-head); margin-bottom: 14px;
+  border-radius: 18px; color: #fff; background: var(--tone-icon);
+  box-shadow: 0 10px 24px rgba(var(--tone-rgb), .35), inset 0 1px 0 rgba(255,255,255,.25);
+}
+.folder-head-icon svg { width: 26px; height: 26px; }
+.folder-head h1 { font-size: var(--t-title); font-weight: 700; letter-spacing: var(--ls-title); }
+.folder-head p { margin-top: 4px; color: var(--text-3); font-size: var(--t-meta-lg); }
+
+.folder-empty { margin-top: 36px; text-align: center; }
+.folder-empty .vf-wave { opacity: .5; }
+.folder-empty strong { display: block; margin-top: 26px; font-size: 19px; font-weight: 700; letter-spacing: -.3px; }
+.folder-empty p { margin: 6px auto 0; max-width: 17rem; color: var(--text-3); font-size: var(--t-body); line-height: var(--lh-body); }
+/* A line that fades out as it reaches the record button. */
+.folder-empty-line {
+  display: block; width: 2px; height: 96px; margin: 22px auto 0; border-radius: 1px;
+  background: linear-gradient(180deg, rgba(var(--primary-rgb), .5), transparent);
+}
+
+/* ---- 1 & 2. Onboarding ------------------------------------ */
+.onboard { display: flex; flex-direction: column; padding-top: calc(var(--top) + 48px); }
+.onboard-mark {
+  display: grid; place-items: center; width: 68px; height: 68px;
+  border-radius: 22px; color: #fff; background: var(--spectrum);
+  box-shadow: var(--sh-primary);
+}
+.onboard-mark svg { width: 32px; height: 32px; }
+.onboard-mark--off { background: var(--raised); box-shadow: none; color: var(--text-2); }
+.onboard h1 { margin-top: 26px; font-size: var(--t-title); font-weight: 700; letter-spacing: var(--ls-title); }
+.onboard-tagline { margin-top: 8px; color: var(--text-2); font-size: var(--t-body-lg); line-height: var(--lh-body); }
+.onboard-features { display: grid; gap: 18px; margin-top: 34px; }
+.onboard-features li { display: flex; gap: 14px; }
+.onboard-feature-icon {
+  display: grid; place-items: center; flex: none;
+  width: 38px; height: 38px; border-radius: var(--r-icon);
+  color: var(--primary-txt); background: var(--danger-bg);
+}
+.onboard-feature-icon svg { width: 18px; height: 18px; }
+.onboard-features strong { display: block; font-size: var(--t-row); font-weight: 600; letter-spacing: var(--ls-row); }
+.onboard-features small { display: block; margin-top: 2px; color: var(--text-3); font-size: var(--t-meta-lg); line-height: 1.45; }
+.onboard-path {
+  display: grid; gap: 8px; margin-top: 26px; padding: 16px;
+  border-radius: var(--r-row); background: var(--surface);
+  counter-reset: step; list-style: none;
+}
+.onboard-path li { color: var(--text-2); font-size: var(--t-body); }
+.onboard-path li::before {
+  counter-increment: step; content: counter(step);
+  display: inline-grid; place-items: center;
+  width: 20px; height: 20px; margin-right: 10px; border-radius: var(--r-full);
+  background: var(--raised); color: var(--text-3); font-size: 11px; font-weight: 700;
+}
+.onboard-actions { display: grid; gap: var(--gap); margin-top: auto; padding-top: 34px; }
+
+/* ---- 5. Recording ----------------------------------------- */
+.rec {
+  display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto;
+  height: 100dvh; overflow: hidden;
+  padding-bottom: calc(var(--bot) + 20px);
+}
+.rec-dest small { color: var(--text-3); }
+.rec-status { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 10px; }
+.rec-dot { width: 9px; height: 9px; border-radius: var(--r-full); background: var(--text-4); }
+.rec-dot.is-live { background: var(--primary); animation: blink 1.4s ease-in-out infinite; }
+@keyframes blink { 50% { opacity: .25; } }
+.rec-clock { font-size: var(--t-timer); font-weight: 600; font-variant-numeric: tabular-nums; }
+.rec-state { color: var(--text-3); font-size: var(--t-label); font-weight: 700; letter-spacing: var(--ls-label); }
+
+.rec-words {
+  display: flex; flex-direction: column; justify-content: flex-end;
+  min-height: 0; overflow: hidden; padding: 24px 0 8px;
+  /* The transcript fades out at the top rather than being clipped, so older
+     lines leave instead of being cut in half. */
+  mask-image: linear-gradient(180deg, transparent, #000 22%);
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 22%);
+}
+.rec-past {
+  color: var(--transcript-past);
+  font-size: var(--t-lyric-past); font-weight: 600; line-height: 1.25;
+}
+.rec-past + .rec-past, .rec-now { margin-top: 10px; }
+.rec-now {
+  color: var(--text);
+  font-size: var(--t-lyric); font-weight: 650;
+  letter-spacing: var(--ls-lyric); line-height: 1.2;
+}
+.rec-words--waiting .rec-past { color: var(--text-4); font-size: var(--t-body-lg); font-weight: 400; }
+.rec-error { margin-top: 8px; color: var(--primary-txt); font-size: var(--t-meta-lg); }
+
+.rec-foot { display: grid; gap: 22px; }
+.rec-controls { display: flex; align-items: center; justify-content: center; gap: 16px; }
+/* Finish is always in the layout and only ever changes opacity: rendering it
+   conditionally moved the record button sideways the moment you paused. */
+.rec-finish {
+  height: var(--btn-h-sm); padding: 0 18px; border-radius: var(--r-full);
+  background: var(--secondary); color: var(--text); font-size: 14px; font-weight: 650;
+  transition: opacity .2s;
+}
+.rec-finish.is-hidden { opacity: 0; pointer-events: none; }
+
+/* ---- 8, 9, 10. Outcomes ----------------------------------- */
+.outcome {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-height: 100dvh; text-align: center;
+}
+.outcome h1 { margin-top: 24px; font-size: var(--t-detail); font-weight: 700; letter-spacing: var(--ls-detail); }
+.outcome > p { margin: 8px auto 0; max-width: 19rem; color: var(--text-3); font-size: var(--t-body-lg); line-height: var(--lh-body); }
+.outcome-mark { display: grid; place-items: center; width: 88px; height: 88px; border-radius: var(--r-full); color: #fff; }
+.outcome-mark svg { width: 38px; height: 38px; }
+.outcome-mark--ok { background: var(--primary); box-shadow: var(--sh-primary); }
+.outcome-mark--off { background: var(--raised); color: var(--text-2); }
+.outcome-note {
+  display: flex; align-items: center; gap: 8px;
+  margin: 18px auto 0; max-width: 20rem;
+  color: var(--text-3); font-size: var(--t-meta-lg); line-height: 1.45;
+}
+.outcome-note i { flex: none; width: 7px; height: 7px; border-radius: var(--r-full); background: var(--primary); animation: blink 1.4s ease-in-out infinite; }
+.outcome-note.quiet i { display: none; }
+.outcome-actions { display: grid; gap: var(--gap); width: 100%; margin-top: 34px; }
+
+/* ---- 7. Storage bar --------------------------------------- */
+.storage-bar { display: flex; height: 10px; overflow: hidden; border-radius: var(--r-full); background: var(--raised); }
+.storage-bar i { background: var(--text-5); }
+.storage-bar em { background: var(--primary); }
+
+/* ---- Sheet contents --------------------------------------- */
+.sheet-note { color: var(--text-3); font-size: var(--t-meta-lg); text-align: center; }
+.sheet-list { display: grid; gap: 2px; }
+.sheet-item {
+  display: flex; align-items: center; gap: 14px;
+  width: 100%; min-height: 54px; padding: 0 12px;
+  border-radius: var(--r-input); color: var(--text);
+  font-size: var(--t-body-lg); font-weight: 500; text-align: left;
+}
+.sheet-item:hover { background: rgba(255,255,255,.05); }
+.sheet-item svg { flex: none; width: 20px; height: 20px; color: var(--text-3); }
+.sheet-item.is-danger, .sheet-item.is-danger svg { color: var(--primary-txt); }
+.sheet-input {
+  width: 100%; height: 52px; padding: 0 16px;
+  border: 0; outline: 0; border-radius: var(--r-input);
+  background: var(--input); color: var(--text); font-size: var(--t-body-lg);
+  box-shadow: inset 0 0 0 1px var(--hairline-2);
+}
+.sheet-input:focus { box-shadow: inset 0 0 0 1px rgba(var(--primary-rgb), .55); }
+.sheet-input::placeholder { color: var(--text-4); }
+.sheet-preview { pointer-events: none; }
+
+.swatches { display: flex; gap: 12px; }
+.swatch {
+  width: 40px; height: 40px; border-radius: var(--r-full);
+  background: var(--tone-icon); transition: transform .15s, box-shadow .15s;
+}
+.swatch.is-on { box-shadow: 0 0 0 2px var(--sheet), 0 0 0 4px #fff; transform: scale(1.04); }
+
+.pick-list { display: grid; gap: 2px; max-height: 42dvh; overflow-y: auto; }
+.pick {
+  display: flex; align-items: center; gap: 14px;
+  width: 100%; min-height: 56px; padding: 0 12px;
+  border-radius: var(--r-input); color: var(--text); text-align: left;
+}
+.pick:hover:not(:disabled) { background: rgba(255,255,255,.05); }
+.pick:disabled { opacity: .5; }
+.pick-swatch { flex: none; width: 22px; height: 22px; border-radius: 8px; background: var(--tone-icon); }
+.pick-name { flex: 1; min-width: 0; font-size: var(--t-body-lg); font-weight: 500; }
+.pick-current { color: var(--text-4); font-size: var(--t-meta); }
+.pick-radio {
+  display: grid; place-items: center; flex: none;
+  width: 24px; height: 24px; border-radius: var(--r-full);
+  box-shadow: inset 0 0 0 1.5px var(--text-5); color: #fff;
+}
+.pick.is-picked .pick-radio { background: var(--primary); box-shadow: none; }
+.pick-radio svg { width: 13px; height: 13px; }
+
+/* ---- 15. Global search ------------------------------------ */
+.chips { display: flex; flex-wrap: wrap; gap: var(--gap); }
+.chips--scroll {
+  flex-wrap: nowrap; overflow-x: auto; margin: 16px calc(var(--gut) * -1) 0;
+  padding: 0 var(--gut) 4px; scrollbar-width: none;
+}
+.chips--scroll::-webkit-scrollbar { display: none; }
+.chip {
+  display: inline-flex; align-items: center; gap: 8px; flex: none;
+  height: var(--btn-h-sm); padding: 0 14px; border-radius: var(--r-full);
+  background: var(--chip); color: var(--text-2); font-size: 14px; font-weight: 500;
+}
+.chip.is-on { background: var(--text); color: var(--bg); font-weight: 650; }
+.chip-dot { width: 8px; height: 8px; border-radius: var(--r-full); background: var(--tone); }
+.chip-count { color: var(--text-4); font-variant-numeric: tabular-nums; }
+.chip.is-on .chip-count { color: rgba(10,10,13,.5); }
+
+.results { display: grid; gap: var(--gap); margin-top: 18px; }
+.result {
+  display: block; width: 100%; padding: 14px;
+  border-radius: var(--r-row); background: var(--surface); text-align: left;
+}
+.result:hover { background: var(--row-hover); }
+.result strong { display: block; font-size: var(--t-row); font-weight: 600; letter-spacing: var(--ls-row); }
+.result-meta { display: block; margin-top: 2px; color: var(--text-3); font-size: var(--t-meta); }
+.result-at {
+  display: inline-block; margin-top: 8px;
+  color: var(--primary-txt); font-size: var(--t-meta); font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.result-snippet {
+  display: block; margin-top: 4px;
+  color: var(--text-snip); font-size: 13.5px; line-height: 1.45;
+}
+mark { background: rgba(var(--primary-rgb), .38); color: var(--text); border-radius: 3px; }
+
+/* ---- 19. Organize ----------------------------------------- */
+.org-targets { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--gap); margin-top: 16px; }
+.record-dock {
+  position: fixed; inset: auto 0 0; z-index: 40;
+  display: grid; place-items: center;
+  height: calc(var(--record-fade) + var(--bot));
+  padding: 0 var(--gut) calc(var(--record-lift) + var(--bot) - 36px);
+  background: linear-gradient(180deg, transparent, var(--bg) 62%);
+  pointer-events: none;
+}
+.record-dock > * { pointer-events: auto; }
+.drop-out {
+  display: grid; place-items: center;
+  width: 100%; height: 84px; border-radius: var(--r-row);
+  border: 2px dashed var(--text-5); color: var(--text-3);
+  font-size: var(--t-body); font-weight: 600;
+  transition: border-color .15s, color .15s, background .15s;
+}
+.drop-out.is-over, .drop-out.drop-over {
+  border-color: var(--primary); color: var(--primary-txt);
+  background: var(--danger-bg);
+}
+
+.drag-ghost {
+  position: fixed; z-index: 90; width: 300px;
+  margin: -28px 0 0 -40px; padding: 12px 16px;
+  border-radius: var(--r-input); background: var(--ghost); color: var(--text);
+  box-shadow: 0 18px 44px rgba(0,0,0,.55), inset 0 0 0 1.5px rgba(var(--primary-rgb), .9);
+  transform: rotate(-2deg) scale(1.03); pointer-events: none;
+}
+.drag-ghost strong { display: block; font-size: var(--t-row); font-weight: 600; letter-spacing: var(--ls-row); }
+.drag-ghost small { display: block; margin-top: 2px; color: var(--text-3); font-size: var(--t-meta); }
+.drag-ghost.is-armed small { color: var(--primary-txt); font-weight: 600; }
+body.is-dragging { cursor: grabbing; }
+
+/* ---- 12, 13, 14. Playback --------------------------------- */
+.play { padding-bottom: calc(272px + var(--bot)); }
+.play-head { margin: 14px 0 18px; }
+.play-head h1 { font-size: var(--t-detail); font-weight: 700; letter-spacing: var(--ls-detail); }
+.play-head p { margin-top: 4px; color: var(--text-3); font-size: var(--t-meta-lg); }
+.play-matches { margin: 16px 0 8px; color: var(--text-3); font-size: var(--t-meta-lg); }
+
+.player {
+  position: fixed; inset: auto 0 0; z-index: 40;
+  display: grid; gap: 10px;
+  padding: 16px var(--gut) calc(18px + var(--bot));
+  background: linear-gradient(180deg, transparent, var(--bg) 22%);
+  backdrop-filter: blur(18px);
+}
+.player-time {
+  display: flex; justify-content: space-between;
+  color: var(--text-4); font-size: var(--t-meta);
+  font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+}
+.player-controls { display: flex; align-items: center; justify-content: space-between; }
+.player-speed {
+  min-width: 46px; height: 38px; border-radius: var(--r-full);
+  color: var(--text-2); font-size: 13.5px; font-weight: 700;
+}
+.player-speed svg { width: 19px; height: 19px; margin: 0 auto; }
+.player-skip { display: grid; place-items: center; width: 46px; height: 46px; color: var(--text); }
+.player-skip svg { width: 26px; height: 26px; }
+.player-play {
+  display: grid; place-items: center;
+  width: var(--play-d-lg); height: var(--play-d-lg); border-radius: var(--r-full);
+  color: #fff; background: var(--primary); box-shadow: var(--sh-primary);
+  transition: transform var(--d-press);
+}
+.player-play:active { transform: scale(.94); }
+.player-play svg { width: 26px; height: 26px; margin-left: 3px; }
+.player-pause { display: flex; gap: 5px; }
+.player-pause i { width: 5px; height: 22px; border-radius: 2px; background: #fff; }
+
+/* =========================================================
+   VF COMPONENTS
+
+   One block per VF*.dc.html reference. Every value is a token;
+   where a reference gives a number that no token covers, the
+   number is here once and the reason is beside it.
+   ========================================================= */
+
+/* ---- VFButton --------------------------------------------
+   Four variants, and only `primary` carries the glow. A screen
+   with two glowing buttons has not decided what it is for.   */
+.vf-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  height: var(--btn-h); padding: 0 22px; box-sizing: border-box;
+  border-radius: var(--r-full);
+  font-family: var(--font); font-size: var(--t-body-lg); font-weight: 600;
+  letter-spacing: -.1px; white-space: nowrap;
+  transition: transform var(--d-press), filter .2s, opacity .2s;
+}
+.vf-btn--full { width: 100%; }
+.vf-btn--sm { height: var(--btn-h-sm); font-size: 14px; }
+.vf-btn:hover:not(:disabled) { filter: brightness(1.12); }
+.vf-btn:active:not(:disabled) { transform: scale(.97); }
+.vf-btn:disabled { opacity: .38; pointer-events: none; }
+.vf-btn svg { width: 18px; height: 18px; }
+.vf-btn--primary   { color: #fff; background: var(--primary); box-shadow: var(--sh-primary); }
+.vf-btn--secondary { color: var(--text); background: var(--secondary); }
+.vf-btn--ghost     { color: var(--text-ghost); background: transparent; }
+.vf-btn--danger    { color: var(--primary-txt); background: var(--danger-bg); }
+
+/* ---- VFSearchField ---------------------------------------- */
+.vf-search {
+  display: flex; align-items: center; gap: 10px;
+  height: var(--field-h); padding: 0 6px 0 16px;
+  border-radius: var(--r-field); background: var(--field);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.04);
+  transition: box-shadow .2s;
+}
+.vf-search.is-focused { box-shadow: inset 0 0 0 1px rgba(var(--primary-rgb), .55); }
+.vf-search-glyph { flex: none; width: 18px; height: 18px; color: var(--icon-dim); }
+.vf-search input {
+  flex: 1; min-width: 0; height: 100%;
+  border: 0; outline: 0; background: transparent;
+  color: var(--text); font-size: var(--t-body-lg); caret-color: var(--primary);
+}
+.vf-search input::placeholder { color: var(--icon-dim); }
+.vf-search-clear {
+  display: grid; place-items: center; flex: none;
+  width: 36px; height: 36px; border-radius: 18px; color: var(--icon-mid);
+}
+.vf-search-clear:hover { background: rgba(255,255,255,.06); }
+.vf-search-clear svg { width: 16px; height: 16px; }
+
+/* ---- VFRecordButton ---------------------------------------
+   It grows 72 -> 80 when a take starts, and the ring rather than
+   the button is what changes, so nothing moves under the thumb. */
+.vf-rec {
+  display: grid; place-items: center; flex: none;
+  border-radius: var(--r-full);
+  transition: transform .15s, box-shadow .2s, background .2s;
+}
+.vf-rec:active { transform: scale(.93); }
+.vf-rec--idle {
+  width: var(--record-d); height: var(--record-d);
+  background: var(--primary); box-shadow: var(--sh-record);
+}
+.vf-rec--idle .vf-rec-dot {
+  width: var(--record-dot); height: var(--record-dot);
+  border-radius: var(--r-full); background: #fff;
+}
+.vf-rec--recording {
+  width: var(--record-d-lg); height: var(--record-d-lg);
+  background: rgba(var(--primary-rgb), .12);
+  box-shadow: inset 0 0 0 3px var(--primary), 0 0 40px rgba(var(--primary-rgb), .25);
+}
+.vf-rec-bars { display: flex; gap: 7px; }
+.vf-rec-bars i { width: 7px; height: 26px; border-radius: 3px; background: #fff; }
+.vf-rec--paused {
+  width: var(--record-d-lg); height: var(--record-d-lg);
+  background: rgba(255,255,255,.04); box-shadow: inset 0 0 0 3px var(--grab);
+}
+.vf-rec--paused .vf-rec-dot {
+  width: var(--record-dot-lg); height: var(--record-dot-lg);
+  border-radius: var(--r-full); background: var(--primary);
+  box-shadow: 0 0 18px rgba(var(--primary-rgb), .6);
+}
+
+/* ---- VFWaveform -------------------------------------------
+   Colour is position, not amplitude: bar i is coloured by how
+   far through the take it sits, so the sweep reads the same on a
+   20 second memo and a 90 minute lecture.                    */
+.vf-wave { position: relative; display: flex; align-items: center; width: 100%; }
+.vf-wave.is-seekable { cursor: pointer; }
+.vf-wave > i {
+  flex: 1 1 0; min-width: 1px; border-radius: var(--r-wave);
+  transition: height .12s ease-out;
+}
+.vf-wave-head {
+  position: absolute; top: -6px; bottom: -6px; width: 2px; margin-left: -1px;
+  border-radius: 1px; background: #fff; box-shadow: 0 0 10px rgba(255,255,255,.6);
+}
+
+/* ---- VFSlideToCancel --------------------------------------
+   Two thresholds on purpose: 60% turns the label red and says
+   what letting go will do, 85% is where letting go does it. The
+   band between them is the chance to change your mind.       */
+.vf-slide {
+  position: relative; height: var(--slide-h); border-radius: 28px;
+  background: var(--input); overflow: hidden;
+  user-select: none; touch-action: none;
+}
+.vf-slide-fill {
+  position: absolute; left: 0; top: 0; bottom: 0;
+  width: calc(var(--x) + var(--slide-h)); border-radius: 28px;
+  background: rgba(var(--primary-rgb), .12);
+  transition: width var(--d-spring) var(--ease), background .2s;
+}
+.vf-slide.is-past .vf-slide-fill { background: rgba(var(--primary-rgb), .28); }
+.vf-slide.is-dragging .vf-slide-fill { transition: background .2s; }
+.vf-slide-label {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  padding-left: 44px; font-size: 15px; font-weight: 500;
+  color: var(--text-3); transition: color .2s; pointer-events: none;
+}
+.vf-slide.is-past .vf-slide-label { color: var(--primary-txt); }
+.vf-slide-knob {
+  position: absolute; left: 4px; top: 4px;
+  display: grid; place-items: center;
+  width: var(--slide-knob); height: var(--slide-knob); border-radius: 24px;
+  background: var(--primary); color: #fff; cursor: grab;
+  transform: translateX(var(--x));
+  box-shadow: 0 4px 14px rgba(var(--primary-rgb), .45);
+  transition: transform var(--d-spring) var(--ease);
+}
+.vf-slide.is-dragging .vf-slide-knob { transition: none; cursor: grabbing; }
+.vf-slide-knob svg { width: 20px; height: 20px; }
+
+/* ---- VFBottomSheet ----------------------------------------
+   The status icon decides the alignment: with one the sheet is
+   an announcement and centres, without one it is a list of
+   choices and stays left.                                    */
+.vf-sheet-layer {
+  position: fixed; inset: 0; z-index: 60; pointer-events: none;
+}
+.vf-sheet-layer.is-open { pointer-events: auto; }
+.vf-scrim {
+  position: absolute; inset: 0; background: rgba(0,0,0,.6);
+  opacity: 0; transition: opacity .3s;
+}
+.vf-sheet-layer.is-open .vf-scrim { opacity: 1; }
+.vf-sheet {
+  position: absolute; left: var(--sheet-inset); right: var(--sheet-inset);
+  bottom: calc(var(--sheet-inset) + var(--bot));
+  padding: 10px 20px 22px; border-radius: var(--r-sheet);
+  background: var(--sheet);
+  box-shadow: inset 0 0 0 1px var(--hairline-2), var(--sh-sheet);
+  transform: translateY(calc(100% + 24px));
+  transition: transform var(--d-sheet) var(--ease);
+}
+.vf-sheet-layer.is-open .vf-sheet { transform: translateY(0); }
+.vf-grab {
+  display: block; width: var(--grab-w); height: var(--grab-h);
+  margin: 0 auto 14px; border-radius: 2px; background: var(--grab);
+}
+.vf-sheet-icon {
+  display: grid; place-items: center;
+  width: var(--status-d); height: var(--status-d);
+  margin: 6px auto 16px; border-radius: var(--r-full);
+}
+.vf-sheet-icon svg { width: 28px; height: 28px; }
+.vf-sheet-icon--check {
+  color: var(--primary); background: rgba(var(--primary-rgb), .16);
+  box-shadow: inset 0 0 0 1px rgba(var(--primary-rgb), .35);
+}
+.vf-sheet-icon--warn {
+  color: var(--warning); background: rgba(255,166,43,.14);
+  box-shadow: inset 0 0 0 1px rgba(255,166,43,.35);
+}
+.vf-sheet-icon--x { color: #fff; background: var(--raised); }
+.vf-sheet-icon--x svg { width: 26px; height: 26px; }
+.vf-sheet-title { font-size: var(--t-sheet); font-weight: 650; letter-spacing: var(--ls-sheet); }
+.vf-sheet-sub {
+  margin-top: 6px; color: var(--text-sub);
+  font-size: 14.5px; line-height: 1.45; text-wrap: pretty;
+}
+.vf-sheet--centred .vf-sheet-title,
+.vf-sheet--centred .vf-sheet-sub { text-align: center; }
+.vf-sheet-body { display: flex; flex-direction: column; gap: var(--gap-lg); margin-top: 20px; }
+.vf-sheet-body:empty { margin-top: 0; }
+
+/* ---- VFToast ----------------------------------------------
+   Its height off the bottom is a variant, because it has to
+   clear whatever that screen keeps down there.               */
+.vf-toast {
+  position: fixed; left: var(--gut); right: var(--gut); z-index: 70;
+  display: flex; align-items: center; gap: 12px;
+  min-height: 50px; padding: 8px 8px 8px 16px; box-sizing: border-box;
+  border-radius: var(--r-toast); background: var(--toast-bg);
+  box-shadow: var(--sh-toast), inset 0 0 0 1px var(--hairline);
+  font-size: 14.5px; font-weight: 500; color: var(--text);
+  opacity: 0; transform: translateY(16px); pointer-events: none;
+  transition: opacity .25s, transform .35s var(--ease);
+}
+.vf-toast.is-open { opacity: 1; transform: translateY(0); pointer-events: auto; }
+.vf-toast--record { bottom: calc(var(--toast-lift) + var(--bot)); }
+.vf-toast--play   { bottom: calc(var(--toast-lift-play) + var(--bot)); }
+.vf-toast--edge   { bottom: calc(var(--toast-edge) + var(--bot)); }
+.vf-toast-dot {
+  display: grid; place-items: center; flex: none;
+  width: 22px; height: 22px; border-radius: 11px;
+}
+.vf-toast-dot i { width: 8px; height: 8px; border-radius: 4px; }
+.vf-toast-dot--success   { background: rgba(43,212,143,.16); }
+.vf-toast-dot--success i { background: var(--success); }
+.vf-toast-dot--error     { background: rgba(var(--primary-rgb), .16); }
+.vf-toast-dot--error i   { background: var(--primary); }
+.vf-toast-dot--info      { background: rgba(142,142,255,.16); }
+.vf-toast-dot--info i    { background: var(--info); }
+.vf-toast-msg { flex: 1; padding: 6px 0; line-height: 1.35; }
+.vf-toast-action {
+  padding: 9px 12px; border-radius: 12px;
+  color: var(--primary-txt); font-weight: 700;
+}
+.vf-toast-action:hover { background: rgba(var(--primary-rgb), .1); }
+
+/* ---- VFFolderCard -----------------------------------------
+   The colour arrives as a corner glow and a hairline ring, never
+   a fill. That is what lets six folders sit together without the
+   screen turning into a paint chart - only the icon tile is
+   fully saturated. No card carries recording imagery.        */
+.vf-card {
+  position: relative; box-sizing: border-box; overflow: hidden;
+  color: var(--text); text-align: left;
+  background:
+    radial-gradient(120% 90% at 0% 0%,
+      rgba(var(--tone-rgb), var(--glow-a)), rgba(var(--tone-rgb), 0) 62%),
+    var(--folder-card);
+  box-shadow: inset 0 0 0 1px rgba(var(--tone-rgb), var(--ring-a));
+  transition: transform .18s var(--ease), box-shadow .18s, background .18s, opacity .18s;
+}
+.vf-card.is-active {
+  background:
+    radial-gradient(120% 100% at 0% 0%,
+      rgba(var(--tone-rgb), .38), rgba(var(--tone-rgb), .12) 70%),
+    var(--surface);
+  box-shadow: inset 0 0 0 2px rgba(var(--tone-rgb), 1), 0 12px 30px rgba(var(--tone-rgb), .35);
+  transform: scale(1.04);
+}
+.vf-card.is-disabled { opacity: .38; pointer-events: none; }
+.vf-card-top { display: flex; align-items: flex-start; justify-content: space-between; }
+.vf-card-icon {
+  display: grid; place-items: center; flex: none; color: #fff;
+  background: var(--tone-icon);
+  box-shadow: 0 8px 20px rgba(var(--tone-rgb), .35), inset 0 1px 0 rgba(255,255,255,.25);
+}
+.vf-card-more {
+  display: flex; align-items: center; justify-content: center; gap: 3px;
+  border-radius: var(--r-full); cursor: pointer;
+}
+.vf-card-more i { width: 4px; height: 4px; border-radius: 2px; background: var(--text-2); }
+.vf-card-more:hover { background: rgba(255,255,255,.08); }
+.vf-card-copy { display: block; min-width: 0; }
+.vf-card-copy strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vf-card-copy small { display: block; color: var(--text-sub); }
+
+.vf-card--hero {
+  display: flex; flex-direction: column; justify-content: space-between;
+  height: var(--card-hero-h); padding: 18px; border-radius: var(--r-hero);
+}
+.vf-card--hero:active { transform: scale(.985); }
+.vf-card--hero .vf-card-icon { width: var(--icon-hero); height: var(--icon-hero); border-radius: 16px; }
+.vf-card--hero .vf-card-icon svg { width: 22px; height: 22px; }
+.vf-card--hero .vf-card-more { width: 44px; height: 44px; margin: -4px -8px 0 0; }
+.vf-card--hero .vf-card-copy strong { font-size: 22px; font-weight: 700; letter-spacing: -.5px; }
+.vf-card--hero .vf-card-copy small { margin-top: 3px; font-size: var(--t-meta-lg); }
+
+.vf-card--tile {
+  display: flex; flex-direction: column;
+  height: var(--card-tile-h); padding: 16px; border-radius: var(--r-tile);
+}
+.vf-card--tile:active { transform: scale(.98); }
+.vf-card--tile .vf-card-top { flex: 1; }
+.vf-card--tile .vf-card-icon { width: var(--icon-tile); height: var(--icon-tile); border-radius: 14px; }
+.vf-card--tile .vf-card-icon svg { width: 20px; height: 20px; }
+.vf-card--tile .vf-card-more { width: 32px; height: 32px; margin: -2px -4px 0 0; }
+.vf-card--tile .vf-card-more i { width: 3.5px; height: 3.5px; background: var(--icon-mid); }
+.vf-card--tile .vf-card-copy strong { font-size: 17px; font-weight: 650; letter-spacing: -.3px; }
+.vf-card--tile .vf-card-copy small {
+  margin-top: 2px; font-size: var(--t-meta);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.vf-card--row {
+  display: flex; align-items: center; gap: 14px;
+  height: var(--card-row-h); padding: 0 14px; border-radius: var(--r-row);
+}
+.vf-card--row:active { transform: scale(.99); }
+.vf-card--row .vf-card-top { flex: none; }
+.vf-card--row .vf-card-icon {
+  width: var(--icon-row); height: var(--icon-row); border-radius: 13px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.2);
+}
+.vf-card--row .vf-card-icon svg { width: 19px; height: 19px; }
+.vf-card--row .vf-card-copy { flex: 1; }
+.vf-card--row .vf-card-copy strong { font-size: var(--t-row); font-weight: 600; letter-spacing: var(--ls-row); }
+.vf-card--row .vf-card-copy small { margin-top: 2px; color: var(--text-3); font-size: var(--t-meta); }
+.vf-card-chev { flex: none; width: 16px; height: 16px; color: var(--text-5); }
+
+.vf-card--target {
+  display: flex; flex-direction: column; justify-content: space-between;
+  height: var(--card-target-h); padding: 12px; border-radius: var(--r-row);
+}
+.vf-card--target .vf-card-icon { width: 30px; height: 30px; border-radius: 10px; box-shadow: none; }
+.vf-card--target .vf-card-icon svg { width: 15px; height: 15px; }
+.vf-card--target .vf-card-copy strong { font-size: 14px; font-weight: 650; }
+.vf-card--target .vf-card-copy small {
+  margin-top: 1px; color: var(--text-3); font-size: var(--t-label); white-space: nowrap;
+}
+.vf-card--target.is-active .vf-card-copy small { color: var(--tone-light); }
+
+/* ---- VFRecordingRow ---------------------------------------
+   The play circle is its own target: tapping it plays in place,
+   tapping the row opens the recording. That is why it is 46px
+   and not a glyph.                                           */
+.vf-row {
+  display: flex; align-items: center; gap: 14px;
+  padding: 12px 6px 12px 12px; border-radius: var(--r-row);
+  background: var(--surface); color: var(--text);
+  transition: background .15s, box-shadow .4s, opacity .15s;
+}
+.vf-row:hover { background: var(--row-hover); }
+.vf-row.is-new {
+  box-shadow: 0 0 0 1.5px rgba(var(--primary-rgb), .7), 0 0 24px rgba(var(--primary-rgb), .18);
+}
+.vf-row.is-dragging { opacity: .35; box-shadow: inset 0 0 0 1.5px var(--grab); }
+.vf-row--drag { cursor: grab; touch-action: none; }
+.vf-row-play {
+  display: grid; place-items: center; flex: none;
+  width: var(--play-d); height: var(--play-d); border-radius: var(--r-full);
+  color: #fff; background: var(--raised); transition: background .2s;
+}
+.vf-row-play:hover { filter: brightness(1.15); }
+.vf-row-play.is-playing { background: var(--primary); }
+.vf-row-play svg { width: 18px; height: 18px; margin-left: 2px; }
+.vf-row-pause { display: flex; gap: 4px; }
+.vf-row-pause i { width: 4px; height: 15px; border-radius: 2px; background: #fff; }
+.vf-row-open { flex: 1; min-width: 0; text-align: left; }
+.vf-row-copy { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.vf-row-copy strong {
+  font-size: var(--t-row); font-weight: 600; letter-spacing: var(--ls-row);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.vf-row-meta {
+  color: var(--text-3); font-size: 13px; font-variant-numeric: tabular-nums;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.vf-row-snippet {
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; margin-top: 2px;
+  color: var(--text-snip); font-size: 13px; line-height: 1.4;
+}
+.vf-row-bar {
+  display: block; height: 3px; margin-top: 5px; overflow: hidden;
+  border-radius: 2px; background: var(--toast-bg);
+}
+.vf-row-bar i { display: block; height: 100%; border-radius: 2px; background: var(--primary); }
+.vf-row-more {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  flex: none; width: 40px; height: 40px; border-radius: 20px;
+}
+.vf-row-more i { width: 4px; height: 4px; border-radius: 2px; background: var(--icon-mid); }
+.vf-row-more:hover { background: rgba(255,255,255,.06); }
+.vf-row-grip {
+  display: grid; grid-template-columns: 4px 4px; grid-auto-rows: 4px; gap: 4px;
+  align-content: center; justify-content: center;
+  flex: none; width: 40px; height: 40px;
+}
+.vf-row-grip i { border-radius: 2px; background: var(--text-4); }
+
+/* ---- The component sheet ----------------------------------
+   TEMPORARY, with VFGallery.jsx.                             */
+.gal { padding: calc(var(--top) + 24px) var(--gut) 120px; }
+.gal > h1 { margin-bottom: 8px; font-size: var(--t-title); font-weight: 700; letter-spacing: var(--ls-title); }
+.gal-block { margin-top: 32px; }
+.gal-block > h2 {
+  margin-bottom: 12px; color: var(--text-3);
+  font-size: var(--t-label); font-weight: 700;
+  letter-spacing: var(--ls-label); text-transform: uppercase;
+}
+.gal-block > h2 em {
+  display: block; margin-top: 4px; color: var(--text-5);
+  font-size: var(--t-meta); font-weight: 400; letter-spacing: 0; text-transform: none; font-style: normal;
+}
+.gal-body { display: flex; flex-direction: column; gap: var(--gap-lg); }
+.gal-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--gap); }
+.gal-grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--gap); }
+.gal-rows { display: grid; gap: var(--gap); }
+.gal-inline { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
+.gal-toasts { display: grid; gap: var(--gap-lg); }
+.gal-toasts .vf-toast { position: static; left: auto; right: auto; bottom: auto; }
+.gal-body > .vf-btn:not(.vf-btn--full) { align-self: flex-start; }
+
+/* ---- Bookmarks, while recording ---------------------------
+   A lecture does not stop for you, so the composer floats over
+   the trace rather than pushing the controls down.            */
+.note-composer {
+  display: flex; align-items: center; gap: 10px;
+  height: 52px; padding: 0 6px 0 14px;
+  border-radius: var(--r-full); background: var(--input);
+  box-shadow: inset 0 0 0 1px var(--hairline-2);
+}
+.note-at {
+  display: inline-flex; align-items: center; gap: 6px; flex: none;
+  color: var(--primary-txt); font-size: var(--t-meta);
+  font-weight: 700; font-variant-numeric: tabular-nums;
+}
+.note-at svg { width: 15px; height: 15px; }
+.note-composer input {
+  flex: 1; min-width: 0; height: 100%;
+  border: 0; outline: 0; background: transparent;
+  color: var(--text); font-size: var(--t-body); caret-color: var(--primary);
+}
+.note-composer input::placeholder { color: var(--text-4); }
+.note-close { display: grid; place-items: center; flex: none; width: 34px; height: 34px; color: var(--text-3); }
+.note-close svg { width: 15px; height: 15px; }
+.note-save {
+  flex: none; height: 38px; padding: 0 16px; border-radius: var(--r-full);
+  background: var(--primary); color: #fff; font-size: 14px; font-weight: 650;
+}
+.note-rack { display: flex; flex-wrap: wrap; gap: var(--gap); }
+.note-chip {
+  display: inline-flex; align-items: center; gap: 8px;
+  max-width: 100%; height: 34px; padding: 0 12px;
+  border-radius: var(--r-full); background: var(--chip); color: var(--text-2);
+  font-size: var(--t-meta);
+}
+.note-chip svg { flex: none; width: 13px; height: 13px; color: var(--primary-txt); }
+.note-chip b { overflow: hidden; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.note-chip small { flex: none; color: var(--text-4); font-variant-numeric: tabular-nums; }
+
+/* The side slots either side of the record button. Both are always in the
+   layout; only their contents fade, so the button cannot move. */
+.rec-side { display: grid; place-items: center; width: 84px; }
+.rec-bookmark {
+  display: grid; place-items: center;
+  width: var(--hit); height: var(--hit); border-radius: var(--r-full);
+  color: var(--text-2); background: var(--chip);
+  transition: opacity .2s, transform var(--d-press);
+}
+.rec-bookmark:active { transform: scale(.92); }
+.rec-bookmark svg { width: 20px; height: 20px; }
+.rec-bookmark.is-hidden { opacity: 0; pointer-events: none; }
+
+/* ---- The transcript, following playback --------------------
+   The line being spoken is in focus and the rest recedes; inside
+   it, the words already said take the accent. Everything else on
+   the screen is quiet so this can be read at a glance.         */
+.transcript-pane { margin-top: 18px; }
+
+/* ---- The transcript, read the way lyrics are ---------------
+   One size for every line, and colour carries the position:
+   the line being spoken sits in front, the words already said
+   inside it go white, everything else falls back. No timestamps
+   - the playhead has the time, and a column of numbers down the
+   left is what pulls the eye off the words.                   */
+.lyrics { display: grid; gap: 4px; margin-top: 18px; }
+.lyric-wrap { display: grid; gap: 4px; }
+.lyric {
+  padding: 8px 4px; border-radius: var(--r-input); text-align: left;
+  font-size: 26px; font-weight: 600; letter-spacing: -.4px; line-height: 1.3;
+  color: var(--grab);
+  transition: color .2s;
+}
+.lyric.is-past, .lyric.is-future { color: var(--grab); }
+.lyric.is-active { color: var(--text-3); }
+.lyric .w { transition: color .1s linear; }
+.lyric.is-active .w.on { color: var(--text); }
+.lyric mark { font-weight: 700; }
+.lyric-bookmark {
+  display: inline-flex; align-items: center; gap: 6px; justify-self: start;
+  padding: 3px 10px; border-radius: var(--r-full);
+  background: var(--danger-bg); color: var(--primary-txt);
+  font-size: var(--t-label); font-weight: 700;
+}
+
+/* ---- Bookmarks, as a list you can jump from ---------------- */
+.bookmark-list { display: grid; gap: 2px; margin-top: 18px; }
+.bookmark-row {
+  display: grid; grid-template-columns: 58px minmax(0, 1fr); align-items: baseline; gap: 12px;
+  padding: 14px 12px; border-radius: var(--r-input); text-align: left;
+}
+.bookmark-row:hover { background: rgba(255,255,255,.04); }
+.bookmark-row time {
+  color: var(--primary-txt); font-size: var(--t-meta); font-weight: 700;
+  font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+}
+.bookmark-row span { color: var(--text-2); font-size: var(--t-body-lg); }
+
+/* ---- The scrubber -----------------------------------------
+   A tape head: the playhead never moves, the recording is
+   dragged past it.                                            */
+.scrubber {
+  position: relative; height: 64px; touch-action: none; cursor: grab;
+  outline: 0;
+}
+.scrubber:active { cursor: grabbing; }
+.scrubber canvas { display: block; width: 100%; height: 100%; }
+.playhead {
+  position: absolute; top: 0; bottom: 14px; left: 50%;
+  width: 2px; margin-left: -1px; border-radius: 1px;
+  background: #fff; box-shadow: 0 0 10px rgba(255,255,255,.6);
+  pointer-events: none;
+}
+.playhead em {
+  position: absolute; bottom: -16px; left: 50%; transform: translateX(-50%);
+  color: var(--text-2); font-size: var(--t-meta); font-style: normal;
+  font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+}
+.scrubber:focus-visible { box-shadow: inset 0 0 0 2px var(--primary); border-radius: var(--r-input); }
+
+/* ---- The three ways out of the player ---------------------- */
+.play-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--gap); }
+.play-actions button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  height: var(--btn-h-sm); border-radius: var(--r-full);
+  background: var(--chip); color: var(--text-2);
+  font-size: 13.5px; font-weight: 600;
+}
+.play-actions button.is-on { background: var(--raised); color: var(--text); }
+.play-actions svg { width: 16px; height: 16px; }
+.play-actions b {
+  min-width: 18px; padding: 0 5px; border-radius: var(--r-full);
+  background: var(--danger-bg); color: var(--primary-txt); font-size: 11px;
+}
+.player-speed.is-on { color: var(--primary-txt); }
+/* Empty and in-progress states for the transcript and bookmark panes. */
+.transcript-note {
+  margin-top: 18px; color: var(--text-4);
+  font-size: var(--t-body); line-height: var(--lh-body);
 }

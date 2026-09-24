@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;display=swap"></helmet>
+<div ref="{{ track }}" style="position:relative;height:56px;border-radius:28px;background:#1F1F26;overflow:hidden;user-select:none;touch-action:none;font-family:Figtree,sans-serif">
+  <div style="position:absolute;left:0;top:0;bottom:0;width:{{ fillW }};background:{{ fillBg }};border-radius:28px;transition:{{ trW }}"></div>
+  <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding-left:44px;font-size:15px;font-weight:500;color:{{ labelColor }};transition:color .2s;pointer-events:none">{{ label }}</div>
+  <div onPointerDown="{{ down }}" style="position:absolute;left:4px;top:4px;width:48px;height:48px;border-radius:24px;background:#FF2D55;display:flex;align-items:center;justify-content:center;cursor:grab;transform:translateX({{ knobX }});transition:{{ trT }};box-shadow:0 4px 14px rgba(255,45,85,.45)">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:340,&quot;height&quot;:80},&quot;label&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Slide to cancel&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;releaseLabel&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Release to cancel&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;onCancel&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;}}">
+class Component extends DCLogic {
+  state = { x: 0, drag: false };
+  track = React.createRef();
+  max() { const el = this.track.current; return el ? el.offsetWidth - 56 : 220; }
+  componentDidMount() {
+    this.mv = (e) => { if (!this.state.drag) return; this.setState({ x: Math.max(0, Math.min(this.max(), e.clientX - this.sx)) }); };
+    this.up = () => {
+      if (!this.state.drag) return;
+      const m = this.max();
+      if (this.state.x >= m * .85) {
+        this.setState({ x: m, drag: false });
+        setTimeout(() => { this.props.onCancel && this.props.onCancel(); setTimeout(() => this.setState({ x: 0 }), 400); }, 200);
+      } else this.setState({ x: 0, drag: false });
+    };
+    window.addEventListener('pointermove', this.mv); window.addEventListener('pointerup', this.up); window.addEventListener('pointercancel', this.up);
+  }
+  componentWillUnmount() { window.removeEventListener('pointermove', this.mv); window.removeEventListener('pointerup', this.up); window.removeEventListener('pointercancel', this.up); }
+  renderVals() {
+    const { x, drag } = this.state, m = this.max(), past = x > m * .6;
+    const ease = 'cubic-bezier(.2,.8,.2,1)';
+    return {
+      track: this.track, knobX: x + 'px', fillW: (x + 56) + 'px',
+      fillBg: past ? 'rgba(255,45,85,.28)' : 'rgba(255,45,85,.12)',
+      trT: drag ? 'none' : 'transform .35s ' + ease, trW: drag ? 'background .2s' : 'width .35s ' + ease + ', background .2s',
+      label: past ? (this.props.releaseLabel ?? 'Release to cancel') : (this.props.label ?? 'Slide to cancel'),
+      labelColor: past ? '#FF5A78' : '#8E8E98',
+      down: (e) => { this.sx = e.clientX - x; this.setState({ drag: true }); e.preventDefault(); },
+    };
+  }
+}
+</script>
+</body>
+</html>

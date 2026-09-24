@@ -563,7 +563,7 @@ export async function handleApi({ method, path, body }) {
     const like = `%${term}%`;
     const rows = await db.getAllAsync(
       `SELECT l.id, l.title, l.workspace_id, l.created_at, l.note_body, l.transcript,
-              w.title AS workspace_title
+              l.segments_json, w.title AS workspace_title, w.folder_id AS folder_id
          FROM lectures l LEFT JOIN workspaces w ON w.id = l.workspace_id
         WHERE l.title LIKE ? OR l.note_body LIKE ? OR l.transcript LIKE ?
         ORDER BY l.created_at DESC LIMIT 40`,
@@ -575,13 +575,24 @@ export async function handleApi({ method, path, body }) {
         const haystack = row.note_body || row.transcript || '';
         const at = haystack.toLowerCase().indexOf(term.toLowerCase());
         const from = Math.max(0, at - 60);
+        // A result is only useful if it can be opened at the moment the word
+        // was said, so the matching segment is found here rather than making
+        // the screen fetch the whole recording to work it out.
+        const segments = parseSegments(row.segments_json, row.transcript);
+        const hit = segments.find((segment) => (
+          String(segment.text ?? '').toLowerCase().includes(term.toLowerCase())
+        ));
         return {
           lecture_id: row.id,
           workspace_id: row.workspace_id,
+          folder_id: row.folder_id ?? null,
           title: row.title,
           workspace_title: row.workspace_title,
           created_at: row.created_at,
-          excerpt: at >= 0 ? `${from > 0 ? '…' : ''}${haystack.slice(from, at + 120)}…` : '',
+          start_seconds: hit ? hit.start_seconds ?? 0 : null,
+          excerpt: hit
+            ? String(hit.text)
+            : (at >= 0 ? `${from > 0 ? '…' : ''}${haystack.slice(from, at + 120)}…` : ''),
         };
       }),
     });

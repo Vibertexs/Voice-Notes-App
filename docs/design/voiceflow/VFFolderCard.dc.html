@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;display=swap"></helmet>
+<sc-if value="{{ isHero }}" hint-placeholder-val="{{ true }}">
+<div onClick="{{ press }}" style="position:relative;height:140px;box-sizing:border-box;border-radius:28px;background:{{ bg }};box-shadow:{{ ring }};padding:18px;display:flex;flex-direction:column;justify-content:space-between;cursor:pointer;font-family:Figtree,sans-serif;color:#F4F4F6;overflow:hidden;transform:{{ tf }};opacity:{{ op }};transition:transform .18s,box-shadow .18s,background .18s" style-active="transform:scale(.985)">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between">
+    <div style="width:48px;height:48px;border-radius:16px;background:{{ grad }};box-shadow:0 8px 20px {{ shadow }},inset 0 1px 0 rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="#fff"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5h3.6c.6 0 1.2.3 1.6.7L12 7h6.5A2.5 2.5 0 0 1 21 9.5v8a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"></path></svg></div>
+    <div onClick="{{ more }}" style="width:44px;height:44px;border-radius:22px;display:flex;align-items:center;justify-content:center;gap:3px;margin:-4px -8px 0 0" style-hover="background:rgba(255,255,255,.08)"><div style="width:4px;height:4px;border-radius:2px;background:#C9C9D1"></div><div style="width:4px;height:4px;border-radius:2px;background:#C9C9D1"></div><div style="width:4px;height:4px;border-radius:2px;background:#C9C9D1"></div></div>
+  </div>
+  <div style="min-width:0"><div style="font-size:22px;font-weight:700;letter-spacing:-.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ title }}</div><div style="font-size:13.5px;color:#9A9AA4;margin-top:3px">{{ metaLabel }}</div></div>
+</div>
+</sc-if>
+<sc-if value="{{ isTile }}" hint-placeholder-val="{{ false }}">
+<div onClick="{{ press }}" style="position:relative;height:140px;box-sizing:border-box;border-radius:26px;background:{{ bg }};box-shadow:{{ ring }};padding:16px;display:flex;flex-direction:column;cursor:pointer;font-family:Figtree,sans-serif;color:#F4F4F6;overflow:hidden;transform:{{ tf }};opacity:{{ op }};transition:transform .18s,box-shadow .18s,background .18s" style-active="transform:scale(.98)">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between">
+    <div style="width:42px;height:42px;border-radius:14px;background:{{ grad }};box-shadow:0 6px 16px {{ shadow }},inset 0 1px 0 rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5h3.6c.6 0 1.2.3 1.6.7L12 7h6.5A2.5 2.5 0 0 1 21 9.5v8a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"></path></svg></div>
+    <div onClick="{{ more }}" style="width:32px;height:32px;border-radius:16px;display:flex;align-items:center;justify-content:center;gap:3px;margin:-2px -4px 0 0" style-hover="background:rgba(255,255,255,.08)"><div style="width:3.5px;height:3.5px;border-radius:2px;background:#A0A0AA"></div><div style="width:3.5px;height:3.5px;border-radius:2px;background:#A0A0AA"></div><div style="width:3.5px;height:3.5px;border-radius:2px;background:#A0A0AA"></div></div>
+  </div>
+  <div style="flex:1"></div>
+    <div style="font-size:17px;font-weight:650;letter-spacing:-.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ title }}</div>
+  <div style="font-size:12.5px;color:#9A9AA4;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ metaLabel }}</div>
+</div>
+</sc-if>
+<sc-if value="{{ isRow }}" hint-placeholder-val="{{ false }}">
+<div onClick="{{ press }}" style="display:flex;align-items:center;gap:14px;height:68px;box-sizing:border-box;padding:0 14px;border-radius:20px;background:{{ bg }};box-shadow:{{ ring }};cursor:pointer;font-family:Figtree,sans-serif;color:#F4F4F6;transform:{{ tf }};opacity:{{ op }};transition:transform .18s,box-shadow .18s,background .18s" style-active="transform:scale(.99)">
+  <div style="width:40px;height:40px;border-radius:13px;background:{{ grad }};box-shadow:inset 0 1px 0 rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;flex:none"><svg width="19" height="19" viewBox="0 0 24 24" fill="#fff"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5h3.6c.6 0 1.2.3 1.6.7L12 7h6.5A2.5 2.5 0 0 1 21 9.5v8a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"></path></svg></div>
+  <div style="flex:1;min-width:0"><div style="font-size:16px;font-weight:600;letter-spacing:-.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ title }}</div><div style="font-size:12.5px;color:#8E8E98;margin-top:2px">{{ metaLabel }}</div></div>
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#55555E" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
+</div>
+</sc-if>
+<sc-if value="{{ isTarget }}" hint-placeholder-val="{{ false }}">
+<div onClick="{{ press }}" style="position:relative;height:88px;box-sizing:border-box;border-radius:20px;background:{{ bg }};box-shadow:{{ ring }};padding:12px;display:flex;flex-direction:column;justify-content:space-between;font-family:Figtree,sans-serif;color:#F4F4F6;transform:{{ tf }};opacity:{{ op }};transition:transform .18s cubic-bezier(.2,.8,.2,1),box-shadow .18s,background .18s">
+  <div style="width:30px;height:30px;border-radius:10px;background:{{ grad }};display:flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="#fff"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5h3.6c.6 0 1.2.3 1.6.7L12 7h6.5A2.5 2.5 0 0 1 21 9.5v8a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"></path></svg></div>
+  <div style="min-width:0"><div style="font-size:14px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ title }}</div><div style="font-size:11.5px;color:{{ targetMetaC }};margin-top:1px;white-space:nowrap">{{ metaLabel }}</div></div>
+</div>
+</sc-if>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:380,&quot;height&quot;:200},&quot;title&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;University&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;count&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:3,&quot;tsType&quot;:&quot;number&quot;},&quot;meta&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;color&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;red&quot;,&quot;blue&quot;,&quot;violet&quot;,&quot;amber&quot;,&quot;green&quot;,&quot;graphite&quot;],&quot;default&quot;:&quot;red&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;layout&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;hero&quot;,&quot;tile&quot;,&quot;row&quot;,&quot;target&quot;],&quot;default&quot;:&quot;hero&quot;,&quot;tsType&quot;:&quot;'hero'|'tile'|'row'|'target'&quot;},&quot;latest&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Lecture 1&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;latestMeta&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Sep 16 · 28:17&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;active&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;disabled&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;onPress&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onMore&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onPlay&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;}}">
+const FC = {
+  red: ['255,45,85', 'linear-gradient(145deg,#FF5A7A,#E0286C)', '#FF7A93'],
+  blue: ['47,123,255', 'linear-gradient(145deg,#5B9BFF,#2A5CFF)', '#7FAEFF'],
+  violet: ['155,75,255', 'linear-gradient(145deg,#B983FF,#7B3CF2)', '#C39BFF'],
+  amber: ['255,138,46', 'linear-gradient(145deg,#FFAE5C,#F2662C)', '#FFB672'],
+  green: ['31,199,138', 'linear-gradient(145deg,#4BDDA6,#0FA57A)', '#5FE3B2'],
+  graphite: ['140,140,155', 'linear-gradient(145deg,#4E4E5A,#32323B)', '#A8A8B4'],
+};
+function levels(seedStr, n) {
+  let s = 0; for (const ch of seedStr) s = (s * 31 + ch.charCodeAt(0)) % 233280;
+  const out = [];
+  for (let i = 0; i < n; i++) { s = (s * 9301 + 49297) % 233280; const r = s / 233280; const env = .45 + .55 * Math.sin(Math.PI * (i + .5) / n); out.push(Math.max(.15, (.25 + .75 * r) * env)); }
+  return out;
+}
+class Component extends DCLogic {
+  renderVals() {
+    const p = this.props, C = FC[p.color ?? 'red'] || FC.red, rgb = C[0];
+    let lay = p.layout ?? 'hero'; if (lay === 'wide') lay = 'hero';
+    const n = p.count ?? 0, title = p.title ?? 'University';
+    const active = !!p.active, disabled = !!p.disabled, gph = (p.color ?? 'red') === 'graphite';
+    const a1 = gph ? .10 : .20, a2 = gph ? .10 : .18;
+    const bg = active
+      ? `radial-gradient(120% 100% at 0% 0%, rgba(${rgb},.38), rgba(${rgb},.12) 70%), #16161B`
+      : `radial-gradient(120% 90% at 0% 0%, rgba(${rgb},${a1}), rgba(${rgb},0) 62%), #131318`;
+    const ring = active ? `inset 0 0 0 2px rgba(${rgb},1), 0 12px 30px rgba(${rgb},.35)` : `inset 0 0 0 1px rgba(${rgb},${a2})`;
+    const lv = levels(title, 36);
+    return {
+      title, isHero: lay === 'hero', isTile: lay === 'tile', isRow: lay === 'row', isTarget: lay === 'target',
+      metaLabel: p.meta || (n === 0 ? 'Empty' : n === 1 ? '1 recording' : n + ' recordings'),
+      grad: C[1], light: C[2], shadow: `rgba(${rgb},.35)`, bg, ring,
+      tf: active ? 'scale(1.04)' : 'none', op: disabled ? .38 : 1,
+      targetMetaC: active ? C[2] : '#8E8E98',
+      latest: p.latest ?? '', latestMeta: p.latestMeta ?? '', hasLatest: !!p.latest,
+      bars: lv.map((v, i) => ({ h: Math.round(v * 34) + 'px', c: `rgba(${rgb},${i < 20 ? .95 : .28})` })),
+      miniBars: lv.slice(0, 16).map(v => ({ h: Math.round(v * 20) + 'px', c: `rgba(${rgb},.6)` })),
+      press: () => p.onPress && p.onPress(),
+      more: (e) => { e.stopPropagation(); p.onMore && p.onMore(); },
+      play: (e) => { e.stopPropagation(); p.onPlay && p.onPlay(); },
+    };
+  }
+}
+</script>
+</body>
+</html>

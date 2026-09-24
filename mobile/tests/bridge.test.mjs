@@ -13,7 +13,7 @@ import { JSDOM } from 'jsdom';
 const here = dirname(fileURLToPath(import.meta.url));
 const source = readFileSync(join(here, '..', 'src', 'bridge.js'), 'utf8');
 const captureSource = readFileSync(
-  join(here, '..', '..', 'frontend', 'src', 'components', 'RecordScreen.jsx'),
+  join(here, '..', '..', 'frontend', 'src', 'screens', 'RecordScreen.jsx'),
   'utf8',
 );
 
@@ -65,7 +65,7 @@ const doneBody = captureSource.slice(doneStart, doneEnd);
 // reach recorder.stop() without first requiring a chunk - and it must not then
 // call an empty result a failure on the native side.
 check('stopping is never gated on a chunk having arrived',
-  !/if \(!recorder \|\| !chunksRef\.current\.length/.test(doneBody)
+  !/!chunks\.current\.length/.test(doneBody)
     && /phase !== 'paused'/.test(doneBody),
   'the page must call native stop before its file token exists');
 // The check below this one proves the shell emits its token before it emits
@@ -78,8 +78,8 @@ check('an empty blob is an error on every path',
     && !/nativeDeliversOnStop/.test(doneBody),
   'an empty native blob is a failed recorder, not a silent take');
 check('the reason the recorder gave is what the page reports',
-  /stopFailureRef\.current \|\|/.test(doneBody)
-    && /stopFailureRef\.current = detail/.test(captureSource),
+  /stopFailure\.current \|\|/.test(doneBody)
+    && /stopFailure\.current = detail/.test(captureSource),
   'the native message is the only account of why recording stopped');
 
 const stopStart = body.indexOf('ShimRecorder.prototype.stop');

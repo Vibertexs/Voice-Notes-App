@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><meta name="design_doc_mode" content="canvas"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;display=swap"><style>body{margin:0;background:#060608;font-family:Figtree,sans-serif;color:#F4F4F6}a{color:#FF5A78;text-decoration:none}a:hover{color:#FF8A9E}</style></helmet>
+<div style="padding:44px;display:flex;flex-direction:column;gap:36px;max-width:1500px">
+  <div style="display:flex;flex-direction:column;gap:8px">
+    <div style="font-size:30px;font-weight:700;letter-spacing:-.8px">VoiceFlow components</div>
+    <div style="font-size:14px;color:#8E8E98;line-height:1.55;max-width:720px">Each block is its own file (name in mono). Download the project and drop any of them into another design, or open the file directly to tweak its props. The <a href="VoiceFlow.dc.html">prototype</a> is built from these.</div>
+  </div>
+
+  <div style="display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start">
+
+    <div id="c-folder" style="width:440px;border-radius:24px;background:#0E0E12;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);padding:22px;display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px"><div style="font-size:16px;font-weight:650">Folder card</div><div style="font:500 11px ui-monospace,Menlo,monospace;color:#FF5A78">VFFolderCard.dc.html</div></div>
+      <dc-import name="VFFolderCard" layout="hero" title="University" meta="3 recordings · 49 min" color="red" hint-size="100%,140px"></dc-import>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <dc-import name="VFFolderCard" layout="tile" title="All iCloud" meta="12 recordings" color="blue" hint-size="100%,140px"></dc-import>
+        <dc-import name="VFFolderCard" layout="tile" title="Shared" meta="43 recordings" color="violet" hint-size="100%,140px"></dc-import>
+      </div>
+      <dc-import name="VFFolderCard" layout="row" title="Inbox" meta="5 recordings" color="graphite" hint-size="100%,68px"></dc-import>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+        <dc-import name="VFFolderCard" layout="target" title="Work" meta="Drop to move" color="amber" active="{{ true }}" hint-size="100%,88px"></dc-import>
+        <dc-import name="VFFolderCard" layout="target" title="Biology" meta="7 recordings" color="green" hint-size="100%,88px"></dc-import>
+        <dc-import name="VFFolderCard" layout="target" title="University" meta="Current" color="red" disabled="{{ true }}" hint-size="100%,88px"></dc-import>
+      </div>
+      <div style="font-size:12.5px;color:#6A6A74">layout: hero · tile · row · target (active / disabled)</div>
+    </div>
+
+    <div id="c-row" style="width:440px;border-radius:24px;background:#0E0E12;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);padding:22px;display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px"><div style="font-size:16px;font-weight:650">Recording row</div><div style="font:500 11px ui-monospace,Menlo,monospace;color:#FF5A78">VFRecordingRow.dc.html</div></div>
+      <dc-import name="VFRecordingRow" title="Lecture 1" date="Sep 16, 2026" duration="28:17" hint-size="100%,70px"></dc-import>
+      <dc-import name="VFRecordingRow" title="Study Notes" date="Sep 14, 2026" duration="12:43" playing="{{ true }}" progress="{{ 0.42 }}" hint-size="100%,76px"></dc-import>
+      <dc-import name="VFRecordingRow" title="Lecture 2" date="Sep 23, 2026" duration="4:12" highlight="{{ true }}" hint-size="100%,70px"></dc-import>
+      <dc-import name="VFRecordingRow" mode="drag" title="Standup" date="Sep 22, 2026" duration="14:05" hint-size="100%,70px"></dc-import>
+      <dc-import name="VFRecordingRow" title="Discussion" date="Sep 12, 2026" duration="8:32" snippet="Maya argued most policy fails because it ignores delays in the loop." hint-size="100%,100px"></dc-import>
+      <div style="font-size:12.5px;color:#6A6A74">default · playing with progress · just saved (highlight) · with snippet</div>
+    </div>
+
+    <div id="c-wave" style="width:440px;border-radius:24px;background:#0E0E12;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);padding:22px;display:flex;flex-direction:column;gap:18px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline"><div style="font-size:16px;font-weight:650">Waveform</div><div style="font:500 11px ui-monospace,Menlo,monospace;color:#FF5A78">VFWaveform.dc.html</div></div>
+      <dc-import name="VFWaveform" seed="{{ 7 }}" height="{{ 96 }}" hint-size="100%,96px"></dc-import>
+      <dc-import name="VFWaveform" seed="{{ 11 }}" count="{{ 72 }}" gap="{{ 2 }}" height="{{ 44 }}" progress="{{ 0.38 }}" hint-size="100%,44px"></dc-import>
+      <dc-import name="VFWaveform" seed="{{ 3 }}" height="{{ 64 }}" dim="{{ true }}" center-head="{{ true }}" hint-size="100%,64px"></dc-import>
+      <div style="font-size:12.5px;color:#6A6A74">live · scrubbable playback (onSeek) · paused</div>
+    </div>
+
+    <div id="c-rec" style="width:440px;border-radius:24px;background:#0E0E12;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);padding:22px;display:flex;flex-direction:column;gap:18px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline"><div style="font-size:16px;font-weight:650">Record / pause button</div><div style="font:500 11px ui-monospace,Menlo,monospace;color:#FF5A78">VFRecordButton.dc.html</div></div>
+      <div style="display:flex;justify-content:space-around;align-items:center;height:110px">
+        <dc-import name="VFRecordButton" state="idle" hint-size="72px,72px"></dc-import>
+        <dc-import name="VFRecordButton" state="recording" hint-size="80px,80px"></dc-import>
+        <dc-import name="VFRecordButton" state="paused" hint-size="80px,80px"></dc-import>
+      </div>
+      <div style="display:flex;justify-content:space-around;font-size:12.5px;color:#6A6A74"><span>idle</span><span>recording</span><span>paused</span></div>
+    </div>
+
+    <div id="c-slide" style="width:440px;border-radius:24px;background:#0E0E12;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);padding:22px;display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline"><div style="font-size:16px;font-weight:650">Slide to cancel</div><div style="font:500 11px ui-monospace,Menlo,monospace;color:#FF5A78">VFSlideToCancel.dc.html</div></div>
+      <dc-import name="VFSlideToCancel" hint-size="100%,56px"></dc-import>
+      <dc-import name="VFSlideToCancel" label="Slide to toss it" release-label="Let go to toss" hint-size="100%,56px"></dc-import>
+      <div style="font-size:12.5px;color:#6A6A74">Drag the knob. Past 60% the label flips; release past 85% fires onCancel.</div>
+    </div>
+
+    <div id="c-btn" style="width:440px;border-radius:24px;background:#0E0E12;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);padding:22px;display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px"><div style="font-size:16px;font-weight:650">Buttons</div><div style="font:500 11px ui-monospace,Menlo,monospace;color:#FF5A78">VFButton.dc.html</div></div>
+      <dc-import name="VFButton" label="Finish Recording" hint-size="100%,52px"></dc-import>
+      <dc-import name="VFButton" label="New Recording" icon="plus" hint-size="100%,52px"></dc-import>
+      <dc-import name="VFButton" label="Back to Folders" variant="secondary" hint-size="100%,52px"></dc-import>
+      <dc-import name="VFButton" label="Delete folder" variant="danger" hint-size="100%,52px"></dc-import>
+      <div style="display:flex;gap:10px;align-items:center">
+        <dc-import name="VFButton" label="Finish" variant="secondary" size="sm" icon="check" full="{{ false }}" hint-size="100px,40px"></dc-import>
+        <dc-import name="VFButton" label="Not now" variant="ghost" size="sm" full="{{ false }}" hint-size="100px,40px"></dc-import>
+        <dc-import name="VFButton" label="Create folder" size="sm" disabled="{{ true }}" full="{{ false }}" hint-size="120px,40px"></dc-import>
+      </div>
+    </div>
+
+    <div id="c-search" style="width:440px;border-radius:24px;background:#0E0E12;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);padding:22px;display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px"><div style="font-size:16px;font-weight:650">Search field</div><div style="font:500 11px ui-monospace,Menlo,monospace;color:#FF5A78">VFSearchField.dc.html</div></div>
+      <dc-import name="VFSearchField" hint-size="100%,48px"></dc-import>
+      <dc-import name="VFSearchField" placeholder="Search this transcript" hint-size="100%,48px"></dc-import>
+      <div style="font-size:12.5px;color:#6A6A74">Type to see the clear button; focus shows the accent ring.</div>
+    </div>
+
+    <div id="c-toast" style="width:440px;border-radius:24px;background:#0E0E12;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);padding:22px;display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px"><div style="font-size:16px;font-weight:650">Status toasts</div><div style="font:500 11px ui-monospace,Menlo,monospace;color:#FF5A78">VFToast.dc.html</div></div>
+      <dc-import name="VFToast" message="Moved to Work" action="View" hint-size="100%,50px"></dc-import>
+      <dc-import name="VFToast" kind="error" message="“Lecture 1” deleted" action="Undo" hint-size="100%,50px"></dc-import>
+      <dc-import name="VFToast" kind="info" message="Opening storage settings…" hint-size="100%,50px"></dc-import>
+    </div>
+
+    <div id="c-sheet" style="width:440px;border-radius:24px;background:#0E0E12;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);padding:22px;display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline"><div style="font-size:16px;font-weight:650">Bottom sheet</div><div style="font:500 11px ui-monospace,Menlo,monospace;color:#FF5A78">VFBottomSheet.dc.html</div></div>
+      <div style="position:relative;height:430px;border-radius:28px;overflow:hidden;background:#0A0A0D">
+        <div style="padding:60px 28px;font-size:26px;font-weight:650;color:#34343D;line-height:1.25">So first we start with the basic idea of a system…</div>
+        <dc-import name="VFBottomSheet" icon="check" title="Finish recording?" subtitle="Save this recording to University?" style="position:absolute;inset:0" hint-size="100%,100%">
+          <dc-import name="VFButton" label="Finish Recording" hint-size="100%,52px"></dc-import>
+          <dc-import name="VFSlideToCancel" hint-size="100%,56px"></dc-import>
+        </dc-import>
+      </div>
+      <div style="font-size:12.5px;color:#6A6A74">icon: none · check · warn · x — any content passes through as children.</div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

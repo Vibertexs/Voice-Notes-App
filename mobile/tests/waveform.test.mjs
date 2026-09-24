@@ -7,8 +7,11 @@ import { JSDOM } from 'jsdom';
 const here = dirname(fileURLToPath(import.meta.url));
 const bridgeSource = readFileSync(join(here, '..', 'src', 'bridge.js'), 'utf8');
 const appSource = readFileSync(join(here, '..', 'App.js'), 'utf8');
+// The gate moved out of the old canvas waveform into the hook that samples the
+// microphone; the contract it guards - that native and page agree on what
+// counts as silence - is unchanged.
 const waveSource = readFileSync(
-  join(here, '..', '..', 'frontend', 'src', 'components', 'Waveform.jsx'), 'utf8',
+  join(here, '..', '..', 'frontend', 'src', 'lib', 'useLiveLevels.js'), 'utf8',
 );
 
 let pass = 0, total = 0;
@@ -34,9 +37,9 @@ const gateMatch = waveSource.match(/\(rms - ([\d.]+)\) \/ ([\d.]+)/);
 check('the page gate was found', Boolean(gateMatch), waveSource.slice(0, 120));
 const [, floorInPage, spanInPage] = gateMatch ?? [];
 check(`bridge uses the page silence floor (${floorInPage})`,
-  body.includes('SILENCE_FLOOR = ' + floorInPage), 'floor drifted from Waveform.jsx');
+  body.includes('SILENCE_FLOOR = ' + floorInPage), 'floor drifted from useLiveLevels.js');
 check(`bridge uses the page gate span (${spanInPage})`,
-  body.includes('GATE_SPAN = ' + spanInPage), 'span drifted from Waveform.jsx');
+  body.includes('GATE_SPAN = ' + spanInPage), 'span drifted from useLiveLevels.js');
 
 console.log('\n== a pushed level comes back as the right bar height ==');
 const dom = new JSDOM('<div id="root"></div>', { runScripts: 'outside-only', url: 'http://localhost/' });

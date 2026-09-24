@@ -1,341 +1,466 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import ActionSheet from './components/ActionSheet';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import HomeScreen from './screens/HomeScreen';
+import FolderScreen from './screens/FolderScreen';
+import RecordScreen from './screens/RecordScreen';
+import PlaybackScreen from './screens/PlaybackScreen';
+import SearchScreen from './screens/SearchScreen';
+import OrganizeScreen from './screens/OrganizeScreen';
+import OnboardingScreen from './screens/OnboardingScreen';
+import RecordDock from './components/RecordDock';
 import DragGhost from './components/DragGhost';
-import RecordButton from './components/RecordButton';
-import FolderDialog from './components/FolderDialog';
-import FolderScreen from './components/FolderScreen';
-import FoldersScreen from './components/FoldersScreen';
-import PlaybackScreen from './components/PlaybackScreen';
-import RecordScreen from './components/RecordScreen';
-import RecordingSheet from './components/RecordingSheet';
+import VFToast from './components/VFToast';
+import FolderEditSheet from './components/FolderEditSheet';
+import MoveToFolderSheet from './components/MoveToFolderSheet';
+import RecordingActionsSheet from './components/RecordingActionsSheet';
 import SettingsDialog from './components/SettingsDialog';
-import { FOLDER_COLORS } from './components/FolderCard';
 import { libraryApi } from './lib/api';
-import { countLabel, recordingMeta } from './lib/format';
 import useDragToFile from './lib/useDragToFile';
 
-function Toast({ toast }) {
-  return toast ? <div className={`toast ${toast.kind ?? ''}`} role="status">{toast.message}</div> : null;
+const SEEN_KEY = 'vf.onboarded';
+const PINNED_KEY = 'vf.pinned';
+
+/**
+ * Which folders lead the bento.
+ *
+ * The handoff's folder model has a `pinned` flag; the store has nowhere to put
+ * one and `backend/` is off limits, so the choice is kept per device. Nothing
+ * chosen yet means the first three, which is what it looked like before. A
+ * folder you just made is pinned straight away - landing a new folder under
+ * "Other", below the ones it was made to sit beside, is not what making it
+ * meant.
+ */
+const PIN_LIMIT = 5;
+function readPinned() {
+  try { return JSON.parse(window.localStorage.getItem(PINNED_KEY) ?? 'null'); }
+  catch { return null; }
+}
+function writePinned(ids) {
+  try { window.localStorage.setItem(PINNED_KEY, JSON.stringify(ids)); }
+  catch { /* private mode */ }
 }
 
+/**
+ * Inbox is where a recording is when it is nowhere: `folder_id === null`.
+ *
+ * The handoff treats Inbox as a folder you can drop onto and record into, but
+ * the store has no such row - unfiled recordings simply have no folder. Making
+ * one real would mean a migration and a folder nobody can delete, so it is a
+ * folder here and null underneath, in one place.
+ */
+const INBOX = { id: '__inbox', name: 'Inbox', color: 'graphite', virtual: true };
+const toFolderId = (id) => (id === INBOX.id || id === '__out' ? null : id);
+
 function Boot() {
-  return <main className="boot"><div className="orb" /><p>Opening your recordings…</p></main>;
+  return <main className="screen boot"><span className="spinner" /><p>Opening your recordings…</p></main>;
 }
 
 function BootError({ error, retry }) {
-  return <main className="boot">
-    <h1>Couldn’t open VoiceFlow</h1>
-    <p>{error}</p>
-    <button className="btn primary" onClick={retry}>Try again</button>
-  </main>;
+  return (
+    <main className="screen boot">
+      <h1>Couldn’t open VoiceFlow</h1>
+      <p>{error}</p>
+      <button type="button" className="vf-btn vf-btn--primary" onClick={retry}>Try again</button>
+    </main>
+  );
 }
 
 /**
  * The shell.
  *
- * Two destinations - folders, and recording - and everything else opens from
- * inside one of them. The shell owns the data, the sheets that can be raised
- * from more than one screen, and nothing else; each screen owns its own layout.
+ * It owns the data, the sheets that can be raised from more than one screen,
+ * and the record button - which is a shell concern rather than a screen one,
+ * because the whole point of it is that it does not move between screens.
+ * Everything else belongs to the screen showing it.
  */
 export default function App() {
-  const [screen, setScreen] = useState({ name: 'folders', folderId: null });
+  const [screen, setScreen] = useState({ name: 'home' });
   const [library, setLibrary] = useState(null);
   const [allFolders, setAllFolders] = useState([]);
   const [workspace, setWorkspace] = useState(null);
-  const [captureContext, setCaptureContext] = useState(null);
-  const [folderDialog, setFolderDialog] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [folderSheet, setFolderSheet] = useState(null);
-  const [colourSheet, setColourSheet] = useState(null);
-  const [recordingSheet, setRecordingSheet] = useState(null);
   const [error, setError] = useState('');
   const [toast, setToast] = useState(null);
+  const [folderSheet, setFolderSheet] = useState(null);   // {folder} | {} for new
+  const [actionSheet, setActionSheet] = useState(null);
+  const [moveSheet, setMoveSheet] = useState(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [organizeFilter, setOrganizeFilter] = useState('all');
+  const [highlightId, setHighlightId] = useState(null);
   const [pendingSeek, setPendingSeek] = useState(null);
-  const fileInputRef = useRef(null);
-  const fileTargetRef = useRef({});
+  const [pinnedIds, setPinnedIds] = useState(readPinned);
+  const [onboarded, setOnboarded] = useState(() => {
+    try { return window.localStorage.getItem(SEEN_KEY) === '1'; } catch { return true; }
+  });
+  const undo = useRef(null);
 
-  const notify = useCallback((message, kind = '') => {
-    setToast({ message, kind });
-    window.setTimeout(() => setToast(null), 4200);
+  const notify = useCallback((message, kind = 'success', action = null) => {
+    setToast({ message, kind, action, id: Date.now() });
   }, []);
 
-  const openLibrary = useCallback(async (folderId = null) => {
+  /* ---- data ---------------------------------------------------------- */
+
+  const load = useCallback(async (folderId = null) => {
     setError('');
-    setWorkspace(null);
-    setScreen({ name: folderId ? 'folder' : 'folders', folderId });
     try {
-      const [nextLibrary, folders] = await Promise.all([
-        libraryApi.library(folderId),
+      const [next, folders] = await Promise.all([
+        libraryApi.library(toFolderId(folderId)),
         libraryApi.allFolders(),
       ]);
-      setLibrary(nextLibrary);
-      setAllFolders(folders.folders);
+      setLibrary(next);
+      setAllFolders(folders.folders ?? []);
+      return next;
+    } catch (caught) { setError(caught.message); return null; }
+  }, []);
+
+  /**
+   * Every recording there is, for Organize's "All" filter.
+   *
+   * /api/library answers for one folder at a time - with no folder it returns
+   * only the unfiled ones - and there is no endpoint that returns the lot. So
+   * All is assembled here, one call per folder. That is fine at the scale a
+   * phone holds and it keeps the change out of the API.
+   */
+  const loadEverything = useCallback(async () => {
+    setError('');
+    try {
+      const folders = (await libraryApi.allFolders()).folders ?? [];
+      setAllFolders(folders);
+      const parts = await Promise.all([
+        libraryApi.library(null),
+        ...folders.filter((folder) => !folder.archived).map((folder) => libraryApi.library(folder.id)),
+      ]);
+      setLibrary({
+        ...parts[0],
+        workspaces: parts.flatMap((part) => part.workspaces ?? []),
+      });
     } catch (caught) { setError(caught.message); }
   }, []);
 
-  const openFolders = useCallback(() => openLibrary(null), [openLibrary]);
-  const openFolder = useCallback((folderId) => openLibrary(folderId), [openLibrary]);
+  useEffect(() => { load(null); }, [load]);
+
+  const openHome = useCallback(async () => {
+    setWorkspace(null);
+    setScreen({ name: 'home' });
+    await load(null);
+  }, [load]);
+
+  const openFolder = useCallback(async (folderId) => {
+    setWorkspace(null);
+    setScreen({ name: 'folder', folderId });
+    await load(folderId);
+  }, [load]);
 
   const openWorkspace = useCallback(async (workspaceId) => {
     setError('');
-    setScreen({ name: 'workspace', workspaceId });
+    setScreen({ name: 'play', workspaceId });
     try { setWorkspace(await libraryApi.workspace(workspaceId)); }
     catch (caught) { setError(caught.message); }
   }, []);
 
-  const refreshWorkspace = useCallback(async () => {
-    if (!workspace?.id) return;
-    try { setWorkspace(await libraryApi.workspace(workspace.id)); }
-    catch (caught) { notify(caught.message, 'error'); }
-  }, [notify, workspace?.id]);
-
-  /** Reload whatever is currently on screen after something changed under it. */
   const refresh = useCallback(async () => {
-    if (screen.name === 'workspace') { await refreshWorkspace(); return; }
-    await openLibrary(screen.folderId ?? null);
-  }, [openLibrary, refreshWorkspace, screen.folderId, screen.name]);
+    if (screen.name === 'play' && workspace?.id) {
+      try { setWorkspace(await libraryApi.workspace(workspace.id)); } catch { /* keep what we have */ }
+      return;
+    }
+    await load(screen.folderId ?? null);
+  }, [load, screen.name, screen.folderId, workspace?.id]);
 
-  useEffect(() => { openFolders(); }, [openFolders]);
+  /* ---- folders, with Inbox folded in --------------------------------- */
 
-  /* ---- folders ---- */
-  async function createFolder(folder) {
-    await libraryApi.createFolder(folder);
-    await openFolders();
-    notify('Folder created.');
-  }
-  async function recolorFolder(folderId, color) {
-    try { await libraryApi.updateFolder(folderId, { color }); await refresh(); }
-    catch (caught) { notify(caught.message, 'error'); }
-  }
-  async function archiveFolder(folder, archived) {
+  // The stored folders lead and the first three are the bento's pinned set;
+  // the handoff's `pinned` flag has nowhere to live in the store yet, so
+  // position stands in for it. Inbox goes last and is never pinned - it is
+  // where things are when they are nowhere, which is not what the biggest card
+  // on the screen should be for.
+  const folders = useMemo(() => {
+    const unfiledCount = screen.name === 'home' ? (library?.workspaces?.length ?? 0) : 0;
+    const inbox = { ...INBOX, lecture_count: unfiledCount, pinned: false };
+    const live = allFolders.filter((folder) => !folder.archived);
+    const chosen = pinnedIds ?? live.slice(0, 3).map((folder) => folder.id);
+    const marked = live.map((folder) => ({ ...folder, pinned: chosen.includes(folder.id) }));
+    // Pinned folders lead, in the order they were pinned, so a new one is the
+    // hero rather than appearing wherever its name happens to sort.
+    const featured = chosen
+      .map((id) => marked.find((folder) => folder.id === id))
+      .filter(Boolean);
+    const others = marked.filter((folder) => !chosen.includes(folder.id));
+    return [...featured, ...others, inbox];
+  }, [allFolders, library?.workspaces?.length, screen.name, pinnedIds]);
+
+  const pin = useCallback((folderId, on) => {
+    setPinnedIds((current) => {
+      const live = allFolders.filter((folder) => !folder.archived);
+      const base = current ?? live.slice(0, 3).map((folder) => folder.id);
+      const next = on
+        ? [folderId, ...base.filter((id) => id !== folderId)].slice(0, PIN_LIMIT)
+        : base.filter((id) => id !== folderId);
+      writePinned(next);
+      return next;
+    });
+  }, [allFolders]);
+
+  const currentFolder = screen.name === 'folder'
+    ? (screen.folderId === INBOX.id ? folders[0] : library?.current_folder)
+    : null;
+
+  /* ---- actions -------------------------------------------------------- */
+
+  const moveWorkspace = useCallback(async (item, targetId, { quiet = false } = {}) => {
+    const folderId = toFolderId(targetId);
+    const from = item.folder_id ?? null;
+    if (from === folderId) return;
     try {
-      await libraryApi.archiveFolder(folder.id, archived);
-      await openFolders();
-      notify(archived ? 'Folder archived.' : 'Folder restored.');
-    } catch (caught) { notify(caught.message, 'error'); }
-  }
-  async function deleteFolder(folder) {
-    if (!window.confirm(`Delete the folder “${folder.name}”? Its recordings are kept.`)) return;
-    try { await libraryApi.deleteFolder(folder.id); await openFolders(); notify('Folder deleted.'); }
-    catch (caught) { notify(caught.message, 'error'); }
-  }
-
-  /* ---- recordings ---- */
-  async function toggleFavourite(target) {
-    try {
-      await libraryApi.updateWorkspace(target.id, { favorite: !target.favorite });
-      notify(target.favorite ? 'Removed from favourites.' : 'Added to favourites.');
-      await refresh();
-    } catch (caught) { notify(caught.message, 'error'); }
-  }
-
-  /** Filing by hand: a recording dropped on a folder, or dropped out of one. */
-  const fileWorkspace = useCallback(async (workspace, target) => {
-    const folderId = target === 'general' ? null : target;
-    if ((workspace.folder_id ?? null) === folderId) return;
-    try {
-      await libraryApi.updateWorkspace(workspace.id, { folder_id: folderId });
-      const name = allFolders.find((folder) => folder.id === folderId)?.name;
-      notify(folderId ? `Moved to ${name ?? 'the folder'}.` : 'Moved to General.');
+      await libraryApi.updateWorkspace(item.id, { folder_id: folderId });
+      const name = folderId ? allFolders.find((f) => f.id === folderId)?.name : INBOX.name;
+      undo.current = { id: item.id, folderId: from };
+      if (!quiet) {
+        notify(`Moved to ${name ?? 'the folder'}`, 'success', 'Undo');
+      }
       await refresh();
     } catch (caught) { notify(caught.message, 'error'); }
   }, [allFolders, notify, refresh]);
 
-  const { drag, beginDrag, blockClick } = useDragToFile(fileWorkspace);
+  const { drag, beginDrag } = useDragToFile((item, targetId) => moveWorkspace(item, targetId));
 
-  /* ---- files ---- */
-  function pickFile(target) {
-    fileTargetRef.current = target ?? {};
-    fileInputRef.current?.click();
-  }
-  async function uploadFiles(files) {
-    if (!files.length) return;
+  async function saveFolder({ name, color }) {
     try {
-      await Promise.all(files.map((file) => libraryApi.uploadMaterial(file, fileTargetRef.current)));
-      notify(`${files.length} file${files.length === 1 ? '' : 's'} added.`);
+      if (folderSheet?.folder && !folderSheet.folder.virtual) {
+        await libraryApi.updateFolder(folderSheet.folder.id, { name, color });
+        notify('Folder updated');
+      } else {
+        const created = await libraryApi.createFolder({ name, color });
+        if (created?.id) pin(created.id, true);
+        notify('Folder created');
+      }
+      await refresh();
+      const next = await libraryApi.allFolders();
+      setAllFolders(next.folders ?? []);
+    } catch (caught) { notify(caught.message, 'error'); }
+  }
+
+  async function deleteFolder(folder) {
+    try {
+      await libraryApi.deleteFolder(folder.id);
+      notify(`“${folder.name}” deleted. Its recordings moved to ${INBOX.name}.`);
+      await openHome();
+    } catch (caught) { notify(caught.message, 'error'); }
+  }
+
+  async function deleteWorkspace(item) {
+    try {
+      await libraryApi.deleteWorkspace(item.id);
+      notify('Recording deleted', 'error');
+      if (screen.name === 'play') await openHome(); else await refresh();
+    } catch (caught) { notify(caught.message, 'error'); }
+  }
+
+  async function runUndo() {
+    const last = undo.current;
+    setToast(null);
+    if (!last) return;
+    undo.current = null;
+    try {
+      await libraryApi.updateWorkspace(last.id, { folder_id: last.folderId });
       await refresh();
     } catch (caught) { notify(caught.message, 'error'); }
   }
-  async function deleteMaterial(material) {
-    if (!window.confirm(`Delete ${material.original_filename}?`)) return;
-    try { await libraryApi.deleteMaterial(material.id); await refresh(); }
-    catch (caught) { notify(caught.message, 'error'); }
+
+  /* ---- record --------------------------------------------------------- */
+
+  // Where a press records, per the handoff: Home to Inbox, Folder to that
+  // folder, Organize to the folder the filter names.
+  function recordTarget() {
+    if (screen.name === 'folder') return currentFolder?.virtual ? null : currentFolder;
+    if (screen.name === 'organize' && organizeFilter !== 'all') {
+      return folders.find((folder) => folder.id === organizeFilter && !folder.virtual) ?? null;
+    }
+    return null;
+  }
+  const [recordFolder, setRecordFolder] = useState(null);
+  function startRecording() {
+    setRecordFolder(recordTarget());
+    setScreen({ name: 'record', folderId: screen.folderId });
   }
 
-  /* ---- capture ---- */
-  function startCapture(workspaceTarget = null) {
-    setCaptureContext({
-      workspace: workspaceTarget,
-      folder: workspaceTarget ? null : library?.current_folder ?? null,
-    });
-    setScreen({ name: 'capture' });
-  }
-  function cancelCapture() {
-    const folderId = captureContext?.workspace?.folder_id ?? captureContext?.folder?.id ?? null;
-    setCaptureContext(null);
-    if (captureContext?.workspace) openWorkspace(captureContext.workspace.id);
-    else openLibrary(folderId);
-  }
-  function captureSaved(workspaceId) { setCaptureContext(null); openWorkspace(workspaceId); }
+  /* ---- render --------------------------------------------------------- */
 
-  async function openSearchResult(result) {
-    if (!result.workspace_id) { notify('That result is no longer available.', 'error'); return; }
-    setPendingSeek(result.start_seconds != null
-      ? { lectureId: result.lecture_id, seconds: result.start_seconds }
-      : null);
-    await openWorkspace(result.workspace_id);
+  if (!onboarded && screen.name !== 'record') {
+    return (
+      <div className="app-shell">
+        <OnboardingScreen
+          denied={screen.name === 'denied'}
+          onAllow={() => {
+            try { window.localStorage.setItem(SEEN_KEY, '1'); } catch { /* private mode */ }
+            setOnboarded(true);
+            startRecording();
+          }}
+          onOpenSettings={() => notify('Open Settings › Apps › VoiceFlow › Permissions.', 'info')}
+          onSkip={() => {
+            try { window.localStorage.setItem(SEEN_KEY, '1'); } catch { /* private mode */ }
+            setOnboarded(true);
+            setScreen({ name: 'home' });
+          }}
+        />
+      </div>
+    );
   }
 
-  if (error && !library && !workspace) return <BootError error={error} retry={openFolders} />;
-  if (!library && screen.name !== 'workspace') return <Boot />;
+  if (error && !library) return <BootError error={error} retry={() => load(null)} />;
+  if (!library && screen.name !== 'play' && screen.name !== 'record') return <Boot />;
 
-  // Recording is offered wherever it has somewhere to go: the root, and inside
-  // a folder (where it files itself into that folder). Playback keeps its own
-  // transport at the bottom, so the two never share that space.
-  const canRecord = ['folders', 'folder'].includes(screen.name);
+  const showDock = ['home', 'folder', 'organize'].includes(screen.name);
+  const dragFrom = drag?.item?.folder_id ?? null;
+  const overLabel = drag?.over
+    ? (drag.over === '__out'
+        ? `Remove from ${currentFolder?.name ?? 'folder'}`
+        : `Move to ${folders.find((f) => f.id === drag.over)?.name ?? 'folder'}`)
+    : undefined;
 
   return (
     <div className="app-shell">
-      {error && <div className="banner"><span>{error}</span><button onClick={() => setError('')} aria-label="Dismiss">×</button></div>}
+      {error && library && (
+        <div className="banner"><span>{error}</span>
+          <button type="button" onClick={() => setError('')} aria-label="Dismiss">×</button>
+        </div>
+      )}
 
-      {screen.name === 'folders' && library && (
-        <FoldersScreen
-          data={library}
-          archived={allFolders.filter((folder) => folder.archived)}
+      {screen.name === 'home' && (
+        <HomeScreen
+          folders={folders}
+          unfiled={library?.workspaces ?? []}
           onOpenFolder={openFolder}
-          onNewFolder={() => setFolderDialog(true)}
-          onFolderMenu={setFolderSheet}
-          onOpenSettings={() => setSettingsOpen(true)}
-          onOpenResult={openSearchResult}
+          onNewFolder={() => setFolderSheet({ folder: null })}
+          onOrganize={() => { setOrganizeFilter('all'); setScreen({ name: 'organize' }); loadEverything(); }}
+          onOpenSearch={() => setScreen({ name: 'search' })}
           onOpenWorkspace={openWorkspace}
-          onWorkspaceMenu={setRecordingSheet}
-          onPickUp={beginDrag}
-          blockClick={blockClick}
-          draggingId={drag?.item?.id}
+          onFolderMenu={(folder) => setFolderSheet({ folder })}
+          onWorkspaceMenu={(item) => setActionSheet({ recording: item })}
         />
       )}
 
-      {screen.name === 'folder' && library?.current_folder && (
+      {screen.name === 'folder' && (
         <FolderScreen
-          data={library}
-          onBack={openFolders}
+          folder={currentFolder}
+          recordings={library?.workspaces ?? []}
+          highlightId={highlightId}
+          onBack={openHome}
+          onOrganize={() => { setOrganizeFilter(screen.folderId ?? 'all'); setScreen({ name: 'organize' }); }}
+          onEdit={() => setFolderSheet({ folder: currentFolder })}
           onOpenWorkspace={openWorkspace}
-          onFolderMenu={setFolderSheet}
-          onWorkspaceMenu={setRecordingSheet}
-          onDeleteMaterial={deleteMaterial}
-          onAddFile={() => pickFile({ folderId: library.current_folder.id })}
-          onRecord={() => startCapture()}
-          onPickUp={beginDrag}
-          blockClick={blockClick}
-          draggingId={drag?.item?.id}
-          dragging={Boolean(drag)}
+          onWorkspaceMenu={(item) => setActionSheet({ recording: item })}
         />
       )}
 
-      {screen.name === 'workspace' && (workspace
-        ? <PlaybackScreen
+      {screen.name === 'organize' && (
+        <OrganizeScreen
+          folders={folders}
+          filter={organizeFilter}
+          recordings={(library?.workspaces ?? [])}
+          drag={drag}
+          onFilter={async (next) => {
+            setOrganizeFilter(next);
+            if (next === 'all') await loadEverything(); else await load(next);
+          }}
+          onBack={() => (screen.folderId ? openFolder(screen.folderId) : openHome())}
+          onDone={() => (screen.folderId ? openFolder(screen.folderId) : openHome())}
+          onPickUp={beginDrag}
+        />
+      )}
+
+      {screen.name === 'search' && (
+        <SearchScreen
+          folders={folders}
+          onBack={openHome}
+          onOpenResult={async (result, term) => {
+            setPendingSeek({ seconds: result.start_seconds ?? 0, term });
+            await openWorkspace(result.workspace_id);
+          }}
+        />
+      )}
+
+      {screen.name === 'record' && (
+        <RecordScreen
+          folder={recordFolder}
+          notify={notify}
+          onDenied={() => { setOnboarded(false); setScreen({ name: 'denied' }); }}
+          onSaved={(workspaceId) => openWorkspace(workspaceId)}
+          onLeave={async (saved) => {
+            setHighlightId(saved?.workspace_id ?? null);
+            if (recordFolder) await openFolder(recordFolder.id); else await openHome();
+          }}
+        />
+      )}
+
+      {screen.name === 'play' && (workspace
+        ? (
+          <PlaybackScreen
             workspace={workspace}
-            folders={allFolders}
-            onBack={() => (workspace.folder_id ? openFolder(workspace.folder_id) : openFolders())}
-            onContinue={() => startCapture(workspace)}
-            onReload={refreshWorkspace}
-            onDelete={() => openLibrary(workspace.folder_id)}
-            onToggleFavourite={toggleFavourite}
-            onPickFile={pickFile}
+            folders={folders}
             notify={notify}
             pendingSeek={pendingSeek}
             onSeekHandled={() => setPendingSeek(null)}
+            onBack={() => (workspace.folder_id ? openFolder(workspace.folder_id) : openHome())}
+            onReload={refresh}
+            onShare={() => setActionSheet({ recording: workspace })}
+            onMore={(context) => setActionSheet({ recording: workspace, ...context })}
           />
+        )
         : <Boot />)}
 
-      {screen.name === 'capture' && (
-        <RecordScreen
-          context={captureContext ?? {}}
-          onSaved={captureSaved}
-          onCancel={cancelCapture}
-          onOpenSettings={() => setSettingsOpen(true)}
-          notify={notify}
+      {showDock && (
+        <RecordDock
+          onPress={startRecording}
+          drag={drag}
+          dropOut={screen.name === 'organize' && Boolean(drag) && dragFrom !== null}
+          over={drag?.over === '__out'}
         />
       )}
 
-      {canRecord && !drag && <RecordButton onClick={() => startCapture()} />}
+      <FolderEditSheet
+        open={Boolean(folderSheet)}
+        folder={folderSheet?.folder ?? null}
+        onClose={() => setFolderSheet(null)}
+        onSave={saveFolder}
+        onDelete={deleteFolder}
+        onPin={pin}
+      />
 
-      {folderDialog && (
-        <FolderDialog
-          parent={library?.current_folder}
-          onClose={() => setFolderDialog(false)}
-          onCreate={createFolder}
-        />
-      )}
+      <RecordingActionsSheet
+        open={Boolean(actionSheet)}
+        recording={actionSheet?.recording}
+        audioUrl={actionSheet?.audioUrl}
+        subtitle={actionSheet?.subtitle}
+        extras={actionSheet?.extras ?? []}
+        notify={notify}
+        onChanged={refresh}
+        onClose={() => setActionSheet(null)}
+        onMove={() => setMoveSheet(actionSheet?.recording)}
+        onDelete={() => deleteWorkspace(actionSheet.recording)}
+      />
 
-      {folderSheet && (
-        <ActionSheet
-          title={folderSheet.name}
-          subtitle={countLabel(folderSheet.lecture_count ?? 0)}
-          tone={folderSheet.color}
-          icon={folderSheet.icon || 'folder'}
-          onClose={() => setFolderSheet(null)}
-          items={[
-            { label: 'Colour', icon: 'levels', chevron: true, keepOpen: true, onSelect: () => { setColourSheet(folderSheet); setFolderSheet(null); } },
-            { label: 'Add file', icon: 'upload', onSelect: () => pickFile({ folderId: folderSheet.id }) },
-            {
-              label: folderSheet.archived ? 'Restore Folder' : 'Archive Folder',
-              icon: 'archive',
-              onSelect: () => archiveFolder(folderSheet, !folderSheet.archived),
-            },
-            { label: 'Delete Folder', icon: 'trash', danger: true, onSelect: () => deleteFolder(folderSheet) },
-          ]}
-        />
-      )}
-
-      {colourSheet && (
-        <ActionSheet
-          title="Colour"
-          subtitle={colourSheet.name}
-          tone={colourSheet.color}
-          icon={colourSheet.icon || 'folder'}
-          onClose={() => setColourSheet(null)}
-        >
-          <div className="swatch-row">
-            {FOLDER_COLORS.map((color) => (
-              <button
-                key={color}
-                data-tone={color}
-                className={`swatch ${colourSheet.color === color ? 'on' : ''}`}
-                aria-label={`${color} folder`}
-                onClick={() => { recolorFolder(colourSheet.id, color); setColourSheet(null); }}
-              />
-            ))}
-          </div>
-        </ActionSheet>
-      )}
-
-      {recordingSheet && (
-        <RecordingSheet
-          workspace={recordingSheet}
-          folders={allFolders}
-          subtitle={recordingMeta({
-            created_at: recordingSheet.updated_at,
-            duration_seconds: recordingSheet.duration_seconds,
-          })}
-          notify={notify}
-          onClose={() => setRecordingSheet(null)}
-          onChanged={refresh}
-          onDeleted={() => { setRecordingSheet(null); refresh(); }}
-          onToggleFavourite={toggleFavourite}
-        />
-      )}
+      <MoveToFolderSheet
+        open={Boolean(moveSheet)}
+        recording={moveSheet}
+        folders={folders}
+        onClose={() => setMoveSheet(null)}
+        onMove={(target) => moveWorkspace(moveSheet, target.id)}
+      />
 
       {settingsOpen && <SettingsDialog onClose={() => setSettingsOpen(false)} notify={notify} />}
 
-      <input
-        ref={fileInputRef} hidden type="file" multiple
-        accept=".pdf,.txt,.md,.doc,.docx,.ppt,.pptx"
-        onChange={(event) => { uploadFiles([...event.target.files]); event.target.value = ''; }}
-      />
+      <DragGhost drag={drag} label={overLabel} />
 
-      <DragGhost drag={drag} />
-      <Toast toast={toast} />
+      {toast && (
+        <VFToast
+          key={toast.id}
+          message={toast.message}
+          kind={toast.kind}
+          action={toast.action ?? ''}
+          visible
+          lift={screen.name === 'play' ? 'play' : showDock ? 'record' : 'edge'}
+          onAction={toast.action === 'Undo' ? runUndo : () => setToast(null)}
+          onHide={() => setToast(null)}
+        />
+      )}
     </div>
   );
 }

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;display=swap"></helmet>
+<div onClick="{{ press }}" onPointerDown="{{ down }}" style="display:flex;align-items:center;gap:14px;padding:12px 6px 12px 12px;border-radius:20px;background:#16161B;cursor:{{ cursor }};box-shadow:{{ ring }};opacity:{{ op }};touch-action:{{ ta }};user-select:none;font-family:Figtree,sans-serif;color:#F4F4F6;transition:background .15s,box-shadow .4s,opacity .15s" style-hover="background:#1B1B21">
+  <div onClick="{{ play }}" style="width:46px;height:46px;border-radius:23px;background:{{ playBg }};display:flex;align-items:center;justify-content:center;flex:none;transition:background .2s" style-hover="filter:brightness(1.15)">
+    <sc-if value="{{ playing }}" hint-placeholder-val="{{ false }}"><div style="display:flex;gap:4px"><div style="width:4px;height:15px;border-radius:2px;background:#fff"></div><div style="width:4px;height:15px;border-radius:2px;background:#fff"></div></div></sc-if>
+    <sc-if value="{{ notPlaying }}" hint-placeholder-val="{{ true }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="#fff" style="margin-left:2px"><path d="M7 4.5v15l13-7.5z"></path></svg></sc-if>
+  </div>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px">
+    <div style="font-size:16px;font-weight:600;letter-spacing:-.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ title }}</div>
+    <div style="font-size:13px;color:#8E8E98;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ meta }}</div>
+    <sc-if value="{{ hasSnippet }}" hint-placeholder-val="{{ false }}"><div style="font-size:13px;color:#B4B4BE;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-top:2px">{{ snippet }}</div></sc-if>
+    <sc-if value="{{ showProgress }}" hint-placeholder-val="{{ false }}"><div style="height:3px;border-radius:2px;background:#2A2A32;margin-top:5px;overflow:hidden"><div style="height:100%;width:{{ progPct }};background:#FF2D55;border-radius:2px"></div></div></sc-if>
+  </div>
+  <sc-if value="{{ isDrag }}" hint-placeholder-val="{{ false }}">
+    <div style="width:40px;height:40px;display:grid;grid-template-columns:4px 4px;grid-auto-rows:4px;gap:4px;align-content:center;justify-content:center;flex:none"><div style="border-radius:2px;background:#6A6A74"></div><div style="border-radius:2px;background:#6A6A74"></div><div style="border-radius:2px;background:#6A6A74"></div><div style="border-radius:2px;background:#6A6A74"></div><div style="border-radius:2px;background:#6A6A74"></div><div style="border-radius:2px;background:#6A6A74"></div></div>
+  </sc-if>
+  <sc-if value="{{ notDrag }}" hint-placeholder-val="{{ true }}">
+    <div onClick="{{ more }}" style="width:40px;height:40px;border-radius:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;flex:none" style-hover="background:rgba(255,255,255,.06)"><div style="width:4px;height:4px;border-radius:2px;background:#A0A0AA"></div><div style="width:4px;height:4px;border-radius:2px;background:#A0A0AA"></div><div style="width:4px;height:4px;border-radius:2px;background:#A0A0AA"></div></div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:380,&quot;height&quot;:90},&quot;title&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Lecture 1&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;date&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Sep 16, 2026&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;duration&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;28:17&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;meta&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;string&quot;},&quot;snippet&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;mode&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;default&quot;,&quot;drag&quot;],&quot;default&quot;:&quot;default&quot;,&quot;tsType&quot;:&quot;'default'|'drag'&quot;},&quot;playing&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;progress&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;min&quot;:0,&quot;max&quot;:1,&quot;step&quot;:0.01,&quot;default&quot;:0.3,&quot;tsType&quot;:&quot;number&quot;},&quot;highlight&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;dragging&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;onPress&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onPlay&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onMore&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onDragStart&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;(e: PointerEvent) =&gt; void&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const p = this.props, playing = !!p.playing, prog = p.progress ?? -1, drag = (p.mode ?? 'default') === 'drag';
+    const meta = [p.date ?? 'Sep 16, 2026', p.duration ?? '28:17'].filter(Boolean).join(' · ');
+    return {
+      title: p.title ?? 'Lecture 1', meta: p.meta ?? meta,
+      snippet: p.snippet ?? '', hasSnippet: !!p.snippet,
+      playing, notPlaying: !playing, isDrag: drag, notDrag: !drag,
+      playBg: playing ? '#FF2D55' : '#26262E',
+      ring: p.highlight ? '0 0 0 1.5px rgba(255,45,85,.7), 0 0 24px rgba(255,45,85,.18)' : (p.dragging ? 'inset 0 0 0 1.5px #3A3A44' : 'none'),
+      op: p.dragging ? .35 : 1, cursor: drag ? 'grab' : 'pointer', ta: drag ? 'none' : 'auto',
+      showProgress: playing && prog >= 0, progPct: Math.round(Math.max(0, prog) * 100) + '%',
+      down: (e) => { if (drag && p.onDragStart) p.onDragStart(e); },
+      press: () => { if (!drag && p.onPress) p.onPress(); },
+      play: (e) => { if (drag) return; e.stopPropagation(); p.onPlay && p.onPlay(); },
+      more: (e) => { e.stopPropagation(); p.onMore && p.onMore(); },
+    };
+  }
+}
+</script>
+</body>
+</html>

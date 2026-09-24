@@ -257,8 +257,14 @@ export default function App() {
         return;
       }
       if (channel === 'rec.resume') {
+        // pcmRecorder reports the state it is now in, so a successful resume
+        // comes back as 'recording'. Checking for 'resumed' meant every resume
+        // threw even though it had worked - and because the bridge kept the
+        // rejected promise as its operation chain, the next stop never reached
+        // native at all. The take could not be finished, and the error it
+        // showed was this one, minutes later.
         const result = recorder.resumeRecording();
-        if (result !== 'resumed') throw new Error(`Could not resume recording: ${result}`);
+        if (result !== 'recording') throw new Error(`Could not resume recording: ${result}`);
         reply(id, true, { ok: true });
         return;
       }

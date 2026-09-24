@@ -75,8 +75,12 @@ export default function useDragToFile(onDrop) {
     clearTargets();
     const target = document.elementFromPoint(x, y)?.closest('[data-drop]');
     if (target) target.classList.add('drop-over');
-    state.over = target?.dataset.drop ?? null;
-    setDrag((current) => (current ? { ...current, x, y, over: state.over } : current));
+    const over = target?.dataset.drop ?? null;
+    // A tick on arrival, not on every move: crossing into a target is the
+    // moment the drop changes meaning, and it is the one worth feeling.
+    if (over !== state.over && over) navigator.vibrate?.(6);
+    state.over = over;
+    setDrag((current) => (current ? { ...current, x, y, over } : current));
     edgeScroll(y);
   }, [edgeScroll]);
 

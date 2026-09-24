@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;display=swap"></helmet>
+<div style="display:flex;align-items:center;gap:12px;min-height:50px;padding:8px 8px 8px 16px;box-sizing:border-box;border-radius:18px;background:#2A2A32;box-shadow:0 14px 36px rgba(0,0,0,.5),inset 0 0 0 1px rgba(255,255,255,.05);font-family:Figtree,sans-serif;font-size:14.5px;font-weight:500;color:#F4F4F6;opacity:{{ o }};transform:translateY({{ ty }});pointer-events:{{ pe }};transition:opacity .25s,transform .35s cubic-bezier(.2,.8,.2,1)">
+  <div style="width:22px;height:22px;border-radius:11px;background:{{ dotBg }};display:flex;align-items:center;justify-content:center;flex:none">
+    <div style="width:8px;height:8px;border-radius:4px;background:{{ dot }}"></div>
+  </div>
+  <div style="flex:1;padding:6px 0;line-height:1.35">{{ message }}</div>
+  <sc-if value="{{ hasAction }}" hint-placeholder-val="{{ false }}"><div onClick="{{ act }}" style="font-weight:700;color:#FF5A78;cursor:pointer;padding:9px 12px;border-radius:12px" style-hover="background:rgba(255,45,85,.1)">{{ action }}</div></sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:360,&quot;height&quot;:80},&quot;message&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Recording saved to University&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;kind&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;success&quot;,&quot;error&quot;,&quot;info&quot;],&quot;default&quot;:&quot;success&quot;,&quot;tsType&quot;:&quot;'success'|'error'|'info'&quot;},&quot;action&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;visible&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;onAction&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const p = this.props, vis = p.visible ?? true, k = p.kind ?? 'success';
+    const C = { success: ['#2BD48F', 'rgba(43,212,143,.16)'], error: ['#FF2D55', 'rgba(255,45,85,.16)'], info: ['#8E8EFF', 'rgba(142,142,255,.16)'] }[k] || ['#2BD48F', 'rgba(43,212,143,.16)'];
+    return {
+      message: p.message ?? 'Recording saved to University', action: p.action ?? '', hasAction: !!p.action,
+      dot: C[0], dotBg: C[1], o: vis ? 1 : 0, ty: vis ? '0px' : '16px', pe: vis ? 'auto' : 'none',
+      act: () => p.onAction && p.onAction(),
+    };
+  }
+}
+</script>
+</body>
+</html>

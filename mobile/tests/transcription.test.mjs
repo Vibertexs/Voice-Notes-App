@@ -16,7 +16,7 @@ const app = readFileSync(join(here, '..', 'App.js'), 'utf8');
 const whisper = readFileSync(join(here, '..', 'src', 'onDeviceWhisper.js'), 'utf8');
 const bridge = readFileSync(join(here, '..', 'src', 'bridge.js'), 'utf8');
 const captureView = readFileSync(
-  join(here, '..', '..', 'frontend', 'src', 'components', 'RecordScreen.jsx'), 'utf8',
+  join(here, '..', '..', 'frontend', 'src', 'screens', 'RecordScreen.jsx'), 'utf8',
 );
 const styles = readFileSync(join(here, '..', '..', 'frontend', 'src', 'styles.css'), 'utf8');
 const settingsView = readFileSync(
@@ -182,16 +182,53 @@ check('the shell tells the page that native pause exists', /transcription: false
 check('the page reads capabilities', /caps\.pause !== false/.test(captureView));
 check('finish is unavailable until the take is paused',
   /async function finish\(\)[\s\S]{0,420}phase !== 'paused'/.test(captureView));
-check('cancel remains a paused-only slide action',
-  /rec-cancel-slot \$\{phase === 'paused' \? 'visible' : ''\}/.test(captureView)
-    && /\{phase === 'paused' && <SlideToCancel/.test(captureView));
-check('the cancel area is reserved before pause, preventing a layout jump',
-  /\.rec-cancel-slot \{[\s\S]{0,180}height: 4\.4rem/.test(styles)
-    && !/\.rec-cancel-slot\.visible \{[\s\S]{0,120}height: auto/.test(styles));
-check('bookmarks capture typed labels without joining the recording layout flow',
-  /function BookmarkComposer/.test(captureView)
-    && /className="bookmark-composer"/.test(captureView)
-    && /\.bookmark-composer,[\s\S]{0,160}position: absolute/.test(styles));
+// Cancelling is still a sustained gesture rather than a button, but the
+// redesign moved it into the finish sheet beside the save, so the two ways a
+// take can end are read together. What must not come back is a plain
+// destructive button.
+check('cancel remains a slide, not a button',
+  /<VFSlideToCancel/.test(captureView)
+    && !/label="Cancel"/.test(captureView));
+check('finish is offered but refused until the take is paused',
+  /<VFButton label=\{COPY\.finishBtn\} disabled=\{phase === 'recording'\}/.test(captureView));
+// The original layout jump this guarded against was the cancel slot appearing
+// on pause. Slide-to-cancel now lives in the sheet, so the only control that
+// changes with the phase is the Finish chip - and it is always in the layout,
+// changing opacity rather than presence, for exactly the same reason.
+check('nothing enters the layout on pause, preventing a jump',
+  /className=\{`rec-finish\$\{phase === 'paused' \? '' : ' is-hidden'\}`\}/.test(captureView)
+    && /\.rec-finish\.is-hidden \{[\s\S]{0,80}opacity: 0/.test(styles));
+
+console.log('\n== the shell accepts what the recorder actually returns ==');
+// This one shipped. pcmRecorder answers with the state it is now in, so a
+// successful resume is 'recording'; App.js demanded 'resumed' and threw on
+// every resume that had in fact worked. The bridge then kept the rejected
+// promise as its operation chain, so the following stop was never sent, and
+// finishing a take failed with a stale message about resuming.
+function recorderReturns(name) {
+  const start = pcm.indexOf(`export function ${name}(`);
+  const body = pcm.slice(start, pcm.indexOf('\n}', start));
+  return [...body.matchAll(/return '([^']+)'/g)].map((m) => m[1]);
+}
+for (const [fn, channel] of [['pauseRecording', 'rec.pause'], ['resumeRecording', 'rec.resume']]) {
+  // 'idle' means it was not recording, which is a real failure. Every other
+  // value the recorder can return is a success the shell has to accept.
+  const wins = recorderReturns(fn).filter((value) => value !== 'idle');
+  const from = app.indexOf(`channel === '${channel}'`);
+  // Comments get stripped first. The explanation of this very bug quotes the
+  // value it is about, which was enough to make the check pass against the
+  // broken code it was written to catch.
+  const guard = app.slice(from, app.indexOf('reply(', from))
+    .replace(/^\s*\/\/.*$/gm, '');
+  const refused = wins.filter((value) => !guard.includes(`'${value}'`));
+  check(`${channel} accepts what ${fn} returns (${wins.join(', ')})`,
+    wins.length > 0 && refused.length === 0,
+    `the shell throws on: ${refused.join(', ')}`);
+}
+check('a failed pause or resume cannot poison the operation chain',
+  !/self\.__operation\.catch\(function \(\) \{\}\);/.test(bridge),
+  'the caught promise has to become __operation, or the next stop is never sent');
+
 
 console.log('\n== native config contains no endpoint exception ==');
 // Capture is a plain React Native module now, so there is no config plugin to
