@@ -1,0 +1,9 @@
+# HTTPS in front of the API.
+#
+# Naming the site by its domain is all Caddy needs to fetch a certificate from
+# Let's Encrypt and keep it renewed. Phones require HTTPS: iOS refuses plain
+# HTTP outright, and Android release builds do too.
+{$DOMAIN} {
+	encode gzip
+	reverse_proxy api:8000
+}

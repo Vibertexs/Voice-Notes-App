@@ -1,0 +1,190 @@
+# VoiceFlow Cloud API
+
+Accounts and sync for the phone app, on FastAPI and MongoDB Atlas. Transcripts
+and metadata only: **audio never leaves the phone that recorded it.**
+
+```
+phone (SQLite)  ──POST /v1/sync──▶  cloud_app.py (FastAPI)  ──▶  MongoDB Atlas
+phone (SQLite)  ◀──changes since───┘        ▲
+                                            └── /v1/recordings, /v1/search … (REST; the future MCP server)
+```
+
+The phone keeps working exactly as before with no account and no network. Signing
+in adds sync on top; it never puts the network between the user and their screen.
+
+---
+
+## 1. Run it locally
+
+```powershell
+copy .env.example .env            # then put your Atlas connection string in it
+.\.venv\Scripts\python -m pip install -r requirements-dev.txt
+.\.venv\Scripts\python -m backend.mongo_setup      # checks the connection, builds the schema
+.\.venv\Scripts\python -m uvicorn cloud_app:app --reload
+```
+
+Open http://127.0.0.1:8000/docs for interactive API docs. In development, reset
+codes are printed to the server log instead of emailed.
+
+Atlas only accepts connections from IPs on its **Network Access** list; if setup
+says it cannot reach the cluster, add your current IP there.
+
+## 2. Tests
+
+```powershell
+.\.venv\Scripts\python -m pytest                    # 69 API tests against a throwaway Atlas database
+$env:VOICEFLOW_TEST_ATLAS_SEARCH=1; .\.venv\Scripts\python -m pytest -k search   # + a real Atlas Search index (~1 min)
+cd mobile; npm test                                 # phone suites, including sync against a scripted server
+cd mobile; npm run test:e2e                         # two phones, the real server, real Atlas
+```
+
+The API tests use a real MongoDB on purpose: most of what they check is MongoDB
+behaviour - unique indexes deciding races, upserts turning into duplicate-key
+errors, validators refusing documents. Each run creates `voiceflow_test_<random>`
+and drops it afterwards.
+
+## 3. Deploy (Render + Atlas)
+
+1. **Push the repo to GitHub.** `.env` is gitignored; check `git status` shows no
+   secrets before pushing.
+2. **Atlas → Network Access → Add IP Address → `0.0.0.0/0`.** Render's free tier
+   has no fixed outbound IP, so the cluster has to accept any address and rely on
+   the database password. That is the honest trade-off of a free host; a paid
+   plan with static IPs (or Atlas private endpoints) removes it.
+3. **Atlas → Database Access:** give the server its own database user with
+   `readWrite` **and** `dbAdmin` on the `voiceflow` database only (Specific
+   Privileges), not an Atlas admin. `dbAdmin` is what lets startup install the
+   validators (`collMod`); without it the server refuses to start, with the reason
+   in the log. If a password ever appeared in a screenshot or chat, rotate it.
+4. **Render → New → Blueprint →** pick the repo. `render.yaml` defines the
+   service. When asked, paste `MONGODB_URI`. `JWT_SECRET` is generated for you.
+   `RESEND_API_KEY` and `APPLE_CLIENT_IDS` can stay empty for now.
+5. Wait for the deploy, then open `https://<your-service>.onrender.com/readyz`.
+   It should answer `{"ok":true,"database":"ok"}`.
+
+The free plan sleeps after 15 idle minutes; the first request after that takes
+up to a minute. The phone retries, so it shows up as a slow sync, not a failure.
+
+### Point the phone at it
+
+The URL is baked into the JS bundle by Expo, so this needs a JS reload, not a
+new native build:
+
+```powershell
+cd mobile
+$env:EXPO_PUBLIC_CLOUD_API_URL="https://<your-service>.onrender.com"; npx expo start
+```
+
+Then on the phone: Folders → the person icon → Create account. For a release
+build, set the same variable in the EAS build profile.
+
+### Email (password resets)
+
+Without `RESEND_API_KEY`, forgot-password still answers normally but no email is
+sent (production logs that it could not send - never the code). A free Resend
+account sends from `onboarding@resend.dev` to your own address; verify a domain
+in Resend to email anyone, and set `EMAIL_FROM` to match.
+
+---
+
+## 4. How users sign in
+
+| | |
+|---|---|
+| **Email + password** | Works everywhere, nothing to configure. argon2id hashes (OWASP's 19 MiB profile, run off the event loop). |
+| **Sign in with Apple** | Server side is done: set `APPLE_CLIENT_IDS` to the iOS bundle id. Needs `expo-apple-authentication` in the app and an iOS build, which is the next step on a Mac. An Apple sign-in whose *verified* email matches an existing account joins it. |
+
+**Tokens.** Sign-in returns a 15-minute access token (JWT, HS256) and a 30-day
+refresh token. The access token is checked against its session on every request,
+so signing out or deleting the account takes effect immediately rather than when
+the JWT expires. Refresh tokens are random, stored only as SHA-256, and rotate on
+every use; presenting one that was already rotated away revokes the session
+(theft detection), with a 10-second grace for a retried request.
+
+**Abuse.** Sign-in, sign-up and reset endpoints are rate limited per IP and per
+email, with counters in MongoDB (so the limit holds across server instances) that
+a TTL index removes. A wrong email and a wrong password take the same time and
+return the same message.
+
+## 5. The data model
+
+| Collection | One document per | Notes |
+|---|---|---|
+| `users` | account | partial unique indexes on `email` and `appleSub` (either may be absent) |
+| `sessions` | signed-in device | refresh-token hash; TTL-expired |
+| `folders` | folder | |
+| `recordings` | recording | bookmarks and notes **embedded** - bounded, always read together |
+| `transcripts` | recording's words | **referenced**, same `_id` as the recording - unbounded, ~15k word timings per lecture, and a folder listing should never load them |
+| `password_resets`, `rate_limits` | short-lived bookkeeping | TTL-expired |
+
+*Embed what is bounded, reference what is unbounded.* Every index on user data
+leads with `userId`, then follows ESR (equality, sort, range). Each synced
+collection has a `$jsonSchema` validator requiring `userId`, `updatedAt` and
+`syncedAt`: a document without them would be invisible to every phone's sync,
+silently. Search uses an **Atlas Search** (Lucene) index on transcript text,
+filtered by user, and falls back to a regex scan until the index is built or on a
+non-Atlas MongoDB.
+
+## 6. Sync
+
+One request does both directions: `POST /v1/sync {deviceId, cursor, changes}`.
+
+**On the phone**, SQLite triggers write every change to a `sync_outbox` table in
+the same transaction as the change (a transactional outbox), so no code path can
+edit something without queueing it. Edits coalesce: one row per thing, stamped
+with the latest edit.
+
+**Conflicts: last write wins** on `updatedAt` (when the user made the edit), with
+one conditional upsert per document:
+
+```python
+replace_one({"_id": id, "userId": user, "updatedAt": {"$lt": incoming}}, doc, upsert=True)
+```
+
+If the server's copy is newer, the filter matches nothing, the upsert tries to
+insert a duplicate `_id`, and that `DuplicateKeyError` *is* the rejection. The same
+mechanism stops one user overwriting another's document by guessing its id.
+Clocks more than five minutes in the future are clamped to now.
+
+**Pulling** walks `syncedAt` - when the *server* accepted a change - never the
+phone's clock, so a phone with a wrong clock cannot hide its changes from the
+others. The cursor is `(syncedAt, _id)` per collection for exact keyset paging,
+and never advances into the last five seconds, where a write might be stamped but
+not yet committed; that window is read again next time. A device never gets its
+own writes back.
+
+**Deletes** are tombstones with their content cleared at once, removed by a TTL
+index after 180 days. Deleting a recording takes its transcript with it; deleting
+a folder moves its recordings to the inbox.
+
+What syncs: folders, recordings (title, folder, favourite, bookmarks, notes,
+transcription status, *where* the audio is) and transcripts. Not yet: study notes,
+flashcards, attached files. Never: audio.
+
+## 7. Endpoints
+
+| | |
+|---|---|
+| `POST /v1/auth/register` · `login` · `refresh` · `logout` · `logout-everywhere` | |
+| `POST /v1/auth/password/forgot` · `reset` · `change` | six-digit emailed code, 15 min, 5 tries |
+| `POST /v1/auth/apple` | |
+| `GET /v1/me` · `DELETE /v1/me` · `DELETE /v1/me/sessions/{id}` | account, devices, deletion |
+| `POST /v1/sync` | the phones |
+| `GET/POST /v1/folders` · `PATCH/DELETE /v1/folders/{id}` | with recording counts via `$lookup` |
+| `GET /v1/recordings?folder=&before=&limit=` · `GET/PATCH/DELETE /v1/recordings/{id}` | |
+| `GET /v1/recordings/{id}/transcript?start=&end=&words=` | time slices cut server-side with `$filter` |
+| `GET /v1/search?q=` | hits carry the second the words were said |
+| `GET /healthz` · `GET /readyz` | process up · database reachable |
+
+The REST routes are what the planned MCP server will call so an assistant can
+read (and file) a student's lectures; edits made there reach the phones on their
+next sync, like any other change.
+
+## 8. Known limits
+
+- Tokens live in the app's private SQLite, not the iOS Keychain / Android
+  Keystore. Moving them to `expo-secure-store` needs a native build.
+- Sign in with Apple needs the native module and an iOS build (server side is ready).
+- Last-write-wins is per document: two devices editing *different* fields of the
+  same recording offline keep only the later device's version of the whole document.
+- A recording synced to a second phone plays only on the phone that recorded it.

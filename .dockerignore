@@ -1,0 +1,18 @@
+# The Dockerfile copies files by name, so this is mostly about keeping the
+# build context small - and making sure a secret can never ride along.
+.env
+.env.*
+.git
+.venv
+node_modules
+mobile
+frontend
+frontend-dist
+static
+data
+docs
+tests
+**/__pycache__
+*.log
+*.wav
+*.json

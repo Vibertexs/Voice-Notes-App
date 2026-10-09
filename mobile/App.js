@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator, Platform, Pressable, SafeAreaView, StatusBar, StyleSheet, Text, View,
+  ActivityIndicator, AppState, Platform, Pressable, SafeAreaView, StatusBar, StyleSheet, Text, View,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useKeepAwake } from 'expo-keep-awake';
@@ -9,12 +9,25 @@ import recorder, { HAS_RECORDER, RECORDER_PROBLEM } from './src/nativeAudio';
 import { BRIDGE_JS } from './src/bridge';
 import { WEB_APP_HTML } from './src/webapp.generated';
 import {
-  AUDIO_DIR, TRANSCRIPTION_ON_DEVICE, audioFile, claimRecording,
-  dropRecording, finishRecording, handleApi, markTranscriptionPending,
+  ACCOUNT, AUDIO_DIR, TRANSCRIPTION_ON_DEVICE, audioFile, claimRecording,
+  dropRecording, exclusive, finishRecording, handleApi, markTranscriptionPending,
   markTranscriptionProgress, newId, openDatabase, pendingTranscriptions,
   recoverInterrupted, saveTranscript,
 } from './src/localApi';
 import { transcribeOnDevice } from './src/onDeviceWhisper';
+import { createCloud } from './src/cloudSync';
+
+/**
+ * The sync server. Inlined by Expo at bundle time, so changing it needs a JS
+ * reload, not a new build:
+ *
+ *   EXPO_PUBLIC_CLOUD_API_URL=https://voiceflow-api.onrender.com npx expo start
+ *
+ * Unset means a phone that never touches the network for your data, which is
+ * how the app behaved before sync existed.
+ */
+const CLOUD_API_URL = process.env.EXPO_PUBLIC_CLOUD_API_URL ?? '';
+const DEVICE_NAME = Platform.OS === 'ios' ? 'iPhone' : (Platform.constants?.Model ?? 'Android phone');
 
 /**
  * Class Notes, as a native shell around the real web UI.
@@ -48,6 +61,24 @@ export default function App() {
   const [pageError, setPageError] = useState('');
   useKeepAwake();
 
+  /**
+   * The page learns about sync through two events rather than by polling:
+   * cn:data when changes from another device have landed (reload what is on
+   * screen), cn:account when sync status changes (the account sheet).
+   */
+  const cloud = useRef(null);
+  if (!cloud.current) {
+    const emit = (name, detail) => webRef.current?.injectJavaScript(
+      `window.dispatchEvent(new CustomEvent(${JSON.stringify(name)}, { detail: ${JSON.stringify(detail ?? null)} })); true;`,
+    );
+    cloud.current = createCloud({
+      openDatabase, exclusive, fetch: (...args) => fetch(...args),
+      apiUrl: CLOUD_API_URL, deviceName: DEVICE_NAME, audioFile,
+      onData: () => emit('cn:data'),
+      onStatus: (status) => emit('cn:account', status),
+    });
+  }
+
   useEffect(() => {
     (async () => {
       try {
@@ -58,12 +89,25 @@ export default function App() {
         TRANSCRIPTION_ON_DEVICE.value = true;
         if (!AUDIO_DIR.exists) AUDIO_DIR.create({ intermediates: true });
         await recoverInterrupted();
+        ACCOUNT.handler = cloud.current.handleAccountApi;
         setReady(true);
       } catch (caught) {
         setFatal(String(caught?.message ?? caught));
       }
     })();
   }, []);
+
+  // Sync on launch, every few minutes while open, and on coming back to the
+  // foreground - the moment a student is most likely to have used the other
+  // device in between.
+  useEffect(() => {
+    if (!ready) return undefined;
+    cloud.current.start();
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') cloud.current.schedule(0);
+    });
+    return () => { subscription.remove(); cloud.current.stop(); };
+  }, [ready]);
 
   // Feed the page's waveform. The browser has no audio graph here, so the
   // level is pushed in rather than measured in the page - and it comes from
@@ -109,6 +153,7 @@ export default function App() {
             onProgress: (progress) => markTranscriptionProgress(lecture.id, progress).catch(() => {}),
           });
           await saveTranscript(lecture.id, transcript, segments);
+          cloud.current.schedule(1000);
         } catch (caught) {
           // Left pending on purpose: the audio is safe and the next drain
           // will try again. Only a message surfaces, never a lost lecture.
@@ -229,6 +274,11 @@ export default function App() {
     try {
       if (channel === 'api') {
         reply(id, true, await handleApi(payload));
+        // Debounced: renaming, filing and bookmarking come in bursts, and the
+        // outbox coalesces them, so one sync a few seconds later covers all.
+        if (payload?.method !== 'GET' && !String(payload?.path).startsWith('/api/account')) {
+          cloud.current.schedule(3000);
+        }
         return;
       }
       if (channel === 'mic.permission') {

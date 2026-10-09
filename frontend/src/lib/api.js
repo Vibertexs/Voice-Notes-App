@@ -63,6 +63,22 @@ export const libraryApi = {
   saveAiNotes: (workspaceId, model, noteBody) => api(`/api/workspaces/${workspaceId}/ai/notes`, { method: 'PUT', body: { model, note_body: noteBody } }),
 };
 
+/**
+ * The account, answered by the phone shell (mobile/src/cloudSync.js), which
+ * talks to the cloud API. The desktop server has no such route: a 404 from
+ * status() means "this build does not sync", not an error.
+ */
+export const accountApi = {
+  status: () => api('/api/account'),
+  register: (email, password) => api('/api/account/register', { method: 'POST', body: { email, password } }),
+  login: (email, password) => api('/api/account/login', { method: 'POST', body: { email, password } }),
+  forgot: (email) => api('/api/account/forgot', { method: 'POST', body: { email } }),
+  reset: (email, code, password) => api('/api/account/reset', { method: 'POST', body: { email, code, password } }),
+  sync: () => api('/api/account/sync', { method: 'POST' }),
+  logout: () => api('/api/account/logout', { method: 'POST' }),
+  remove: (password) => api('/api/account/delete', { method: 'POST', body: { password } }),
+};
+
 export async function uploadRecording({ blob, title, captureNotes, folderId, workspaceId }) {
   const form = new FormData();
   const extension = blob.type.includes('mp4') ? 'mp4' : 'webm';

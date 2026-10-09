@@ -19,8 +19,10 @@ const captureView = readFileSync(
   join(here, '..', '..', 'frontend', 'src', 'screens', 'RecordScreen.jsx'), 'utf8',
 );
 const styles = readFileSync(join(here, '..', '..', 'frontend', 'src', 'styles.css'), 'utf8');
+// Transcription settings live in the account sheet now, beside sync - the one
+// place that has to say plainly what leaves the phone and what never does.
 const settingsView = readFileSync(
-  join(here, '..', '..', 'frontend', 'src', 'components', 'SettingsDialog.jsx'), 'utf8',
+  join(here, '..', '..', 'frontend', 'src', 'components', 'AccountSheet.jsx'), 'utf8',
 );
 const appJson = JSON.parse(readFileSync(join(here, '..', 'app.json'), 'utf8'));
 
@@ -174,8 +176,11 @@ check('an install reapplies it',
 check('the page bridge still uses native recording commands',
   /rec\.start/.test(bridge) && /rec\.pause/.test(bridge) && /rec\.resume/.test(bridge) && /rec\.stop/.test(bridge));
 check('the transcript settings explain private on-device processing',
-  /never sent to a server/.test(settingsView) && /60 MB/.test(settingsView)
-    && !/Server address|transcription-server/.test(settingsView));
+  /never sent to a server/.test(settingsView) && /180 MB/.test(settingsView)
+    && !/Server address|transcription-server/.test(settingsView),
+  'the size has to match the model actually downloaded (small.en-q5_1, ~181MB)');
+check('the account sheet says audio stays on the phone',
+  /Audio never leaves the phone/.test(settingsView));
 
 console.log('\n== pause is required before saving ==');
 check('the shell tells the page that native pause exists', /transcription: false, pause: true/.test(app));

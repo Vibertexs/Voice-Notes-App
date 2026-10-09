@@ -24,6 +24,7 @@
     "web": "expo start --web",
     "build:web": "node scripts/bundle-web.mjs",
     "test": "node tests/run.mjs",
+    "test:e2e": "node tests/sync_e2e.test.mjs",
     "postinstall": "patch-package"
   },
   "private": true,

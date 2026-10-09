@@ -1,0 +1,27 @@
+# Render Blueprint for the cloud API. In Render: New > Blueprint, pick this
+# repo, then fill in the values marked sync: false when it asks.
+# See docs/cloud-api.md for the whole walkthrough.
+services:
+  - type: web
+    name: voiceflow-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: MONGODB_URI          # the Atlas connection string - never committed
+        sync: false
+      - key: MONGODB_DB
+        value: voiceflow
+      - key: JWT_SECRET           # Render generates a random 256-bit value
+        generateValue: true
+      - key: RESEND_API_KEY       # optional: without it reset codes are not emailed
+        sync: false
+      - key: EMAIL_FROM
+        value: VoiceFlow <onboarding@resend.dev>
+      - key: APPLE_CLIENT_IDS     # optional: your iOS bundle id, enables Sign in with Apple
+        sync: false

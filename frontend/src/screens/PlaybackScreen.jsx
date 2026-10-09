@@ -195,6 +195,10 @@ export default function PlaybackScreen({
           Transcribing · {Math.round((selected?.transcription_progress ?? 0) * 100)}%
         </p>
       )}
+      {/* Synced from another phone: the words came across, the audio never does. */}
+      {selected && !selected.audio_url && !transcribing && (
+        <p className="transcript-note">The audio is on the phone that recorded this. Its transcript and bookmarks are here.</p>
+      )}
 
       {(searching || pane === 'transcript') ? (
         <SyncedTranscript

@@ -53,15 +53,31 @@ Do not guess at layout. Two ways to look:
 
 Use `adb exec-out`, never `adb shell cat`, for anything binary — CRLF translation corrupts it.
 
+## Cloud sync
+
+Optional accounts and sync live in `backend/cloud/` (FastAPI + MongoDB Atlas, entry point
+`cloud_app.py`) — a separate server from the desktop `app.py`. Read `docs/cloud-api.md`
+before touching it. Two rules that are easy to break:
+
+- **Audio never syncs.** Only metadata and transcripts go up.
+- **Every phone write goes through `exclusive()`** in `localApi.js`. Sync applies server
+  changes in a transaction with the outbox triggers switched off; a write that slips in
+  between its statements is silently never uploaded.
+
+`.env` holds the real Atlas password. It is gitignored; never commit it, print it, or
+create/edit it without asking.
+
 ## Tests
 
 ```bash
-cd mobile && npm test
+cd mobile && npm test          # six suites, all must pass
+python -m pytest               # cloud API, against a throwaway Atlas database
+cd mobile && npm run test:e2e  # two phones through the real server (needs .env)
 ```
 
-Five suites, all must pass. They assert design and architecture invariants, not just logic
-— if one fails after a UI change, read its rationale before assuming it is stale. Several
-encode a bug that was expensive to find.
+The phone suites assert design and architecture invariants, not just logic — if one fails
+after a UI change, read its rationale before assuming it is stale. Several encode a bug
+that was expensive to find.
 
 ## Repo map
 
@@ -71,6 +87,8 @@ encode a bug that was expensive to find.
 | `mobile/App.js` | native shell: recording, storage, bridge |
 | `mobile/src/pcmRecorder.js` | writes the 16 kHz mono PCM WAV whisper.cpp requires |
 | `mobile/src/onDeviceWhisper.js` | local Whisper (`small.en`), model download |
-| `mobile/src/localApi.js` | the backend, reimplemented on-device over SQLite |
+| `mobile/src/localApi.js` | the backend, reimplemented on-device over SQLite; sync outbox triggers |
+| `mobile/src/cloudSync.js` | the phone's sync client and `/api/account`; no Expo imports, tested under Node |
 | `mobile/patches/` | Java fixes to the capture module; needs an EAS build |
-| `backend/` | Python/FastAPI, serves the desktop app only |
+| `backend/cloud/` | the cloud API: accounts, sync, search (MongoDB) |
+| `backend/` (rest) | Python/FastAPI, serves the desktop app only |

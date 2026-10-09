@@ -12,7 +12,7 @@ import VFToast from './components/VFToast';
 import FolderEditSheet from './components/FolderEditSheet';
 import MoveToFolderSheet from './components/MoveToFolderSheet';
 import RecordingActionsSheet from './components/RecordingActionsSheet';
-import SettingsDialog from './components/SettingsDialog';
+import AccountSheet from './components/AccountSheet';
 import { libraryApi } from './lib/api';
 import useDragToFile from './lib/useDragToFile';
 
@@ -82,7 +82,7 @@ export default function App() {
   const [folderSheet, setFolderSheet] = useState(null);   // {folder} | {} for new
   const [actionSheet, setActionSheet] = useState(null);
   const [moveSheet, setMoveSheet] = useState(null);
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
   const [organizeFilter, setOrganizeFilter] = useState('all');
   const [highlightId, setHighlightId] = useState(null);
   const [pendingSeek, setPendingSeek] = useState(null);
@@ -163,6 +163,19 @@ export default function App() {
     }
     await load(screen.folderId ?? null);
   }, [load, screen.name, screen.folderId, workspace?.id]);
+
+  // Another device's changes have landed (the phone shell announces it after
+  // a sync). Reload whatever is on screen - except mid-recording, where the
+  // screen holds nothing from the library and must not be disturbed.
+  const refreshRef = useRef(refresh);
+  refreshRef.current = refresh;
+  const screenRef = useRef(screen.name);
+  screenRef.current = screen.name;
+  useEffect(() => {
+    const onData = () => { if (screenRef.current !== 'record') refreshRef.current(); };
+    window.addEventListener('cn:data', onData);
+    return () => window.removeEventListener('cn:data', onData);
+  }, []);
 
   /* ---- folders, with Inbox folded in --------------------------------- */
 
@@ -330,6 +343,7 @@ export default function App() {
           onOpenFolder={openFolder}
           onNewFolder={() => setFolderSheet({ folder: null })}
           onOrganize={() => { setOrganizeFilter('all'); setScreen({ name: 'organize' }); loadEverything(); }}
+          onAccount={() => setAccountOpen(true)}
           onOpenSearch={() => setScreen({ name: 'search' })}
           onOpenWorkspace={openWorkspace}
           onFolderMenu={(folder) => setFolderSheet({ folder })}
@@ -445,7 +459,7 @@ export default function App() {
         onMove={(target) => moveWorkspace(moveSheet, target.id)}
       />
 
-      {settingsOpen && <SettingsDialog onClose={() => setSettingsOpen(false)} notify={notify} />}
+      <AccountSheet open={accountOpen} onClose={() => setAccountOpen(false)} notify={notify} />
 
       <DragGhost drag={drag} label={overLabel} />
 

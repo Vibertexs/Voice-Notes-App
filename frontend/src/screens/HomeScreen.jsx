@@ -18,7 +18,7 @@ import { recordingMeta } from '../lib/format';
  * doing that inline would mean the results had nowhere to go.
  */
 export default function HomeScreen({
-  folders = [], unfiled = [], onOpenFolder, onNewFolder, onOrganize,
+  folders = [], unfiled = [], onOpenFolder, onNewFolder, onOrganize, onAccount,
   onOpenSearch, onOpenWorkspace, onFolderMenu, onWorkspaceMenu, onPlay,
   playingId, progress = -1,
 }) {
@@ -30,6 +30,9 @@ export default function HomeScreen({
       <header className="vf-head">
         <h1>Folders</h1>
         <div className="vf-head-actions">
+          <button type="button" className="vf-round" aria-label="Account" onClick={onAccount}>
+            <Icon name="person" strokeWidth={2.2} />
+          </button>
           <button type="button" className="vf-round" aria-label="Organize" onClick={onOrganize}>
             <Icon name="move" strokeWidth={2.2} />
           </button>

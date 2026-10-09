@@ -20,12 +20,115 @@ const DB_NAME = 'classnotes-web.db';
 
 /** Set once by the shell at startup; localApi has no way to detect it itself. */
 export const TRANSCRIPTION_ON_DEVICE = { value: false };
+/**
+ * Answers /api/account/*. The shell installs the cloud client here; with no
+ * handler the route 404s, which is how the page tells a phone with no cloud
+ * configured (and the desktop server) apart from one that has it.
+ */
+export const ACCOUNT = { handler: null };
 export const AUDIO_DIR = new Directory(Paths.document, 'recordings');
 
 let database = null;
 
 const nowIso = () => new Date().toISOString();
 export const newId = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
+
+/**
+ * One writer at a time.
+ *
+ * expo-sqlite has a single connection, and every await is a point where
+ * another caller's statement can run. That is harmless until sync applies a
+ * batch of pulled changes inside a transaction with the outbox triggers
+ * switched off: any write that slipped in between those statements would join
+ * the transaction and never be queued for upload. So every write - the page's,
+ * the recorder's, Whisper's and sync's - goes through this queue.
+ */
+let writeChain = Promise.resolve();
+export function exclusive(task) {
+  const run = writeChain.then(task, task);
+  writeChain = run.catch(() => {});
+  return run;
+}
+
+/**
+ * The transactional outbox.
+ *
+ * Triggers record which synced things changed, in the same transaction as
+ * the change itself, so nothing can be edited without being queued - not by
+ * any code path, present or future. One row per thing: editing a title five
+ * times queues one upload, stamped with the last edit. That stamp is the
+ * `updatedAt` the server's last-write-wins compares.
+ *
+ * What syncs is the user's library: folders, and each recording (a
+ * workspace) with its bookmarks, notes and transcript. Audio never leaves the
+ * phone; nor do study notes, flashcards or attached files yet.
+ *
+ * A pending delete is never downgraded to an update by a later child-table
+ * trigger, and nothing is recorded while sync itself is applying changes
+ * that came from the server (the `applying` flag, set inside its transaction).
+ */
+const STAMP = "strftime('%Y-%m-%dT%H:%M:%fZ', 'now')";
+const NOT_APPLYING = "NOT EXISTS (SELECT 1 FROM cloud_state WHERE key = 'applying')";
+const queue = (kind, id, op = 'upsert') => (op === 'delete'
+  ? `INSERT OR REPLACE INTO sync_outbox (kind, id, op, changed_at) VALUES ('${kind}', ${id}, 'delete', ${STAMP});`
+  : `INSERT OR REPLACE INTO sync_outbox (kind, id, op, changed_at) VALUES ('${kind}', ${id},
+       COALESCE((SELECT op FROM sync_outbox WHERE kind = '${kind}' AND id = ${id} AND op = 'delete'), 'upsert'),
+       ${STAMP});`);
+const LECTURE_WORKSPACE = '(SELECT workspace_id FROM lectures WHERE id = NEW.lecture_id)';
+const OLD_LECTURE_WORKSPACE = '(SELECT workspace_id FROM lectures WHERE id = OLD.lecture_id)';
+
+const SYNC_SCHEMA = `
+  CREATE TABLE IF NOT EXISTS sync_outbox (
+    kind TEXT NOT NULL,
+    id TEXT NOT NULL,
+    op TEXT NOT NULL,
+    changed_at TEXT NOT NULL,
+    PRIMARY KEY (kind, id)
+  );
+  CREATE TABLE IF NOT EXISTS cloud_state (
+    key TEXT PRIMARY KEY NOT NULL,
+    value TEXT NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS cloud_stash (
+    id TEXT PRIMARY KEY NOT NULL,
+    doc TEXT NOT NULL
+  );
+
+  CREATE TRIGGER IF NOT EXISTS sync_folder_insert AFTER INSERT ON folders WHEN ${NOT_APPLYING}
+  BEGIN ${queue('folders', 'NEW.id')} END;
+  CREATE TRIGGER IF NOT EXISTS sync_folder_update AFTER UPDATE ON folders WHEN ${NOT_APPLYING}
+  BEGIN ${queue('folders', 'NEW.id')} END;
+  CREATE TRIGGER IF NOT EXISTS sync_folder_delete AFTER DELETE ON folders WHEN ${NOT_APPLYING}
+  BEGIN ${queue('folders', 'OLD.id', 'delete')} END;
+
+  CREATE TRIGGER IF NOT EXISTS sync_workspace_insert AFTER INSERT ON workspaces WHEN ${NOT_APPLYING}
+  BEGIN ${queue('recordings', 'NEW.id')} END;
+  CREATE TRIGGER IF NOT EXISTS sync_workspace_update AFTER UPDATE ON workspaces WHEN ${NOT_APPLYING}
+  BEGIN ${queue('recordings', 'NEW.id')} END;
+  CREATE TRIGGER IF NOT EXISTS sync_workspace_delete AFTER DELETE ON workspaces WHEN ${NOT_APPLYING}
+  BEGIN ${queue('recordings', 'OLD.id', 'delete')} END;
+
+  CREATE TRIGGER IF NOT EXISTS sync_lecture_meta
+  AFTER UPDATE OF workspace_id, title, duration_seconds, transcription_status, file_name, size_bytes, model ON lectures
+  WHEN NEW.workspace_id IS NOT NULL AND ${NOT_APPLYING}
+  BEGIN ${queue('recordings', 'NEW.workspace_id')} END;
+  CREATE TRIGGER IF NOT EXISTS sync_lecture_words
+  AFTER UPDATE OF transcript, segments_json ON lectures
+  WHEN NEW.workspace_id IS NOT NULL AND ${NOT_APPLYING}
+  BEGIN ${queue('transcripts', 'NEW.workspace_id')} END;
+
+  CREATE TRIGGER IF NOT EXISTS sync_marker_insert AFTER INSERT ON session_markers
+  WHEN ${LECTURE_WORKSPACE} IS NOT NULL AND ${NOT_APPLYING}
+  BEGIN ${queue('recordings', LECTURE_WORKSPACE)} END;
+  CREATE TRIGGER IF NOT EXISTS sync_marker_delete AFTER DELETE ON session_markers
+  WHEN ${OLD_LECTURE_WORKSPACE} IS NOT NULL AND ${NOT_APPLYING}
+  BEGIN ${queue('recordings', OLD_LECTURE_WORKSPACE)} END;
+
+  CREATE TRIGGER IF NOT EXISTS sync_notes_insert AFTER INSERT ON workspace_notes WHEN ${NOT_APPLYING}
+  BEGIN ${queue('recordings', 'NEW.workspace_id')} END;
+  CREATE TRIGGER IF NOT EXISTS sync_notes_update AFTER UPDATE ON workspace_notes WHEN ${NOT_APPLYING}
+  BEGIN ${queue('recordings', 'NEW.workspace_id')} END;
+`;
 
 export async function openDatabase() {
   if (database) return database;
@@ -129,6 +232,11 @@ export async function openDatabase() {
       /* already migrated */
     }
   }
+  await database.execAsync(SYNC_SCHEMA);
+  // Sync sets this inside a transaction, so a crash rolls it back - but a
+  // flag left behind would silently stop every change being queued, which is
+  // worth one statement per launch to rule out.
+  await database.runAsync("DELETE FROM cloud_state WHERE key = 'applying'");
   return database;
 }
 
@@ -145,20 +253,24 @@ export async function pendingTranscriptions() {
   );
 }
 
-export async function markTranscriptionPending(id) {
-  const db = await openDatabase();
-  await db.runAsync(
+function markPending(db, id) {
+  return db.runAsync(
     "UPDATE lectures SET transcription_status = 'pending', transcription_progress = 0 WHERE id = ?",
     id,
   );
 }
 
+export async function markTranscriptionPending(id) {
+  const db = await openDatabase();
+  await exclusive(() => markPending(db, id));
+}
+
 export async function markTranscriptionProgress(id, progress) {
   const db = await openDatabase();
-  await db.runAsync(
+  await exclusive(() => db.runAsync(
     'UPDATE lectures SET transcription_progress = ? WHERE id = ?',
     Math.max(0, Math.min(1, Number(progress) || 0)), id,
-  );
+  ));
 }
 
 export function audioFile(fileName) {
@@ -315,7 +427,17 @@ async function touchWorkspace(db, workspaceId) {
  * Answers one request. `path` includes the query string, exactly as the page
  * asked for it; `body` is already parsed.
  */
-export async function handleApi({ method, path, body }) {
+export async function handleApi(request) {
+  // Account calls do network work and take the write lock themselves when
+  // they touch the library, so they must not be queued behind it here.
+  if (/^\/api\/account(\/|$|\?)/.test(request.path)) {
+    if (!ACCOUNT.handler) return fail(404, 'Sync is not set up in this build.');
+    return ACCOUNT.handler(request);
+  }
+  return request.method === 'GET' ? route(request) : exclusive(() => route(request));
+}
+
+async function route({ method, path, body }) {
   const db = await openDatabase();
   const [rawPath, rawQuery] = path.split('?');
   const query = new URLSearchParams(rawQuery ?? '');
@@ -518,7 +640,8 @@ export async function handleApi({ method, path, body }) {
       if (!TRANSCRIPTION_ON_DEVICE.value) {
         return fail(503, 'On-device Whisper is not ready yet. Restart the app after installing the current build.');
       }
-      await markTranscriptionPending(id);
+      // The unlocked form: this already runs inside the write lock.
+      await markPending(db, id);
       return ok({ id, status: 'pending', via: 'device', uri: file.uri });
     }
   }
@@ -659,19 +782,19 @@ async function createLecture(db, body) {
 
 export async function claimRecording({ id, title, fileName }) {
   const db = await openDatabase();
-  await db.runAsync(
+  await exclusive(() => db.runAsync(
     `INSERT INTO lectures (id, title, created_at, file_name, status, transcription_status)
      VALUES (?, ?, ?, ?, 'recording', 'unavailable')`,
     id, title, nowIso(), fileName,
-  );
+  ));
 }
 
 export async function finishRecording({ id, durationMs, sizeBytes }) {
   const db = await openDatabase();
-  await db.runAsync(
+  await exclusive(() => db.runAsync(
     `UPDATE lectures SET duration_seconds = ?, size_bytes = ?, status = 'captured' WHERE id = ?`,
     Math.round(durationMs) / 1000, sizeBytes, id,
-  );
+  ));
 }
 
 /**
@@ -683,22 +806,24 @@ export async function saveTranscript(id, transcript, segments = []) {
   const db = await openDatabase();
   const text = String(transcript ?? '').trim();
   const timed = Array.isArray(segments) ? segments.filter((s) => s?.text) : [];
-  await db.runAsync(
+  await exclusive(() => db.runAsync(
     `UPDATE lectures SET transcript = ?, segments_json = ?, transcription_status = ?,
             transcription_progress = ?
      WHERE id = ?`,
     text, JSON.stringify(timed), text ? 'ready' : 'unavailable', text ? 1 : 0, id,
-  );
+  ));
 }
 
 export async function dropRecording(id) {
   const db = await openDatabase();
-  const row = await db.getFirstAsync('SELECT file_name FROM lectures WHERE id = ?', id);
-  await db.runAsync('DELETE FROM lectures WHERE id = ?', id);
-  if (row?.file_name) {
-    const file = audioFile(row.file_name);
-    if (file.exists) file.delete();
-  }
+  await exclusive(async () => {
+    const row = await db.getFirstAsync('SELECT file_name FROM lectures WHERE id = ?', id);
+    await db.runAsync('DELETE FROM lectures WHERE id = ?', id);
+    if (row?.file_name) {
+      const file = audioFile(row.file_name);
+      if (file.exists) file.delete();
+    }
+  });
 }
 
 /**
@@ -708,6 +833,10 @@ export async function dropRecording(id) {
  */
 export async function recoverInterrupted() {
   const db = await openDatabase();
+  return exclusive(() => recover(db));
+}
+
+async function recover(db) {
   const stranded = await db.getAllAsync("SELECT * FROM lectures WHERE status = 'recording'");
   const recovered = [];
   for (const row of stranded) {

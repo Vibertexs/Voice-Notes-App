@@ -725,6 +725,27 @@ select.field { appearance: none; }
 .sheet-input::placeholder { color: var(--text-4); }
 .sheet-preview { pointer-events: none; }
 
+/* Account. Neutral surfaces only: the spectrum is not spent here. */
+.account-form { display: flex; flex-direction: column; gap: var(--gap-lg); }
+.account-note { text-align: left; font-size: var(--t-meta); line-height: var(--lh-body); }
+.account-error { color: var(--primary-txt); font-size: var(--t-meta-lg); line-height: 1.4; }
+.account-who {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px; border-radius: var(--r-row); background: var(--surface);
+}
+.account-avatar {
+  display: grid; place-items: center; flex: none;
+  width: var(--icon-row); height: var(--icon-row); border-radius: var(--r-full);
+  background: var(--raised); color: var(--text); font-weight: 700; font-size: var(--t-row);
+}
+.account-id { display: grid; gap: 2px; min-width: 0; }
+.account-id strong {
+  overflow: hidden; color: var(--text); font-size: var(--t-row); font-weight: 600;
+  letter-spacing: var(--ls-row); text-overflow: ellipsis; white-space: nowrap;
+}
+.account-id span { color: var(--text-sub); font-size: var(--t-meta); }
+.account-id span.is-error { color: var(--primary-txt); }
+
 .swatches { display: flex; gap: 12px; }
 .swatch {
   width: 40px; height: 40px; border-radius: var(--r-full);

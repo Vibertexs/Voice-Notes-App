@@ -19,6 +19,7 @@ const SUITES = [
   'transcription.test.mjs',
   'local_api.test.mjs',
   'render.test.mjs',
+  'sync.test.mjs',
 ];
 
 let failed = 0;

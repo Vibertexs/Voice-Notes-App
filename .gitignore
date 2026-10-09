@@ -29,3 +29,6 @@ mobile/dist/
 
 # Expo export artifacts from build verification
 mobile/.verify-android/
+
+# Secrets: the Atlas connection string lives here.
+.env

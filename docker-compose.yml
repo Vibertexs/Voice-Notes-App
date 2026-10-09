@@ -1,0 +1,42 @@
+# The cloud API on a single server (an EC2 instance, or any Linux box):
+#
+#   docker compose up -d --build
+#
+# Two containers:
+#   api    the FastAPI app from the Dockerfile. Not published to the host:
+#          nothing outside this compose network can reach it directly.
+#   caddy  the front door on ports 80/443. Gets and renews a free HTTPS
+#          certificate from Let's Encrypt on its own, and forwards to api.
+#
+# Configuration comes from a .env file next to this one on the server, which
+# is never committed. It needs MONGODB_URI, JWT_SECRET and DOMAIN; see
+# docs/cloud-api.md.
+services:
+  api:
+    build: .
+    env_file: .env
+    environment:
+      ENVIRONMENT: production
+    expose:
+      - "8000"
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2
+    depends_on:
+      - api
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env, e.g. 3-91-20-14.sslip.io}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      # Certificates live here, so a restart does not ask Let's Encrypt again.
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:
