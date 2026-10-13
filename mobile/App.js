@@ -18,15 +18,17 @@ import { transcribeOnDevice } from './src/onDeviceWhisper';
 import { createCloud } from './src/cloudSync';
 
 /**
- * The sync server. Inlined by Expo at bundle time, so changing it needs a JS
- * reload, not a new build:
+ * The sync server: the EC2 instance (docker-compose.yml), whose Elastic IP
+ * gives it a fixed sslip.io name and a Let's Encrypt certificate.
  *
- *   EXPO_PUBLIC_CLOUD_API_URL=https://voiceflow-api.onrender.com npx expo start
+ * Point a development build somewhere else - a local uvicorn, say - with
  *
- * Unset means a phone that never touches the network for your data, which is
- * how the app behaved before sync existed.
+ *   EXPO_PUBLIC_CLOUD_API_URL=http://192.168.1.20:8000 npx expo start
+ *
+ * Expo inlines it at bundle time, so a JS reload picks it up. No data leaves
+ * the phone until the user signs in from the account sheet.
  */
-const CLOUD_API_URL = process.env.EXPO_PUBLIC_CLOUD_API_URL ?? '';
+const CLOUD_API_URL = process.env.EXPO_PUBLIC_CLOUD_API_URL ?? 'https://44-241-23-183.sslip.io';
 const DEVICE_NAME = Platform.OS === 'ios' ? 'iPhone' : (Platform.constants?.Model ?? 'Android phone');
 
 /**
