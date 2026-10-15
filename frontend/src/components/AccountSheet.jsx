@@ -49,6 +49,7 @@ export default function AccountSheet({ open, onClose, notify }) {
   const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
+  const [emailOpen, setEmailOpen] = useState(false);
   const [error, setError] = useState('');
 
   const load = useCallback(async () => {
@@ -58,7 +59,7 @@ export default function AccountSheet({ open, onClose, notify }) {
 
   useEffect(() => {
     if (!open) return undefined;
-    setError(''); setPassword(''); setCode('');
+    setError(''); setPassword(''); setCode(''); setEmailOpen(false);
     load();
     // The shell announces sync progress, so the status line moves on its own.
     const onStatus = (event) => { if (event.detail) setAccount(event.detail); };
@@ -169,35 +170,46 @@ export default function AccountSheet({ open, onClose, notify }) {
     signin: 'Sign in', register: 'Create account', forgot: 'Send code', reset: 'Set password and sign in',
   }[mode];
 
+  // Google leads when this build has it: the email form waits behind "Use email
+  // instead" until asked for, or until the user is somewhere only email goes
+  // (creating a password account, resetting one).
+  const showEmail = !account.google || emailOpen || mode !== 'signin';
+
   return (
     <VFBottomSheet open={open} title={title} subtitle={subtitle} onClose={onClose}>
-      {(mode === 'signin' || mode === 'register') && account.google && (
+      {account.google && (mode === 'signin' || mode === 'register') && (
         <>
-          <VFButton label={busy ? 'One moment…' : 'Continue with Google'} variant="secondary" disabled={busy}
-            onPress={withGoogle} />
-          <p className="account-or" aria-hidden="true"><span>or use email</span></p>
+          <VFButton label={busy ? 'One moment…' : 'Continue with Google'}
+            variant={showEmail ? 'secondary' : 'primary'} disabled={busy} onPress={withGoogle} />
+          {showEmail && <p className="account-or" aria-hidden="true"><span>or use email</span></p>}
         </>
       )}
-      <form className="account-form" onSubmit={submit}>
-        <input className="sheet-input" type="email" inputMode="email" autoComplete="email"
-          autoCapitalize="none" placeholder="Email" aria-label="Email" value={email}
-          readOnly={mode === 'reset'} onChange={(event) => setEmail(event.target.value)} />
-        {mode === 'reset' && (
-          <input className="sheet-input" inputMode="numeric" autoComplete="one-time-code" maxLength={6}
-            placeholder="Six-digit code" aria-label="Code" value={code}
-            onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))} />
-        )}
-        {needsPassword && (
-          <input className="sheet-input" type="password"
-            autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
-            placeholder={mode === 'signin' ? 'Password' : 'New password (8+ characters)'}
-            aria-label="Password" value={password} onChange={(event) => setPassword(event.target.value)} />
-        )}
-        {error && <p className="account-error" role="alert">{error}</p>}
-        <VFButton type="submit" label={busy ? 'One moment…' : action} disabled={busy || !ready} onPress={() => {}} />
-      </form>
+      {!showEmail && error && <p className="account-error" role="alert">{error}</p>}
+      {!showEmail && (
+        <VFButton label="Use email instead" variant="ghost" onPress={() => { setEmailOpen(true); setError(''); }} />
+      )}
+      {showEmail && (
+        <form className="account-form" onSubmit={submit}>
+          <input className="sheet-input" type="email" inputMode="email" autoComplete="email"
+            autoCapitalize="none" placeholder="Email" aria-label="Email" value={email}
+            readOnly={mode === 'reset'} onChange={(event) => setEmail(event.target.value)} />
+          {mode === 'reset' && (
+            <input className="sheet-input" inputMode="numeric" autoComplete="one-time-code" maxLength={6}
+              placeholder="Six-digit code" aria-label="Code" value={code}
+              onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))} />
+          )}
+          {needsPassword && (
+            <input className="sheet-input" type="password"
+              autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
+              placeholder={mode === 'signin' ? 'Password' : 'New password (8+ characters)'}
+              aria-label="Password" value={password} onChange={(event) => setPassword(event.target.value)} />
+          )}
+          {error && <p className="account-error" role="alert">{error}</p>}
+          <VFButton type="submit" label={busy ? 'One moment…' : action} disabled={busy || !ready} onPress={() => {}} />
+        </form>
+      )}
 
-      {mode === 'signin' && (
+      {showEmail && mode === 'signin' && (
         <>
           <VFButton label="New here? Create an account" variant="ghost" onPress={() => { setMode('register'); setError(''); }} />
           <VFButton label="Forgot password?" variant="ghost" size="sm" onPress={() => { setMode('forgot'); setError(''); }} />
