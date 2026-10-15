@@ -9,7 +9,7 @@ function countLabel(count, meta) {
 }
 
 /**
- * A folder, in the four shapes the app has for one.
+ * A folder, in the two shapes the app has for one.
  *
  * The card carries no recording imagery - no waveform, no play button, no
  * preview of what is inside. A folder is a place, and the things in it are one
@@ -18,10 +18,8 @@ function countLabel(count, meta) {
  * than a fill, which is what lets six of them sit together without the screen
  * turning into a paint chart. Only the icon tile is fully saturated.
  *
- * All four layouts are the same object at different sizes:
- *   hero   the first pinned folder, full width
- *   tile   the rest of the pinned folders, two up
- *   row    everything below the fold
+ * Both layouts are the same object at different sizes:
+ *   row    a folder in a list
  *   target a drop zone while a recording is being dragged
  *
  * `active` means something is hovering over this target, not that it is
@@ -30,7 +28,7 @@ function countLabel(count, meta) {
  * Reference: docs/design/voiceflow/VFFolderCard.dc.html
  */
 export default function VFFolderCard({
-  title = 'Folder', count = 0, meta, color = 'red', layout = 'hero',
+  title = 'Folder', count = 0, meta, color = 'red', layout = 'row',
   active = false, disabled = false, onPress, onMore, dropId,
 }) {
   const label = countLabel(count, meta);

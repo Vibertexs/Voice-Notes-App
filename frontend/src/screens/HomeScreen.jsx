@@ -8,10 +8,8 @@ import { recordingMeta } from '../lib/format';
 /**
  * Home.
  *
- * A bento rather than a list: the first pinned folder takes the full width,
- * the rest pair up, and everything below the fold becomes a row. The point is
- * that the folder you use most is the biggest thing on the screen, not the
- * first item of a uniform list.
+ * Every folder is the same row, so the screen reads as one list and a new
+ * folder lands where its name sorts rather than jumping to the top.
  *
  * The search field here does not search. Tapping it hands over to global
  * search, which has the recent-search chips and searches inside transcripts -
@@ -19,12 +17,9 @@ import { recordingMeta } from '../lib/format';
  */
 export default function HomeScreen({
   folders = [], unfiled = [], onOpenFolder, onNewFolder, onOrganize, onAccount,
-  onOpenSearch, onOpenWorkspace, onFolderMenu, onWorkspaceMenu, onPlay,
+  onOpenSearch, onOpenWorkspace, onWorkspaceMenu, onPlay,
   playingId, progress = -1,
 }) {
-  const [hero, ...pinned] = folders.filter((folder) => folder.pinned);
-  const rest = folders.filter((folder) => !folder.pinned);
-
   return (
     <main className="screen screen--dock">
       <header className="vf-head">
@@ -51,32 +46,10 @@ export default function HomeScreen({
         onFocus={onOpenSearch}
       />
 
-      {hero && (
-        <section className="vf-bento" aria-label="Pinned folders">
-          <VFFolderCard
-            layout="hero" title={hero.name} count={hero.lecture_count ?? 0}
-            color={hero.color} onPress={() => onOpenFolder(hero.id)}
-            onMore={() => onFolderMenu(hero)}
-          />
-          {pinned.length > 0 && (
-            <div className="vf-bento-pair">
-              {pinned.map((folder) => (
-                <VFFolderCard
-                  key={folder.id} layout="tile" title={folder.name}
-                  count={folder.lecture_count ?? 0} color={folder.color}
-                  onPress={() => onOpenFolder(folder.id)} onMore={() => onFolderMenu(folder)}
-                />
-              ))}
-            </div>
-          )}
-        </section>
-      )}
-
-      {rest.length > 0 && (
-        <section className="vf-section" aria-label="Other folders">
-          <h2 className="vf-label">Other</h2>
+      {folders.length > 0 && (
+        <section className="vf-section vf-section--first" aria-label="Folders">
           <div className="vf-rows">
-            {rest.map((folder) => (
+            {folders.map((folder) => (
               <VFFolderCard
                 key={folder.id} layout="row" title={folder.name}
                 count={folder.lecture_count ?? 0} color={folder.color}

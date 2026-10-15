@@ -5,7 +5,7 @@ import RecordScreen from './screens/RecordScreen';
 import PlaybackScreen from './screens/PlaybackScreen';
 import SearchScreen from './screens/SearchScreen';
 import OrganizeScreen from './screens/OrganizeScreen';
-import OnboardingScreen from './screens/OnboardingScreen';
+import MicDeniedScreen from './screens/MicDeniedScreen';
 import RecordDock from './components/RecordDock';
 import DragGhost from './components/DragGhost';
 import VFToast from './components/VFToast';
@@ -15,29 +15,6 @@ import RecordingActionsSheet from './components/RecordingActionsSheet';
 import AccountSheet from './components/AccountSheet';
 import { libraryApi } from './lib/api';
 import useDragToFile from './lib/useDragToFile';
-
-const SEEN_KEY = 'vf.onboarded';
-const PINNED_KEY = 'vf.pinned';
-
-/**
- * Which folders lead the bento.
- *
- * The handoff's folder model has a `pinned` flag; the store has nowhere to put
- * one and `backend/` is off limits, so the choice is kept per device. Nothing
- * chosen yet means the first three, which is what it looked like before. A
- * folder you just made is pinned straight away - landing a new folder under
- * "Other", below the ones it was made to sit beside, is not what making it
- * meant.
- */
-const PIN_LIMIT = 5;
-function readPinned() {
-  try { return JSON.parse(window.localStorage.getItem(PINNED_KEY) ?? 'null'); }
-  catch { return null; }
-}
-function writePinned(ids) {
-  try { window.localStorage.setItem(PINNED_KEY, JSON.stringify(ids)); }
-  catch { /* private mode */ }
-}
 
 /**
  * Inbox is where a recording is when it is nowhere: `folder_id === null`.
@@ -86,10 +63,6 @@ export default function App() {
   const [organizeFilter, setOrganizeFilter] = useState('all');
   const [highlightId, setHighlightId] = useState(null);
   const [pendingSeek, setPendingSeek] = useState(null);
-  const [pinnedIds, setPinnedIds] = useState(readPinned);
-  const [onboarded, setOnboarded] = useState(() => {
-    try { return window.localStorage.getItem(SEEN_KEY) === '1'; } catch { return true; }
-  });
   const undo = useRef(null);
 
   const notify = useCallback((message, kind = 'success', action = null) => {
@@ -179,40 +152,17 @@ export default function App() {
 
   /* ---- folders, with Inbox folded in --------------------------------- */
 
-  // The stored folders lead and the first three are the bento's pinned set;
-  // the handoff's `pinned` flag has nowhere to live in the store yet, so
-  // position stands in for it. Inbox goes last and is never pinned - it is
-  // where things are when they are nowhere, which is not what the biggest card
-  // on the screen should be for.
+  // Every folder is a row, in the order the store returns them (by name), with
+  // Inbox last: it is where things are when they are nowhere, so it follows the
+  // folders you made rather than leading them.
   const folders = useMemo(() => {
     const unfiledCount = screen.name === 'home' ? (library?.workspaces?.length ?? 0) : 0;
-    const inbox = { ...INBOX, lecture_count: unfiledCount, pinned: false };
-    const live = allFolders.filter((folder) => !folder.archived);
-    const chosen = pinnedIds ?? live.slice(0, 3).map((folder) => folder.id);
-    const marked = live.map((folder) => ({ ...folder, pinned: chosen.includes(folder.id) }));
-    // Pinned folders lead, in the order they were pinned, so a new one is the
-    // hero rather than appearing wherever its name happens to sort.
-    const featured = chosen
-      .map((id) => marked.find((folder) => folder.id === id))
-      .filter(Boolean);
-    const others = marked.filter((folder) => !chosen.includes(folder.id));
-    return [...featured, ...others, inbox];
-  }, [allFolders, library?.workspaces?.length, screen.name, pinnedIds]);
-
-  const pin = useCallback((folderId, on) => {
-    setPinnedIds((current) => {
-      const live = allFolders.filter((folder) => !folder.archived);
-      const base = current ?? live.slice(0, 3).map((folder) => folder.id);
-      const next = on
-        ? [folderId, ...base.filter((id) => id !== folderId)].slice(0, PIN_LIMIT)
-        : base.filter((id) => id !== folderId);
-      writePinned(next);
-      return next;
-    });
-  }, [allFolders]);
+    const inbox = { ...INBOX, lecture_count: unfiledCount };
+    return [...allFolders.filter((folder) => !folder.archived), inbox];
+  }, [allFolders, library?.workspaces?.length, screen.name]);
 
   const currentFolder = screen.name === 'folder'
-    ? (screen.folderId === INBOX.id ? folders[0] : library?.current_folder)
+    ? (screen.folderId === INBOX.id ? folders.find((folder) => folder.id === INBOX.id) : library?.current_folder)
     : null;
 
   /* ---- actions -------------------------------------------------------- */
@@ -240,8 +190,7 @@ export default function App() {
         await libraryApi.updateFolder(folderSheet.folder.id, { name, color });
         notify('Folder updated');
       } else {
-        const created = await libraryApi.createFolder({ name, color });
-        if (created?.id) pin(created.id, true);
+        await libraryApi.createFolder({ name, color });
         notify('Folder created');
       }
       await refresh();
@@ -296,23 +245,19 @@ export default function App() {
 
   /* ---- render --------------------------------------------------------- */
 
-  if (!onboarded && screen.name !== 'record') {
+  // The microphone is asked for when someone first taps record, not before they
+  // have seen the app. This is where a refusal lands.
+  if (screen.name === 'denied') {
     return (
       <div className="app-shell">
-        <OnboardingScreen
-          denied={screen.name === 'denied'}
-          onAllow={() => {
-            try { window.localStorage.setItem(SEEN_KEY, '1'); } catch { /* private mode */ }
-            setOnboarded(true);
-            startRecording();
-          }}
+        <MicDeniedScreen
           onOpenSettings={() => notify('Open Settings › Apps › VoiceFlow › Permissions.', 'info')}
-          onSkip={() => {
-            try { window.localStorage.setItem(SEEN_KEY, '1'); } catch { /* private mode */ }
-            setOnboarded(true);
-            setScreen({ name: 'home' });
-          }}
+          onSkip={() => setScreen({ name: 'home' })}
         />
+        {toast && (
+          <VFToast key={toast.id} message={toast.message} kind={toast.kind} action="" visible
+            lift="edge" onHide={() => setToast(null)} />
+        )}
       </div>
     );
   }
@@ -346,7 +291,6 @@ export default function App() {
           onAccount={() => setAccountOpen(true)}
           onOpenSearch={() => setScreen({ name: 'search' })}
           onOpenWorkspace={openWorkspace}
-          onFolderMenu={(folder) => setFolderSheet({ folder })}
           onWorkspaceMenu={(item) => setActionSheet({ recording: item })}
         />
       )}
@@ -395,7 +339,7 @@ export default function App() {
         <RecordScreen
           folder={recordFolder}
           notify={notify}
-          onDenied={() => { setOnboarded(false); setScreen({ name: 'denied' }); }}
+          onDenied={() => setScreen({ name: 'denied' })}
           onSaved={(workspaceId) => openWorkspace(workspaceId)}
           onLeave={async (saved) => {
             setHighlightId(saved?.workspace_id ?? null);
@@ -435,7 +379,6 @@ export default function App() {
         onClose={() => setFolderSheet(null)}
         onSave={saveFolder}
         onDelete={deleteFolder}
-        onPin={pin}
       />
 
       <RecordingActionsSheet

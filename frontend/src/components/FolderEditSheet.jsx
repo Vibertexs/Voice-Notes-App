@@ -14,7 +14,7 @@ import { SWATCHES } from '../lib/copy';
  * Deleting keeps the recordings and moves them to Inbox, which is why the
  * button says so. A folder is a shelf, not a container.
  */
-export default function FolderEditSheet({ open, folder = null, onClose, onSave, onDelete, onPin }) {
+export default function FolderEditSheet({ open, folder = null, onClose, onSave, onDelete }) {
   const editing = Boolean(folder);
   const [name, setName] = useState('');
   const [color, setColor] = useState('red');
@@ -53,7 +53,7 @@ export default function FolderEditSheet({ open, folder = null, onClose, onSave, 
 
       <div className="sheet-preview">
         <VFFolderCard
-          layout="hero"
+          layout="row"
           title={name.trim() || 'Folder name'}
           count={folder?.lecture_count ?? 0}
           color={color}
@@ -66,14 +66,6 @@ export default function FolderEditSheet({ open, folder = null, onClose, onSave, 
         disabled={!name.trim()}
         onPress={() => { onClose?.(); onSave?.({ name: name.trim(), color }); }}
       />
-
-      {editing && !folder.virtual && (
-        <VFButton
-          label={folder.pinned ? 'Unpin from the top' : 'Pin to the top'}
-          variant="secondary"
-          onPress={() => { onClose?.(); onPin?.(folder.id, !folder.pinned); }}
-        />
-      )}
 
       {editing && !folder.virtual && (
         <VFButton

@@ -10,21 +10,19 @@
  * `fill` takes the {placeholders} the handoff writes into the strings.
  */
 export const COPY = {
-  tagline: 'Record. Learn. Revisit.',
-  allow: 'Allow microphone',
   later: 'Not now',
 
   finishTitle: 'Finish recording?',
   finishSub: 'Save this recording to {folder}?',
   finishBtn: 'Finish Recording',
-  slide: 'Slide to cancel',
-  release: 'Release to cancel',
+  slide: 'Slide to delete',
+  release: 'Release to delete',
 
   savingTitle: 'Saving recording…',
   savingSub: 'Please wait a moment.',
   savedTitle: 'Recording saved',
   savedSub: '“{title}” has been saved to {folder}.',
-  canceledTitle: 'Recording canceled',
+  canceledTitle: 'Recording deleted',
   canceledSub: 'Your recording has been discarded.',
 
   emptyTitle: 'No recordings yet',

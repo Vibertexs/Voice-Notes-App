@@ -13,7 +13,7 @@ import { Icon } from './Icon';
  * Reference: docs/design/voiceflow/VFSlideToCancel.dc.html
  */
 export default function VFSlideToCancel({
-  label = 'Slide to cancel', releaseLabel = 'Release to cancel', onCancel,
+  label = 'Slide to delete', releaseLabel = 'Release to delete', onCancel,
 }) {
   const track = useRef(null);
   const origin = useRef(0);

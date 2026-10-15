@@ -51,12 +51,7 @@ export default function VFGallery() {
         <VFSearchField value={query} onChange={setQuery} placeholder="Type to see the clear button" />
       </Row>
 
-      <Row title="VFFolderCard" note="hero · tile · row · target">
-        <VFFolderCard layout="hero" title="University" count={3} color="red" onMore={() => {}} />
-        <div className="gal-grid2">
-          <VFFolderCard layout="tile" title="Work" count={8} color="blue" onMore={() => {}} />
-          <VFFolderCard layout="tile" title="Ideas" count={1} color="violet" onMore={() => {}} />
-        </div>
+      <Row title="VFFolderCard" note="row · target">
         <VFFolderCard layout="row" title="Inbox" count={5} color="graphite" />
         <VFFolderCard layout="row" title="Personal" count={0} color="green" />
         <div className="gal-grid3">
