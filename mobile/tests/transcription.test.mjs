@@ -67,6 +67,12 @@ const googleAuth = readFileSync(join(here, '..', 'src', 'googleAuth.js'), 'utf8'
 check('Google sign-in is loaded lazily, not at import',
   !/^import .*google-signin/m.test(googleAuth) && /require\('@react-native-google-signin\/google-signin'\)/.test(googleAuth),
   'a top-level import crashes every build that predates the library');
+// The lazy require alone is not enough: when the module's own load throws,
+// React Native reports a fatal error instead of letting the catch block run.
+check('it checks the binary has the module before requiring it',
+  /TurboModuleRegistry\.get\('RNGoogleSignin'\)/.test(googleAuth)
+    && googleAuth.indexOf("TurboModuleRegistry.get('RNGoogleSignin')") < googleAuth.indexOf("require('@react-native-google-signin"),
+  'otherwise an older binary shows a red screen, and a release build crashes');
 check('it asks Google for a token addressed to the Web client, not the Android one',
   /configure\(\{ webClientId: GOOGLE_WEB_CLIENT_ID \}\)/.test(googleAuth));
 check('the model module has no audio upload call', !/fetch\(|createUploadTask|uploadAsync/.test(whisper));

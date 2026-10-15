@@ -13,6 +13,8 @@
  * here; Google matches it to this app by package name and signing key.
  */
 
+import { TurboModuleRegistry } from 'react-native';
+
 /** Public by design - a client id identifies the app, it does not authorise anything. */
 export const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID
   ?? '852372251285-68sveacic3pe2j7ak6lmublkb8q2qegb.apps.googleusercontent.com';
@@ -22,6 +24,11 @@ let library;
 function load() {
   if (library !== undefined) return library;
   try {
+    // Ask the binary first. A `require` whose module throws while loading does
+    // not throw to the caller in React Native: it reports a fatal error, which
+    // is a red screen in development and a crash in a release build. The
+    // non-enforcing lookup just answers null when the module is not compiled in.
+    if (!TurboModuleRegistry.get('RNGoogleSignin')) throw new Error('RNGoogleSignin is not in this binary');
     // eslint-disable-next-line global-require
     const loaded = require('@react-native-google-signin/google-signin');
     loaded.GoogleSignin.configure({ webClientId: GOOGLE_WEB_CLIENT_ID });
