@@ -18,6 +18,7 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from backend.cloud import routes_auth, routes_library
 from backend.cloud.apple import AppleVerifier
+from backend.cloud.google import GoogleVerifier
 from backend.cloud.config import Settings, get_settings
 from backend.cloud.database import open_database, prepare_database
 from backend.cloud.email import EmailSender, ResendSender
@@ -103,6 +104,7 @@ def create_app(
     *,
     email_sender: EmailSender | None = None,
     apple_verifier: AppleVerifier | None = None,
+    google_verifier: GoogleVerifier | None = None,
 ) -> FastAPI:
     settings = settings or get_settings()
 
@@ -118,6 +120,7 @@ def create_app(
             app.state.settings = settings
             app.state.email = email_sender or ResendSender(settings)
             app.state.apple = apple_verifier or AppleVerifier(settings.apple_client_ids)
+            app.state.google = google_verifier or GoogleVerifier(settings.google_client_ids)
             app.state.search = Search(database, settings)
             yield
         finally:

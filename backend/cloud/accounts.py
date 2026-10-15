@@ -35,6 +35,7 @@ def user_out(user: dict[str, Any]) -> User:
         created_at=user["createdAt"],
         has_password=bool(user.get("passwordHash")),
         apple_linked=bool(user.get("appleSub")),
+        google_linked=bool(user.get("googleSub")),
     )
 
 

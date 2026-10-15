@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     # Sign in with Apple is accepted only for these audiences: the iOS bundle
     # id, and the Services ID if there is ever a web sign-in. Empty = off.
     apple_client_ids: Annotated[list[str], NoDecode] = []
+    # Sign in with Google: the *Web* OAuth client id (the audience of the tokens
+    # the Android library produces). Empty = off.
+    google_client_ids: Annotated[list[str], NoDecode] = []
     password_reset_minutes: int = 15
     rate_limits_enabled: bool = True
 
@@ -52,7 +55,7 @@ class Settings(BaseSettings):
     search_backend: Literal["auto", "atlas", "regex"] = "auto"
     tombstone_days: int = 180
 
-    @field_validator("allowed_origins", "apple_client_ids", mode="before")
+    @field_validator("allowed_origins", "apple_client_ids", "google_client_ids", mode="before")
     @classmethod
     def _comma_list(cls, value: object) -> object:
         """Accept `a.com,b.com` from an env var, not just a JSON array."""

@@ -72,6 +72,7 @@ VALIDATORS: dict[str, dict[str, Any]] = {
             "email": _STRING_OR_NULL,
             "passwordHash": _STRING_OR_NULL,
             "appleSub": _STRING_OR_NULL,
+            "googleSub": _STRING_OR_NULL,
             "createdAt": _DATE,
         },
     },
@@ -134,6 +135,8 @@ def declared_indexes(settings: Settings) -> dict[str, list[dict[str, Any]]]:
                    partialFilterExpression={"email": {"$type": "string"}}),
             _index([("appleSub", ASCENDING)], "apple_sub_unique", unique=True,
                    partialFilterExpression={"appleSub": {"$type": "string"}}),
+            _index([("googleSub", ASCENDING)], "google_sub_unique", unique=True,
+                   partialFilterExpression={"googleSub": {"$type": "string"}}),
         ],
         "sessions": [
             _index([("tokenHash", ASCENDING)], "token_hash_unique", unique=True),

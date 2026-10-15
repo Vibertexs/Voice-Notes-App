@@ -101,12 +101,18 @@ class AppleSignIn(Model):
     device_name: str | None = Field(default=None, max_length=80)
 
 
+class GoogleSignIn(Model):
+    id_token: str = Field(min_length=20, max_length=8000)
+    device_name: str | None = Field(default=None, max_length=80)
+
+
 class User(UtcModel):
     id: str
     email: str | None
     created_at: datetime
     has_password: bool
     apple_linked: bool
+    google_linked: bool = False
 
 
 class Tokens(Model):

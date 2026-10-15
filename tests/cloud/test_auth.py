@@ -298,3 +298,102 @@ async def test_repeated_failed_logins_are_rate_limited(client, app, account: Acc
 @pytest.mark.parametrize("path", ["/v1/folders", "/v1/recordings", "/v1/search?q=x", "/v1/me"])
 async def test_data_routes_need_a_token(client, path):
     assert (await client.get(path)).status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# Sign in with Google
+# ---------------------------------------------------------------------------
+
+async def _google(client, token: str):
+    return await client.post("/v1/auth/google", json={"idToken": token})
+
+
+async def test_google_sign_in_creates_then_reuses_an_account(client, fake_google):
+    sub = unique_id("google.")
+    email = f"{sub}@gmail.com"
+    first = await _google(client, fake_google.token(sub, email=email))
+    assert first.status_code == 200, first.text
+    user = first.json()["user"]
+    assert user["googleLinked"] is True and user["hasPassword"] is False and user["email"] == email
+    second = await _google(client, fake_google.token(sub))
+    assert second.json()["user"]["id"] == user["id"]
+    me = await client.get("/v1/me", headers={"Authorization": f"Bearer {second.json()['accessToken']}"})
+    assert me.status_code == 200
+
+
+async def test_google_accepts_both_spellings_of_its_issuer(client, fake_google):
+    for issuer in ("https://accounts.google.com", "accounts.google.com"):
+        assert (await _google(client, fake_google.token(unique_id("g."), issuer=issuer))).status_code == 200
+    assert (await _google(client, fake_google.token(unique_id("g."), issuer="https://evil.example"))).status_code == 401
+
+
+async def test_google_tokens_for_another_app_or_key_are_refused(client, fake_google, fake_apple):
+    assert (await _google(client, fake_google.token("x", audience="someone-else.apps.googleusercontent.com"))).status_code == 401
+    assert (await _google(client, fake_google.token("x", kid="unknown-key"))).status_code == 401
+    assert (await _google(client, type(fake_google)().token("x"))).status_code == 401      # other key pair
+    # A token Apple signed is not a Google token, even with the right audience.
+    assert (await _google(client, fake_apple.token("x", audience=fake_google.client_id))).status_code == 401
+
+
+async def test_google_with_a_verified_email_joins_the_password_account_and_removes_its_password(
+        client, fake_google, account: Account):
+    response = await _google(client, fake_google.token(unique_id("google."), email=account.email))
+    assert response.status_code == 200
+    assert response.json()["user"]["id"] == account.id
+    assert response.json()["user"]["googleLinked"] is True and response.json()["user"]["hasPassword"] is False
+    # Nobody verified the address when the password was chosen, so the password
+    # and the sessions that came with it are gone.
+    assert (await account.get("/v1/me")).status_code == 401
+    login = await client.post("/v1/auth/login", json={"email": account.email, "password": account.password})
+    assert login.status_code == 401
+
+
+async def test_the_pre_registration_attack_does_not_work(client, mailbox, fake_google):
+    """An attacker registers the victim's address with their own password. When
+    the victim later signs in with Google, the attacker must be locked out."""
+    victim_email = f"victim-{unique_id()}@gmail.com"
+    attacker = await client.post("/v1/auth/register", json={"email": victim_email, "password": "attacker password 1"})
+    assert attacker.status_code == 201
+    attacker_token = {"Authorization": f"Bearer {attacker.json()['accessToken']}"}
+
+    victim = await _google(client, fake_google.token(unique_id("google."), email=victim_email))
+    assert victim.status_code == 200 and victim.json()["user"]["id"] == attacker.json()["user"]["id"]
+
+    assert (await client.get("/v1/me", headers=attacker_token)).status_code == 401
+    assert (await client.post("/v1/auth/login", json={"email": victim_email, "password": "attacker password 1"})).status_code == 401
+    refresh = await client.post("/v1/auth/refresh", json={"refreshToken": attacker.json()["refreshToken"]})
+    assert refresh.status_code == 401
+    # The victim, who does control the inbox, can still set a password.
+    await client.post("/v1/auth/password/forgot", json={"email": victim_email})
+    code = _code_for(mailbox, victim_email)
+    reset = await client.post("/v1/auth/password/reset",
+                              json={"email": victim_email, "code": code, "newPassword": "the real owner password"})
+    assert reset.status_code == 200
+
+
+async def test_google_with_an_unverified_email_does_not_join_an_account(client, fake_google, account: Account):
+    response = await _google(client, fake_google.token(unique_id("google."), email=account.email, verified=False))
+    assert response.status_code == 200
+    assert response.json()["user"]["id"] != account.id
+    assert (await account.get("/v1/me")).status_code == 200          # the real account is untouched
+
+
+async def test_apple_and_google_can_be_linked_to_one_account(client, fake_apple, fake_google):
+    email = f"both-{unique_id()}@example.com"
+    apple = await _apple(client, fake_apple.token(unique_id("apple."), email=email))
+    google = await _google(client, fake_google.token(unique_id("google."), email=email))
+    assert apple.json()["user"]["id"] == google.json()["user"]["id"]
+    assert google.json()["user"]["appleLinked"] and google.json()["user"]["googleLinked"]
+    # Linking a second provider must not sign out the first one's devices: no password was involved.
+    me = await client.get("/v1/me", headers={"Authorization": f"Bearer {apple.json()['accessToken']}"})
+    assert me.status_code == 200
+
+
+async def test_google_is_off_when_no_client_id_is_set(client, app, fake_google):
+    from backend.cloud.google import GoogleVerifier
+    original = app.state.google
+    app.state.google = GoogleVerifier([])
+    try:
+        assert (await _google(client, fake_google.token("x"))).status_code == 404
+    finally:
+        app.state.google = original

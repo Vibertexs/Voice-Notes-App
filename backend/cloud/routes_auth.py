@@ -29,11 +29,14 @@ from backend.cloud.accounts import (
     delete_account, end_sessions, normalize_email, rotate_session, start_session, user_out,
 )
 from backend.cloud.apple import AppleTokenError
+from backend.cloud.google import GoogleTokenError
 from backend.cloud.common import new_id, utcnow
+from backend.cloud.config import Settings
+from backend.cloud.database import Database
 from backend.cloud.deps import DatabaseDep, PrincipalDep, SettingsDep, client_ip
 from backend.cloud.models import (
-    AppleSignIn, ChangePassword, DeleteAccount, ForgotPassword, Login, Logout, Refresh, Register,
-    ResetPassword, Tokens,
+    AppleSignIn, ChangePassword, DeleteAccount, ForgotPassword, GoogleSignIn, Login, Logout, Refresh,
+    Register, ResetPassword, Tokens,
 )
 from backend.cloud.security import (
     hash_code, hash_password, hash_token, needs_rehash, new_reset_code, same, verify_password,
@@ -54,6 +57,7 @@ async def register(body: Register, request: Request, database: DatabaseDep, sett
         "email": normalize_email(body.email),
         "passwordHash": await hash_password(body.password),
         "appleSub": None,
+        "googleSub": None,
         "createdAt": utcnow(),
     }
     try:
@@ -184,51 +188,84 @@ async def change_password(body: ChangePassword, principal: PrincipalDep, databas
 
 
 # ---------------------------------------------------------------------------
-# Sign in with Apple
+# Sign in with Apple / Google
 # ---------------------------------------------------------------------------
 
-def _apple_email(claims: dict[str, Any]) -> str | None:
-    """Apple's email, only if Apple vouches for it.
+def _verified_email(claims: dict[str, Any]) -> str | None:
+    """The provider's email, only if the provider vouches for it.
 
     email_verified arrives as a boolean or as the string "true" depending on
-    the flow. An unverified email is never used to join an existing account:
-    that would let anyone claim any account by typing its address.
+    the provider and flow. An unverified email is never used to join an
+    existing account: that would let anyone claim any account by typing its
+    address.
     """
     email = claims.get("email")
     verified = claims.get("email_verified") in (True, "true")
     return normalize_email(email) if email and verified else None
 
 
-@router.post("/auth/apple", response_model=Tokens)
-async def apple_sign_in(body: AppleSignIn, request: Request, database: DatabaseDep, settings: SettingsDep) -> Tokens:
-    verifier = request.app.state.apple
+async def _provider_sign_in(
+    request: Request, database: Database, settings: Settings, *,
+    verifier: Any, token_error: type[Exception], field: str, bucket: str,
+    token: str, nonce: str | None, device_name: str | None, label: str,
+) -> Tokens:
+    """One sign-in path for every OpenID provider; `field` is where the
+    provider's stable user id is stored on the user."""
     if not verifier.enabled:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Sign in with Apple is not set up on this server.")
-    await ratelimit.hit(database, settings, "apple:ip", client_ip(request))
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"Sign in with {label} is not set up on this server.")
+    await ratelimit.hit(database, settings, bucket, client_ip(request))
     try:
-        claims = await verifier.verify(body.identity_token, body.nonce)
-    except AppleTokenError as error:
+        claims = await verifier.verify(token, nonce)
+    except token_error as error:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, str(error)) from None
 
     subject = claims["sub"]
-    email = _apple_email(claims)
-    user = await database.users.find_one({"appleSub": subject})
+    email = _verified_email(claims)
+    user = await database.users.find_one({field: subject})
     if user is None and email:
-        user = await database.users.find_one_and_update(
-            {"email": email, "appleSub": None},
-            {"$set": {"appleSub": subject}},
-            return_document=ReturnDocument.AFTER,
-        )
+        # The same person's password account, found by the verified address.
+        candidate = await database.users.find_one({"email": email, field: None})
+        if candidate is not None:
+            await database.users.update_one(
+                {"_id": candidate["_id"], field: None},
+                # The password goes, because nobody ever proved the address
+                # belonged to whoever typed it at registration. Without this,
+                # someone could register a victim's email with a password of
+                # their own and keep that password after the victim signs in
+                # with the provider. The real owner can set a new one through
+                # the emailed reset code.
+                {"$set": {field: subject, "passwordHash": None}},
+            )
+            if candidate.get("passwordHash"):
+                await end_sessions(database, candidate["_id"])
+            user = await database.users.find_one({"_id": candidate["_id"]})
     if user is None:
-        user = {"_id": new_id("usr_"), "email": email, "passwordHash": None, "appleSub": subject, "createdAt": utcnow()}
+        user = {"_id": new_id("usr_"), "email": email, "passwordHash": None,
+                "appleSub": None, "googleSub": None, field: subject, "createdAt": utcnow()}
         try:
             await database.users.insert_one(user)
         except DuplicateKeyError:
-            # Lost a race with a parallel sign-in for the same Apple id.
-            user = await database.users.find_one({"appleSub": subject})
+            # Lost a race with a parallel sign-in for the same provider id.
+            user = await database.users.find_one({field: subject})
             if user is None:
                 raise
-    return await start_session(database, settings, user, request, body.device_name)
+    return await start_session(database, settings, user, request, device_name)
+
+
+@router.post("/auth/apple", response_model=Tokens)
+async def apple_sign_in(body: AppleSignIn, request: Request, database: DatabaseDep, settings: SettingsDep) -> Tokens:
+    return await _provider_sign_in(
+        request, database, settings, verifier=request.app.state.apple, token_error=AppleTokenError,
+        field="appleSub", bucket="apple:ip", token=body.identity_token, nonce=body.nonce,
+        device_name=body.device_name, label="Apple")
+
+
+@router.post("/auth/google", response_model=Tokens)
+async def google_sign_in(body: GoogleSignIn, request: Request, database: DatabaseDep, settings: SettingsDep) -> Tokens:
+    return await _provider_sign_in(
+        request, database, settings, verifier=request.app.state.google, token_error=GoogleTokenError,
+        field="googleSub", bucket="google:ip", token=body.id_token, nonce=None,
+        device_name=body.device_name, label="Google")
 
 
 # ---------------------------------------------------------------------------

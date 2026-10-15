@@ -24,10 +24,12 @@ from jwt.algorithms import RSAAlgorithm
 
 from backend.cloud.app import create_app
 from backend.cloud.apple import APPLE_ISSUER, AppleVerifier
+from backend.cloud.google import GoogleVerifier
 from backend.cloud.config import Settings
 from backend.cloud.email import MemorySender
 
 APPLE_CLIENT_ID = "com.voiceflow.test"
+GOOGLE_CLIENT_ID = "123456-web.apps.googleusercontent.com"
 APPLE_KID = "test-key-1"
 TEST_DB_PREFIX = "voiceflow_test_"
 
@@ -39,6 +41,7 @@ def _settings() -> Settings:
             mongodb_db=f"{TEST_DB_PREFIX}{uuid.uuid4().hex[:10]}",
             jwt_secret="test-secret-" + "x" * 40,
             apple_client_ids=[APPLE_CLIENT_ID],
+            google_client_ids=[GOOGLE_CLIENT_ID],
             rate_limits_enabled=False,
             # "auto" builds the Atlas index and uses regex until it is ready,
             # exactly as production does. Building one takes a minute or two,
@@ -50,7 +53,10 @@ def _settings() -> Settings:
 
 
 class FakeApple:
-    """Stands in for Apple: a key pair, and identity tokens signed with it."""
+    """Stands in for an identity provider: a key pair, and tokens signed with it."""
+
+    issuer = APPLE_ISSUER
+    client_id = APPLE_CLIENT_ID
 
     def __init__(self) -> None:
         self.private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
@@ -61,10 +67,11 @@ class FakeApple:
         return self.jwks
 
     def token(self, sub: str, *, email: str | None = None, verified: Any = True,
-              audience: str = APPLE_CLIENT_ID, nonce: str | None = None, kid: str = APPLE_KID) -> str:
+              audience: str | None = None, nonce: str | None = None, kid: str = APPLE_KID,
+              issuer: str | None = None) -> str:
         now = datetime.now(timezone.utc)
         claims: dict[str, Any] = {
-            "iss": APPLE_ISSUER, "aud": audience, "sub": sub,
+            "iss": issuer or self.issuer, "aud": audience or self.client_id, "sub": sub,
             "iat": now, "exp": now + timedelta(minutes=10),
         }
         if email:
@@ -74,9 +81,19 @@ class FakeApple:
         return jwt.encode(claims, self.private_key, algorithm="RS256", headers={"kid": kid})
 
 
+class FakeGoogle(FakeApple):
+    issuer = "https://accounts.google.com"
+    client_id = GOOGLE_CLIENT_ID
+
+
 @pytest.fixture(scope="session")
 def fake_apple() -> FakeApple:
     return FakeApple()
+
+
+@pytest.fixture(scope="session")
+def fake_google() -> FakeGoogle:
+    return FakeGoogle()
 
 
 @pytest.fixture(scope="session")
@@ -85,13 +102,14 @@ def mailbox() -> MemorySender:
 
 
 @pytest.fixture(scope="session")
-async def app(fake_apple: FakeApple, mailbox: MemorySender):
+async def app(fake_apple: FakeApple, fake_google: FakeGoogle, mailbox: MemorySender):
     settings = _settings()
     assert settings.mongodb_db.startswith(TEST_DB_PREFIX)
     application = create_app(
         settings,
         email_sender=mailbox,
         apple_verifier=AppleVerifier([APPLE_CLIENT_ID], fetch_keys=fake_apple.fetch),
+        google_verifier=GoogleVerifier([GOOGLE_CLIENT_ID], fetch_keys=fake_google.fetch),
     )
     async with application.router.lifespan_context(application):
         try:

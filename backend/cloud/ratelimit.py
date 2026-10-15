@@ -31,6 +31,7 @@ LIMITS = {
     "forgot:email": (3, 900),
     "reset:email": (10, 900),
     "apple:ip": (20, 60),
+    "google:ip": (20, 60),
 }
 
 
