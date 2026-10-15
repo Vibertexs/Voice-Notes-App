@@ -1,0 +1,6 @@
+# Shell scripts run on Linux; a CRLF checkout on Windows breaks them
+# ("bad interpreter: /usr/bin/env bash\r").
+*.sh text eol=lf
+Dockerfile text eol=lf
+docker-compose.yml text eol=lf
+deploy/Caddyfile text eol=lf

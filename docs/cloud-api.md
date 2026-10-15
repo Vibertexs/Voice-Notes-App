@@ -87,6 +87,54 @@ in Resend to email anyone, and set `EMAIL_FROM` to match.
 
 ---
 
+### Backups
+
+Free Atlas (M0) has no backups, so the EC2 host takes its own. Every night at
+03:15 UTC, cron runs `deploy/backup/backup.sh`, which:
+
+1. `mongodump`s the `voiceflow` database (the connection string comes from a
+   mode-600 config file, never a command-line argument or the log),
+2. verifies the archive with `mongorestore --dryRun`,
+3. uploads it to `s3://voiceflow-backups-bilal/mongodb/` with its SHA-256 in
+   the object metadata, and confirms S3 reports the same size,
+4. deletes the local temp copy.
+
+The server's IAM role can put, get and list only; **S3's lifecycle rule deletes
+backups after 30 days**, so the server never needs delete permission. No AWS
+keys exist anywhere - the CLI uses the instance role.
+
+**Set up (once, on the EC2 host):**
+
+```bash
+cd ~/Voice-Notes-App && git pull
+bash deploy/backup/install.sh      # tools, config, cron, log rotation
+/opt/voiceflow-backup/backup.sh    # run one now and read the output
+```
+
+**Is it working?** `/opt/voiceflow-backup/backup.sh --check` exits non-zero if the
+newest backup is missing or older than 36 hours; log is `/var/log/voiceflow-backup.log`.
+
+**Restore.** The default never touches production - it loads into a separate
+database so you can look first:
+
+```bash
+/opt/voiceflow-backup/restore.sh --list
+/opt/voiceflow-backup/restore.sh                        # latest -> voiceflow_restore_<date>
+/opt/voiceflow-backup/restore.sh --from voiceflow-20261015T031500Z.archive.gz
+```
+
+To replace live data (after inspecting the restored copy), `--into voiceflow
+--overwrite-production`, then type the database name to confirm. Afterwards
+restart the API (`docker compose restart api`) so it rebuilds the Atlas Search
+index, which is not part of a dump. Drop test restores when finished.
+
+Limits: a once-a-night snapshot means up to 24 hours of changes can be lost. The
+phones do **not** automatically re-upload those: their outbox is empty because the
+changes were already synced, and their pull cursors are ahead of the restored
+data. Signing out and back in on a phone re-queues everything on it (the library
+there is the other full copy), so after a real restore, have users do that. The
+exception is unsynced edits still in a phone's outbox, which upload as usual.
+
 ## 4. How users sign in
 
 | | |
