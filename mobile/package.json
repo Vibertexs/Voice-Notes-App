@@ -4,6 +4,7 @@
   "main": "index.js",
   "dependencies": {
     "@fugood/react-native-audio-pcm-stream": "^1.1.4",
+    "@react-native-google-signin/google-signin": "^16.1.5",
     "buffer": "^6.0.3",
     "expo": "~57.0.24",
     "expo-dev-client": "~57.0.19",

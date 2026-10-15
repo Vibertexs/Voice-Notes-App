@@ -17,7 +17,7 @@ const { createCloud, segmentToCloud, segmentFromCloud, toMs } = loadCloudSync();
 /** Answers like backend/cloud, scripted. Accepts everything it is sent. */
 function fakeServer() {
   const server = {
-    pushes: [], replies: [], calls: [], refreshes: 0,
+    pushes: [], replies: [], calls: [], refreshes: 0, googleBodies: [],
     accessValid: true, rejectIds: new Set(), invalidIds: new Set(),
   };
   const json = (status, body) => ({
@@ -32,6 +32,7 @@ function fakeServer() {
     const body = init.body ? JSON.parse(init.body) : null;
     server.calls.push({ path, auth: init.headers.Authorization ?? null, body });
     if (path === '/v1/auth/login' || path === '/v1/auth/register') return json(200, tokens(0));
+    if (path === '/v1/auth/google') { server.googleBodies.push(body); return json(200, tokens(0)); }
     if (path === '/v1/auth/refresh') { server.refreshes++; server.accessValid = true; return json(200, tokens(server.refreshes)); }
     if (path === '/v1/auth/logout') return json(204, null);
     if (path === '/v1/sync') {
@@ -247,6 +248,59 @@ check('signed out', res.body.signedIn === false, res.body);
 res = await phone.GET('/api/library');
 check('the library is still here', res.body.folders.length > 0, res.body.folders);
 check('the server was told', server.calls.some((c) => c.path === '/v1/auth/logout'));
+
+// ---------------------------------------------------------------------------
+console.log('\n== signing in with Google ==');
+{
+  const gPhone = makePhone();
+  await gPhone.api.openDatabase();
+  const gServer = fakeServer();
+  let signedOut = 0;
+  const behaviour = { token: 'google-id-token-from-the-picker', fail: null };
+  const fakeGoogle = {
+    available: () => true,
+    idToken: async () => { if (behaviour.fail) throw behaviour.fail; return behaviour.token; },
+    signOut: async () => { signedOut++; },
+  };
+  const { cloud: gCloud } = cloudFor(gPhone, gServer, { google: fakeGoogle });
+  await gPhone.POST('/api/folders', { name: 'Before Google' });
+
+  res = await gPhone.GET('/api/account');
+  check('the page is told Google is available', res.body.google === true, res.body);
+
+  behaviour.fail = Object.assign(new Error('Google sign-in was cancelled.'), { cancelled: true });
+  res = await gPhone.POST('/api/account/google');
+  check('backing out of the picker is not an error', res.status === 200 && res.body.cancelled === true && res.body.signedIn === false, res);
+  check('...and nothing was sent to the server', gServer.googleBodies.length === 0);
+
+  behaviour.fail = new Error('Google Play services are missing or out of date on this phone.');
+  res = await gPhone.POST('/api/account/google');
+  check('a real failure is reported in words', res.status === 502 && /Play services/.test(res.body.detail), res);
+
+  behaviour.fail = null;
+  res = await gPhone.POST('/api/account/google');
+  check('signing in succeeds', res.status === 200 && res.body.signedIn === true && res.body.user?.email === 'student@example.com', res);
+  check('the ID token went to the server, with the device name',
+    gServer.googleBodies[0]?.idToken === 'google-id-token-from-the-picker' && gServer.googleBodies[0]?.deviceName === 'Test phone',
+    gServer.googleBodies);
+  await gCloud.syncNow();
+  check('what was already on the phone uploaded, as with a password sign-in',
+    gServer.pushes.some((push) => (push.changes.folders ?? []).some((folder) => folder.name === 'Before Google')), gServer.pushes);
+
+  res = await gPhone.POST('/api/account/logout');
+  check('signing out also signs out of Google, so the picker shows next time', signedOut === 1 && res.body.signedIn === false, { signedOut, res });
+  gCloud.stop();
+
+  // A binary built before the library existed.
+  const oldPhone = makePhone();
+  await oldPhone.api.openDatabase();
+  const { cloud: oldCloud } = cloudFor(oldPhone, fakeServer(), { google: { available: () => false } });
+  res = await oldPhone.GET('/api/account');
+  check('without the library the page is told not to offer it', res.body.google === false, res.body);
+  res = await oldPhone.POST('/api/account/google');
+  check('...and a direct call is refused politely', res.status === 503 && /isn't available/.test(res.body.detail), res);
+  oldCloud.stop();
+}
 
 cloud.stop();
 done();

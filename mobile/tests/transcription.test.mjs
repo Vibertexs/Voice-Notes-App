@@ -61,6 +61,14 @@ check('Whisper timestamps are converted from centiseconds to app seconds',
 check('short pieces are requested and regrouped into readable lines',
   /maxLen: 1/.test(whisper) && /function groupIntoLines/.test(whisper),
   'without this a whole line lights at once and the transcript lags the voice');
+// Same trap as whisper.rn: a native module imported at the top of a file takes
+// the whole app down on a binary built before the module existed.
+const googleAuth = readFileSync(join(here, '..', 'src', 'googleAuth.js'), 'utf8');
+check('Google sign-in is loaded lazily, not at import',
+  !/^import .*google-signin/m.test(googleAuth) && /require\('@react-native-google-signin\/google-signin'\)/.test(googleAuth),
+  'a top-level import crashes every build that predates the library');
+check('it asks Google for a token addressed to the Web client, not the Android one',
+  /configure\(\{ webClientId: GOOGLE_WEB_CLIENT_ID \}\)/.test(googleAuth));
 check('the model module has no audio upload call', !/fetch\(|createUploadTask|uploadAsync/.test(whisper));
 
 console.log('\n== the grouping runs, not just matches ==');

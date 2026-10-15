@@ -140,7 +140,10 @@ exception is unsynced edits still in a phone's outbox, which upload as usual.
 | | |
 |---|---|
 | **Email + password** | Works everywhere, nothing to configure. argon2id hashes (OWASP's 19 MiB profile, run off the event loop). |
-| **Sign in with Apple** | Server side is done: set `APPLE_CLIENT_IDS` to the iOS bundle id. Needs `expo-apple-authentication` in the app and an iOS build, which is the next step on a Mac. An Apple sign-in whose *verified* email matches an existing account joins it. |
+| **Sign in with Google** | Set `GOOGLE_CLIENT_IDS` to the **Web** OAuth client id. The Android app uses `@react-native-google-signin/google-signin`; Google matches the app to its *Android* client by package name and signing-key SHA-1, and the ID token it returns is addressed to the Web client, which the server verifies. While the consent screen is in *Testing*, only listed test users can sign in. |
+| **Sign in with Apple** | Server side is done: set `APPLE_CLIENT_IDS` to the iOS bundle id. Needs `expo-apple-authentication` and an iOS build. |
+
+A provider sign-in whose **verified** email matches a password account joins it, and **clears that account's password and sessions**: nobody ever proved the address belonged to whoever registered it, so otherwise an attacker could register a victim's email first and keep their password. The owner sets a new one through the emailed reset code.
 
 **Tokens.** Sign-in returns a 15-minute access token (JWT, HS256) and a 30-day
 refresh token. The access token is checked against its session on every request,

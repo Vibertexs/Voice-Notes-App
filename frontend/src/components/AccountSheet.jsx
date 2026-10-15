@@ -74,7 +74,8 @@ export default function AccountSheet({ open, onClose, notify }) {
   }
 
   const signedIn = (next, message) => {
-    if (!next) return;
+    // Backing out of Google's account picker comes back as a status, not a sign-in.
+    if (!next?.signedIn) return;
     setAccount(next); setPassword(''); setCode(''); setMode('signin');
     notify?.(message);
   };
@@ -85,6 +86,10 @@ export default function AccountSheet({ open, onClose, notify }) {
     if (mode === 'register') signedIn(await run(() => accountApi.register(email, password)), 'Account created. Syncing your library.');
     if (mode === 'reset') signedIn(await run(() => accountApi.reset(email, code, password)), 'Password changed. You’re signed in.');
     if (mode === 'forgot' && await run(() => accountApi.forgot(email))) setMode('reset');
+  }
+
+  async function withGoogle() {
+    signedIn(await run(() => accountApi.google()), 'Signed in with Google. Syncing your library.');
   }
 
   /* ---- what this build can do ------------------------------------------ */
@@ -166,6 +171,13 @@ export default function AccountSheet({ open, onClose, notify }) {
 
   return (
     <VFBottomSheet open={open} title={title} subtitle={subtitle} onClose={onClose}>
+      {(mode === 'signin' || mode === 'register') && account.google && (
+        <>
+          <VFButton label={busy ? 'One moment…' : 'Continue with Google'} variant="secondary" disabled={busy}
+            onPress={withGoogle} />
+          <p className="account-or" aria-hidden="true"><span>or use email</span></p>
+        </>
+      )}
       <form className="account-form" onSubmit={submit}>
         <input className="sheet-input" type="email" inputMode="email" autoComplete="email"
           autoCapitalize="none" placeholder="Email" aria-label="Email" value={email}

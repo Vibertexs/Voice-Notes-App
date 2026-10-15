@@ -16,6 +16,7 @@ import {
 } from './src/localApi';
 import { transcribeOnDevice } from './src/onDeviceWhisper';
 import { createCloud } from './src/cloudSync';
+import { google } from './src/googleAuth';
 
 /**
  * The sync server: the EC2 instance (docker-compose.yml), whose Elastic IP
@@ -75,7 +76,7 @@ export default function App() {
     );
     cloud.current = createCloud({
       openDatabase, exclusive, fetch: (...args) => fetch(...args),
-      apiUrl: CLOUD_API_URL, deviceName: DEVICE_NAME, audioFile,
+      apiUrl: CLOUD_API_URL, deviceName: DEVICE_NAME, audioFile, google,
       onData: () => emit('cn:data'),
       onStatus: (status) => emit('cn:account', status),
     });

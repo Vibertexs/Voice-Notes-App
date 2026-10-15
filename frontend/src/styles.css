@@ -728,6 +728,11 @@ select.field { appearance: none; }
 /* Account. Neutral surfaces only: the spectrum is not spent here. */
 .account-form { display: flex; flex-direction: column; gap: var(--gap-lg); }
 .account-note { text-align: left; font-size: var(--t-meta); line-height: var(--lh-body); }
+.account-or {
+  display: flex; align-items: center; gap: 12px;
+  color: var(--text-3); font-size: var(--t-meta);
+}
+.account-or::before, .account-or::after { content: ''; flex: 1; height: 1px; background: var(--hairline); }
 .account-error { color: var(--primary-txt); font-size: var(--t-meta-lg); line-height: 1.4; }
 .account-who {
   display: flex; align-items: center; gap: 14px;

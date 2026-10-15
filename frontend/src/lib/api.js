@@ -72,6 +72,7 @@ export const accountApi = {
   status: () => api('/api/account'),
   register: (email, password) => api('/api/account/register', { method: 'POST', body: { email, password } }),
   login: (email, password) => api('/api/account/login', { method: 'POST', body: { email, password } }),
+  google: () => api('/api/account/google', { method: 'POST' }),
   forgot: (email) => api('/api/account/forgot', { method: 'POST', body: { email } }),
   reset: (email, code, password) => api('/api/account/reset', { method: 'POST', body: { email, code, password } }),
   sync: () => api('/api/account/sync', { method: 'POST' }),

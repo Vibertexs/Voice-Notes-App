@@ -108,6 +108,9 @@ const primaryLecture = (db, workspaceId) => db.getFirstAsync(
 export function createCloud({
   openDatabase, exclusive, fetch: fetchImpl, apiUrl, deviceName = 'Phone',
   audioFile = null, onData = () => {}, onStatus = () => {}, now = () => Date.now(),
+  // Native Google sign-in, injected because it is a native module: { available(), idToken(), signOut() }.
+  // Absent (or not installed in this build) means the page simply does not offer the button.
+  google = null,
 }) {
   const server = String(apiUrl ?? '').replace(/\/+$/, '');
   let syncing = null;
@@ -147,6 +150,7 @@ export function createCloud({
     return {
       configured: Boolean(server),
       server: server || null,
+      google: Boolean(google?.available?.()),
       signedIn: Boolean(await getState('refresh_token')),
       user: user ? JSON.parse(user) : null,
       pending: pending?.n ?? 0,
@@ -643,6 +647,23 @@ export function createCloud({
           return { status: 200, body: await signedIn(await request('/v1/auth/register', { method: 'POST', body: credentials(body) })) };
         case 'login':
           return { status: 200, body: await signedIn(await request('/v1/auth/login', { method: 'POST', body: credentials(body) })) };
+        case 'google': {
+          if (!google?.available?.()) {
+            return { status: 503, body: { detail: "Google sign-in isn't available in this version of the app." } };
+          }
+          let idToken;
+          try {
+            idToken = await google.idToken();
+          } catch (error) {
+            // Backing out of Google's account picker is not an error worth showing.
+            if (error?.cancelled) return { status: 200, body: { ...(await status()), cancelled: true } };
+            return { status: 502, body: { detail: error?.message || 'Google sign-in did not complete.' } };
+          }
+          return {
+            status: 200,
+            body: await signedIn(await request('/v1/auth/google', { method: 'POST', body: { idToken, deviceName } })),
+          };
+        }
         case 'forgot':
           await request('/v1/auth/password/forgot', { method: 'POST', body: { email: String(body?.email ?? '').trim() } });
           return { status: 200, body: { ok: true } };
@@ -667,11 +688,13 @@ export function createCloud({
           // Best effort: signing out of the phone must work offline too.
           if (token) await request('/v1/auth/logout', { method: 'POST', body: { refreshToken: token } }).catch(() => {});
           await forgetSession();
+          await google?.signOut?.().catch(() => {});
           return { status: 200, body: await status() };
         }
         case 'delete':
           await authed('/v1/me', { method: 'DELETE', body: { password: body?.password ?? null } });
           await forgetSession();
+          await google?.signOut?.().catch(() => {});
           return { status: 200, body: await status() };
         default:
           return { status: 404, body: { detail: `No account route ${action}` } };
