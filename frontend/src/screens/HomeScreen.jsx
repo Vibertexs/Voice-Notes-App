@@ -3,7 +3,7 @@ import VFSearchField from '../components/VFSearchField';
 import VFRecordingRow from '../components/VFRecordingRow';
 import { Icon } from '../components/Icon';
 import { COPY } from '../lib/copy';
-import { recordingMeta } from '../lib/format';
+import { greetingLine, recordingMeta } from '../lib/format';
 
 /**
  * Home.
@@ -22,6 +22,7 @@ export default function HomeScreen({
 }) {
   return (
     <main className="screen screen--dock">
+      <p className="vf-greeting">{greetingLine()}</p>
       <header className="vf-head">
         <h1>Folders</h1>
         <div className="vf-head-actions">
@@ -52,7 +53,7 @@ export default function HomeScreen({
             {folders.map((folder) => (
               <VFFolderCard
                 key={folder.id} layout="row" title={folder.name}
-                count={folder.lecture_count ?? 0} color={folder.color}
+                count={folder.lecture_count ?? 0} color={folder.color} icon={folder.icon}
                 onPress={() => onOpenFolder(folder.id)}
               />
             ))}

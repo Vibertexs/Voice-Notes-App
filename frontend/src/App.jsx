@@ -184,13 +184,13 @@ export default function App() {
 
   const { drag, beginDrag } = useDragToFile((item, targetId) => moveWorkspace(item, targetId));
 
-  async function saveFolder({ name, color }) {
+  async function saveFolder({ name, color, icon = null }) {
     try {
       if (folderSheet?.folder && !folderSheet.folder.virtual) {
-        await libraryApi.updateFolder(folderSheet.folder.id, { name, color });
+        await libraryApi.updateFolder(folderSheet.folder.id, { name, color, icon });
         notify('Folder updated');
       } else {
-        await libraryApi.createFolder({ name, color });
+        await libraryApi.createFolder({ name, color, icon });
         notify('Folder created');
       }
       await refresh();

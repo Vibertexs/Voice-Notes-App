@@ -67,7 +67,7 @@ export default function SearchScreen({ onBack, onOpenResult, folders = [] }) {
 
   const open = (result) => { remember(term); onOpenResult(result, term); };
 
-  const folderName = (result) => folders.find((folder) => folder.id === result.folder_id)?.name;
+  const folderOf = (result) => folders.find((folder) => folder.id === result.folder_id);
 
   return (
     <main className="screen screen--search">
@@ -101,7 +101,8 @@ export default function SearchScreen({ onBack, onOpenResult, folders = [] }) {
               <button type="button" className="result" onClick={() => open(result)}>
                 <strong>{result.title || result.workspace_title}</strong>
                 <span className="result-meta">
-                  {[folderName(result), dateLabel(result.created_at)].filter(Boolean).join(' · ')}
+                  {folderOf(result) && <i className="result-dot" data-tone={folderOf(result).color} />}
+                  {[folderOf(result)?.name, dateLabel(result.created_at)].filter(Boolean).join(' · ')}
                 </span>
                 {result.start_seconds != null && (
                   <span className="result-at">{mmss(result.start_seconds)}</span>

@@ -3,6 +3,7 @@ import VFBottomSheet from './VFBottomSheet';
 import VFButton from './VFButton';
 import VFFolderCard from './VFFolderCard';
 import { SWATCHES } from '../lib/copy';
+import { FOLDER_ICONS, Icon } from './Icon';
 
 /**
  * Make a folder, or change one.
@@ -18,11 +19,13 @@ export default function FolderEditSheet({ open, folder = null, onClose, onSave, 
   const editing = Boolean(folder);
   const [name, setName] = useState('');
   const [color, setColor] = useState('red');
+  const [icon, setIcon] = useState(null);
 
   useEffect(() => {
     if (!open) return;
     setName(folder?.name ?? '');
     setColor(folder?.color && SWATCHES.includes(folder.color) ? folder.color : 'red');
+    setIcon(folder?.icon && FOLDER_ICONS.includes(folder.icon) ? folder.icon : null);
   }, [open, folder]);
 
   return (
@@ -51,12 +54,29 @@ export default function FolderEditSheet({ open, folder = null, onClose, onSave, 
         ))}
       </div>
 
+      <div className="icon-picks" role="radiogroup" aria-label="Folder icon" data-tone={color}>
+        {[null, ...FOLDER_ICONS].map((name) => (
+          <button
+            key={name ?? 'folder'}
+            type="button"
+            role="radio"
+            aria-checked={icon === name}
+            aria-label={name ?? 'plain folder'}
+            className={`icon-pick${icon === name ? ' is-on' : ''}`}
+            onClick={() => setIcon(name)}
+          >
+            {name ? <Icon name={name} strokeWidth={2} /> : <Icon name="folderSolid" />}
+          </button>
+        ))}
+      </div>
+
       <div className="sheet-preview">
         <VFFolderCard
           layout="row"
           title={name.trim() || 'Folder name'}
           count={folder?.lecture_count ?? 0}
           color={color}
+          icon={icon}
         />
       </div>
 
@@ -64,7 +84,7 @@ export default function FolderEditSheet({ open, folder = null, onClose, onSave, 
         label={editing ? 'Save' : 'Create folder'}
         icon={editing ? 'check' : 'plus'}
         disabled={!name.trim()}
-        onPress={() => { onClose?.(); onSave?.({ name: name.trim(), color }); }}
+        onPress={() => { onClose?.(); onSave?.({ name: name.trim(), color, icon }); }}
       />
 
       {editing && !folder.virtual && (

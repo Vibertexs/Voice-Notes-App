@@ -39,7 +39,9 @@ export default function FolderScreen({
       </header>
 
       <div className="folder-head">
-        <span className="folder-head-icon"><Icon name="folderSolid" /></span>
+        <span className="folder-head-icon">
+          {folder.icon ? <Icon name={folder.icon} strokeWidth={2.2} /> : <Icon name="folderSolid" />}
+        </span>
         <h1>{folder.name}</h1>
         <p>{countLabel(folder.lecture_count ?? recordings.length)}</p>
       </div>

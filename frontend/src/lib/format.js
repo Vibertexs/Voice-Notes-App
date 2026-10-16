@@ -26,6 +26,14 @@ export function clock(milliseconds = 0) {
 export const dateLabel = (date) =>
   new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(date));
 
+/** Good evening · Thu, Oct 15 - the line above Home's title. */
+export function greetingLine(now = new Date()) {
+  const hour = now.getHours();
+  const part = hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening';
+  const day = new Intl.DateTimeFormat(undefined, { weekday: 'short', month: 'short', day: 'numeric' }).format(now);
+  return `Good ${part} · ${day}`;
+}
+
 /** Sep 16, 2026 · 28:17 — the metadata line under a recording's name. */
 export function recordingMeta(lecture) {
   if (!lecture) return '';

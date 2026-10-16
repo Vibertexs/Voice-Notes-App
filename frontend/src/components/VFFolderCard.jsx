@@ -28,7 +28,7 @@ function countLabel(count, meta) {
  * Reference: docs/design/voiceflow/VFFolderCard.dc.html
  */
 export default function VFFolderCard({
-  title = 'Folder', count = 0, meta, color = 'red', layout = 'row',
+  title = 'Folder', count = 0, meta, color = 'red', icon = null, layout = 'row',
   active = false, disabled = false, onPress, onMore, dropId,
 }) {
   const label = countLabel(count, meta);
@@ -45,7 +45,9 @@ export default function VFFolderCard({
       onClick={interactive ? () => onPress?.() : undefined}
     >
       <span className="vf-card-top">
-        <span className="vf-card-icon"><Icon name="folderSolid" /></span>
+        <span className="vf-card-icon">
+          {icon ? <Icon name={icon} strokeWidth={2.2} /> : <Icon name="folderSolid" />}
+        </span>
         {onMore && layout !== 'target' && (
           <span
             role="button"

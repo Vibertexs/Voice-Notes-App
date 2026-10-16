@@ -45,6 +45,7 @@ export default function OrganizeScreen({
               layout="target"
               title={folder.name}
               color={folder.color}
+              icon={folder.icon}
               count={folder.lecture_count ?? 0}
               meta={isSource ? 'Current' : (drag?.over === folder.id ? 'Drop to move' : undefined)}
               active={drag?.over === folder.id && !isSource}

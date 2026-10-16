@@ -33,19 +33,19 @@
   /* ---- Canvas and surfaces -------------------------------- */
   --bg:           #0A0A0D;  /* app                            */
   --bg-deep:      #060608;  /* deepest                        */
-  --group:        #141419;  /* list group                     */
-  --surface:      #16161B;  /* row, card                      */
-  --sheet:        #17171C;  /* bottom sheet                   */
-  --field:        #1A1A20;  /* search field                   */
-  --chip:         #1C1C22;  /* chips                          */
-  --input:        #1F1F26;  /* inputs, slide track            */
-  --raised:       #26262E;  /* play circle, selected tab      */
+  --group:        #1B1B22;  /* list group                     */
+  --surface:      #1E1E25;  /* row, card                      */
+  --sheet:        #1C1C23;  /* bottom sheet                   */
+  --field:        #212128;  /* search field                   */
+  --chip:         #24242C;  /* chips                          */
+  --input:        #27272F;  /* inputs, slide track            */
+  --raised:       #30303A;  /* play circle, selected tab      */
   --toast-bg:     #2A2A32;
-  --secondary:    #22222A;  /* VFButton secondary             */
-  --folder-card:  #131318;  /* VFFolderCard surface           */
+  --secondary:    #2A2A33;  /* VFButton secondary             */
+  --folder-card:  #1A1A21;  /* VFFolderCard surface           */
   --ghost:        #24242C;  /* drag ghost                     */
-  --hairline:     rgba(255,255,255,.05);
-  --hairline-2:   rgba(255,255,255,.06);
+  --hairline:     rgba(255,255,255,.09);
+  --hairline-2:   rgba(255,255,255,.10);
 
   /* ---- Accent ---------------------------------------------
      One red does every primary action. The violet is only ever
@@ -67,19 +67,19 @@
   /* ---- Text ----------------------------------------------- */
   --text:         #F4F4F6;
   --text-2:       #C9C9D1;
-  --text-3:       #8E8E98;  /* muted; all metadata            */
-  --text-4:       #6A6A74;
-  --text-5:       #55555E;
+  --text-3:       #A3A3AE;  /* muted; all metadata            */
+  --text-4:       #82828C;
+  --text-5:       #6C6C76;
   --transcript-past: #4A4A53;
   /* Greys the component references use that the palette list does not
      name. They are here so no component has to invent one. */
   --text-ghost:   #A8A8B2;  /* ghost button label             */
-  --text-sub:     #9A9AA4;  /* sheet subtitle, card meta      */
+  --text-sub:     #B0B0BA;  /* sheet subtitle, card meta      */
   --text-snip:    #B4B4BE;  /* row snippet                    */
-  --icon-dim:     #7A7A84;  /* search glyph                   */
-  --icon-mid:     #A0A0AA;  /* clear, menu dots               */
+  --icon-dim:     #9292A0;  /* search glyph                   */
+  --icon-mid:     #B4B4BE;  /* clear, menu dots               */
   --grab:         #3A3A44;  /* sheet handle, paused ring      */
-  --row-hover:    #1B1B21;
+  --row-hover:    #24242C;
 
   /* ---- Waveform ------------------------------------------- */
   --wave-idle:    #34343D;  /* unplayed                       */
@@ -96,10 +96,10 @@
           'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
   --font-mono: ui-monospace, 'Roboto Mono', SFMono-Regular, Menlo, monospace;
 
-  --t-title:      30px;   --ls-title:    -.8px;  /* screen title  700 */
-  --t-detail:     27px;   --ls-detail:   -.7px;  /* detail title  700 */
+  --t-title:      34px;   --ls-title:    -.8px;  /* screen title  700 */
+  --t-detail:     30px;   --ls-detail:   -.7px;  /* detail title  700 */
   --t-sheet:      21px;   --ls-sheet:    -.4px;  /* sheet title   650 */
-  --t-row:        16px;   --ls-row:      -.2px;  /* row title     600 */
+  --t-row:        16.5px;   --ls-row:      -.2px;  /* row title     600 */
   --t-body:       15px;                          /* body          400 */
   --t-body-lg:    16px;
   --lh-body:      1.5;
@@ -113,13 +113,13 @@
 
   /* ---- Radii ---------------------------------------------- */
   --r-full:    999px;  /* pill buttons                         */
-  --r-row:     20px;
-  --r-card:    22px;   /* folder card                          */
+  --r-row:     24px;
+  --r-card:    26px;   /* folder card                          */
   --r-tile:    26px;  /* the component spec; the radii line says 24 */
   --r-hero:    28px;
-  --r-sheet:   32px;
+  --r-sheet:   34px;
   --r-field:   24px;
-  --r-input:   16px;
+  --r-input:   18px;
   --r-toast:   18px;
   --r-icon:    14px;   /* icon tiles, 12-14                    */
   --r-icon-sm: 12px;
@@ -213,69 +213,69 @@
    stored under them keep rendering until the data is migrated.
    ========================================================= */
 [data-tone="red"] {
-  --tone:#FF2D55; --tone-rgb:255,45,85; --tone-light:#FF7A93; --glow-a:.20; --ring-a:.18;
+  --tone:#FF2D55; --tone-rgb:255,45,85; --tone-light:#FF7A93; --glow-a:.20; --ring-a:.32; --wash-a:.30;
   --tone-card:linear-gradient(135deg,#FF2D55,#E6286C,#C42A88);
   --tone-icon:linear-gradient(145deg,#FF5A7A,#E0286C);
   --g1:#FF2D55; --g2:#C42A88;
 }
 [data-tone="blue"] {
-  --tone:#2F86FF; --tone-rgb:47,123,255; --tone-light:#7FAEFF; --glow-a:.20; --ring-a:.18;
+  --tone:#2F86FF; --tone-rgb:47,123,255; --tone-light:#7FAEFF; --glow-a:.20; --ring-a:.32; --wash-a:.30;
   --tone-card:linear-gradient(135deg,#2F86FF,#2A5CFF,#3D3AE0);
   --tone-icon:linear-gradient(145deg,#5B9BFF,#2A5CFF);
   --g1:#2F86FF; --g2:#3D3AE0;
 }
 [data-tone="violet"] {
-  --tone:#B04BFF; --tone-rgb:155,75,255; --tone-light:#C39BFF; --glow-a:.20; --ring-a:.18;
+  --tone:#B04BFF; --tone-rgb:155,75,255; --tone-light:#C39BFF; --glow-a:.20; --ring-a:.32; --wash-a:.30;
   --tone-card:linear-gradient(135deg,#B04BFF,#8B3CF2,#6A2BD8);
   --tone-icon:linear-gradient(145deg,#B983FF,#7B3CF2);
   --g1:#B04BFF; --g2:#6A2BD8;
 }
 [data-tone="amber"] {
-  --tone:#FF9A2E; --tone-rgb:255,138,46; --tone-light:#FFB672; --glow-a:.20; --ring-a:.18;
+  --tone:#FF9A2E; --tone-rgb:255,138,46; --tone-light:#FFB672; --glow-a:.20; --ring-a:.32; --wash-a:.30;
   --tone-card:linear-gradient(135deg,#FF9A2E,#F2662C,#E0452E);
   --tone-icon:linear-gradient(145deg,#FFAE5C,#F2662C);
   --g1:#FF9A2E; --g2:#E0452E;
 }
 [data-tone="green"] {
-  --tone:#22CC8E; --tone-rgb:31,199,138; --tone-light:#5FE3B2; --glow-a:.20; --ring-a:.18;
+  --tone:#22CC8E; --tone-rgb:31,199,138; --tone-light:#5FE3B2; --glow-a:.20; --ring-a:.32; --wash-a:.30;
   --tone-card:linear-gradient(135deg,#22CC8E,#12A87C,#0C876C);
   --tone-icon:linear-gradient(145deg,#4BDDA6,#0FA57A);
   --g1:#22CC8E; --g2:#0C876C;
 }
 [data-tone="graphite"] {
-  --tone:#34343D; --tone-rgb:140,140,155; --tone-light:#A8A8B4; --glow-a:.10; --ring-a:.10;
+  --tone:#34343D; --tone-rgb:140,140,155; --tone-light:#A8A8B4; --glow-a:.10; --ring-a:.16; --wash-a:.12;
   --tone-card:linear-gradient(135deg,#34343D,#24242B);
   --tone-icon:linear-gradient(145deg,#4E4E5A,#32323B);
   --g1:#34343D; --g2:#24242B;
 }
 
 [data-tone="rose"] {
-  --tone:#FF2D55; --tone-rgb:255,45,85; --tone-light:#FF7A93; --glow-a:.20; --ring-a:.18;
+  --tone:#FF2D55; --tone-rgb:255,45,85; --tone-light:#FF7A93; --glow-a:.20; --ring-a:.32; --wash-a:.30;
   --tone-card:linear-gradient(135deg,#FF2D55,#E6286C,#C42A88);
   --tone-icon:linear-gradient(145deg,#FF5A7A,#E0286C);
   --g1:#FF2D55; --g2:#C42A88;
 }
 [data-tone="coral"] {
-  --tone:#FF9A2E; --tone-rgb:255,138,46; --tone-light:#FFB672; --glow-a:.20; --ring-a:.18;
+  --tone:#FF9A2E; --tone-rgb:255,138,46; --tone-light:#FFB672; --glow-a:.20; --ring-a:.32; --wash-a:.30;
   --tone-card:linear-gradient(135deg,#FF9A2E,#F2662C,#E0452E);
   --tone-icon:linear-gradient(145deg,#FFAE5C,#F2662C);
   --g1:#FF9A2E; --g2:#E0452E;
 }
 [data-tone="lime"],
 [data-tone="mint"] {
-  --tone:#22CC8E; --tone-rgb:31,199,138; --tone-light:#5FE3B2; --glow-a:.20; --ring-a:.18;
+  --tone:#22CC8E; --tone-rgb:31,199,138; --tone-light:#5FE3B2; --glow-a:.20; --ring-a:.32; --wash-a:.30;
   --tone-card:linear-gradient(135deg,#22CC8E,#12A87C,#0C876C);
   --tone-icon:linear-gradient(145deg,#4BDDA6,#0FA57A);
   --g1:#22CC8E; --g2:#0C876C;
 }
 [data-tone="sky"] {
-  --tone:#2F86FF; --tone-rgb:47,123,255; --tone-light:#7FAEFF; --glow-a:.20; --ring-a:.18;
+  --tone:#2F86FF; --tone-rgb:47,123,255; --tone-light:#7FAEFF; --glow-a:.20; --ring-a:.32; --wash-a:.30;
   --tone-card:linear-gradient(135deg,#2F86FF,#2A5CFF,#3D3AE0);
   --tone-icon:linear-gradient(145deg,#5B9BFF,#2A5CFF);
   --g1:#2F86FF; --g2:#3D3AE0;
 }
 [data-tone="slate"] {
-  --tone:#34343D; --tone-rgb:140,140,155; --tone-light:#A8A8B4; --glow-a:.10; --ring-a:.10;
+  --tone:#34343D; --tone-rgb:140,140,155; --tone-light:#A8A8B4; --glow-a:.10; --ring-a:.16; --wash-a:.12;
   --tone-card:linear-gradient(135deg,#34343D,#24242B);
   --tone-icon:linear-gradient(145deg,#4E4E5A,#32323B);
   --g1:#34343D; --g2:#24242B;
@@ -550,10 +550,12 @@ select.field { appearance: none; }
 .vf-section { margin-top: 26px; }
 .vf-section--first { margin-top: 14px; }
 .vf-label {
-  margin-bottom: 10px; color: var(--text-3);
+  width: fit-content; margin-bottom: 10px;
   font-size: var(--t-label); font-weight: 700;
   letter-spacing: var(--ls-label); text-transform: uppercase;
+  background: var(--spectrum); -webkit-background-clip: text; background-clip: text; color: transparent;
 }
+.vf-greeting { color: var(--text-3); font-size: var(--t-meta-lg); font-weight: 500; }
 .vf-rows { display: grid; gap: var(--gap); }
 .vf-empty-line { margin-top: 24px; color: var(--text-4); font-size: var(--t-body); line-height: var(--lh-body); }
 .vf-empty { margin-top: 48px; text-align: center; }
@@ -568,7 +570,7 @@ select.field { appearance: none; }
 .folder-glow {
   position: absolute; top: -5%; left: 15%; z-index: 0;
   width: 460px; height: 300px; margin-left: -230px;
-  background: radial-gradient(closest-side, rgba(var(--tone-rgb), .26), transparent);
+  background: radial-gradient(closest-side, rgba(var(--tone-rgb), .40), transparent);
   pointer-events: none;
 }
 /* The glow is the one child that must stay out of the flow: raising the rest
@@ -713,6 +715,7 @@ select.field { appearance: none; }
 .sheet-input:focus { box-shadow: inset 0 0 0 1px rgba(var(--primary-rgb), .55); }
 .sheet-input::placeholder { color: var(--text-4); }
 .sheet-preview { pointer-events: none; }
+.sheet-preview .vf-card { width: 100%; }
 
 /* Account. Neutral surfaces only: the spectrum is not spent here. */
 .account-form { display: flex; flex-direction: column; gap: var(--gap-lg); }
@@ -725,7 +728,7 @@ select.field { appearance: none; }
 .account-error { color: var(--primary-txt); font-size: var(--t-meta-lg); line-height: 1.4; }
 .account-who {
   display: flex; align-items: center; gap: 14px;
-  padding: 14px; border-radius: var(--r-row); background: var(--surface);
+  padding: 14px; border-radius: var(--r-row); background: var(--chip);
 }
 .account-avatar {
   display: grid; place-items: center; flex: none;
@@ -746,6 +749,17 @@ select.field { appearance: none; }
   background: var(--tone-icon); transition: transform .15s, box-shadow .15s;
 }
 .swatch.is-on { box-shadow: 0 0 0 2px var(--sheet), 0 0 0 4px #fff; transform: scale(1.04); }
+.icon-picks { display: flex; flex-wrap: wrap; gap: 10px; }
+.icon-pick {
+  display: grid; place-items: center; width: 40px; height: 40px;
+  border-radius: var(--r-full); color: var(--text-2); background: var(--chip);
+  transition: transform .15s, box-shadow .15s, background .15s;
+}
+.icon-pick svg { width: 19px; height: 19px; }
+.icon-pick.is-on {
+  color: #fff; background: var(--tone-icon);
+  box-shadow: 0 0 0 2px var(--sheet), 0 0 0 4px #fff; transform: scale(1.04);
+}
 
 .pick-list { display: grid; gap: 2px; max-height: 42dvh; overflow-y: auto; }
 .pick {
@@ -755,7 +769,11 @@ select.field { appearance: none; }
 }
 .pick:hover:not(:disabled) { background: rgba(255,255,255,.05); }
 .pick:disabled { opacity: .5; }
-.pick-swatch { flex: none; width: 22px; height: 22px; border-radius: 8px; background: var(--tone-icon); }
+.pick-swatch {
+  display: grid; place-items: center; flex: none; width: 26px; height: 26px;
+  border-radius: 9px; color: #fff; background: var(--tone-icon);
+}
+.pick-swatch svg { width: 14px; height: 14px; }
 .pick-name { flex: 1; min-width: 0; font-size: var(--t-body-lg); font-weight: 500; }
 .pick-current { color: var(--text-4); font-size: var(--t-meta); }
 .pick-radio {
@@ -791,6 +809,10 @@ select.field { appearance: none; }
 .result:hover { background: var(--row-hover); }
 .result strong { display: block; font-size: var(--t-row); font-weight: 600; letter-spacing: var(--ls-row); }
 .result-meta { display: block; margin-top: 2px; color: var(--text-3); font-size: var(--t-meta); }
+.result-dot {
+  display: inline-block; width: 8px; height: 8px; margin-right: 6px; vertical-align: 1px;
+  border-radius: var(--r-full); background: var(--tone-icon);
+}
 .result-at {
   display: inline-block; margin-top: 8px;
   color: var(--primary-txt); font-size: var(--t-meta); font-weight: 700;
@@ -1101,16 +1123,19 @@ body.is-dragging { cursor: grabbing; }
 .vf-toast-action:hover { background: rgba(var(--primary-rgb), .1); }
 
 /* ---- VFFolderCard -----------------------------------------
-   The colour arrives as a corner glow and a hairline ring, never
-   a fill. That is what lets six folders sit together without the
-   screen turning into a paint chart - only the icon tile is
-   fully saturated. No card carries recording imagery.        */
+   Each folder is washed in its own colour, strongest behind the
+   icon and fading across the card, with a ring in the same hue.
+   The wash strength is a per-tone variable (--wash-a) so Inbox's
+   graphite stays the quiet one. No card carries recording
+   imagery.                                                    */
 .vf-card {
   position: relative; box-sizing: border-box; overflow: hidden;
   color: var(--text); text-align: left;
   background:
-    radial-gradient(120% 90% at 0% 0%,
-      rgba(var(--tone-rgb), var(--glow-a)), rgba(var(--tone-rgb), 0) 62%),
+    linear-gradient(100deg,
+      rgba(var(--tone-rgb), var(--wash-a, .3)) 0%,
+      rgba(var(--tone-rgb), calc(var(--wash-a, .3) * .35)) 60%,
+      rgba(var(--tone-rgb), calc(var(--wash-a, .3) * .2)) 100%),
     var(--folder-card);
   box-shadow: inset 0 0 0 1px rgba(var(--tone-rgb), var(--ring-a));
   transition: transform .18s var(--ease), box-shadow .18s, background .18s, opacity .18s;
@@ -1147,14 +1172,14 @@ body.is-dragging { cursor: grabbing; }
 .vf-card--row:active { transform: scale(.99); }
 .vf-card--row .vf-card-top { flex: none; }
 .vf-card--row .vf-card-icon {
-  width: var(--icon-row); height: var(--icon-row); border-radius: 13px;
+  width: var(--icon-row); height: var(--icon-row); border-radius: 15px;
   box-shadow: inset 0 1px 0 rgba(255,255,255,.2);
 }
 .vf-card--row .vf-card-icon svg { width: 19px; height: 19px; }
 .vf-card--row .vf-card-copy { flex: 1; }
 .vf-card--row .vf-card-copy strong { font-size: var(--t-row); font-weight: 600; letter-spacing: var(--ls-row); }
-.vf-card--row .vf-card-copy small { margin-top: 2px; color: var(--text-3); font-size: var(--t-meta); }
-.vf-card-chev { flex: none; width: 16px; height: 16px; color: var(--text-5); }
+.vf-card--row .vf-card-copy small { margin-top: 2px; color: var(--tone-light); font-size: var(--t-meta); }
+.vf-card-chev { flex: none; width: 16px; height: 16px; color: var(--tone-light); opacity: .75; }
 
 .vf-card--target {
   display: flex; flex-direction: column; justify-content: space-between;
@@ -1191,6 +1216,7 @@ body.is-dragging { cursor: grabbing; }
 }
 .vf-row-play:hover { filter: brightness(1.15); }
 .vf-row-play.is-playing { background: var(--primary); }
+.screen--folder .vf-row-play:not(.is-playing) { background: rgba(var(--tone-rgb), .24); color: var(--tone-light); }
 .vf-row-play svg { width: 18px; height: 18px; margin-left: 2px; }
 .vf-row-pause { display: flex; gap: 4px; }
 .vf-row-pause i { width: 4px; height: 15px; border-radius: 2px; background: #fff; }

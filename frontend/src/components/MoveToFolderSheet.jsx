@@ -34,7 +34,7 @@ export default function MoveToFolderSheet({ open, recording, folders = [], onClo
                 disabled={isCurrent}
                 onClick={() => setPicked(folder.id)}
               >
-                <span className="pick-swatch" />
+                <span className="pick-swatch">{folder.icon && <Icon name={folder.icon} strokeWidth={2.4} />}</span>
                 <span className="pick-name">{folder.name}</span>
                 {isCurrent
                   ? <span className="pick-current">Current</span>

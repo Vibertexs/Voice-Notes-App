@@ -25,10 +25,11 @@ also reload. Anything under `mobile/patches/` is Java and needs a new EAS build.
 ## Design system
 
 `frontend/src/styles.css` is the single source of truth. Every colour, size and radius is a
-token on `:root`. **Use the tokens; do not introduce new colours.** The palette is
-deliberate: surfaces are near-black and desaturated, and the coral→magenta→purple→blue
-spectrum is spent only on the record button, the waveforms and primary pills. Saturation
-anywhere else reads as a mistake.
+token on `:root`. **Use the tokens; do not introduce new colours.** Surfaces are dark but
+clearly separated from the background (contrast was raised on purpose; do not flatten it
+back). Colour is spent in two places: the coral→purple spectrum on the record button,
+waveforms, primary pills and section labels; and each folder's own tone, which washes its
+card, tints its contents and colours its icon. No hue outside the tone table.
 
 Decisions already made, worth not relitigating:
 
