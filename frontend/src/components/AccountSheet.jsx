@@ -6,33 +6,26 @@ import { accountApi } from '../lib/api';
 /**
  * The account, and what this phone does with your data.
  *
- * Signing in turns on sync: titles, folders, bookmarks, notes and transcripts
- * go to your account so another phone (and, later, an assistant you connect)
- * can see them. Audio never does. Without an account nothing changes - the
- * app was built to work entirely on the phone, and still does.
+ * Signing in backs up titles, folders, bookmarks, notes and transcripts to
+ * your account, so another phone (and, later, an assistant you connect) can
+ * see them. Audio never goes. It happens by itself - when the app opens, a
+ * few seconds after a change, and every few minutes - so there is no sync
+ * button and no word "sync" on screen. Without an account nothing changes:
+ * the app was built to work entirely on the phone, and still does.
  *
- * The sheet has to read sensibly in three builds: one with sync, one without
+ * The sheet has to read sensibly in three builds: one with backup, one without
  * a server configured, and the desktop app, where /api/account does not exist.
  */
-const PRIVACY = 'Titles, folders, bookmarks, notes and transcripts sync to your account. '
-  + 'Audio never leaves the phone that recorded it.';
+const PRIVACY = 'Your folders, titles, bookmarks, notes and transcripts are backed up to your account, '
+  + 'so a new phone can bring them back. Audio never leaves the phone that recorded it.';
 const TRANSCRIPTION = 'Transcripts are made on this phone by Whisper; your recordings are never sent to a server '
   + 'to be transcribed. The first one downloads the speech model, about 180 MB, once.';
 
-function ago(iso) {
-  if (!iso) return 'Not synced yet';
-  const seconds = Math.max(0, (Date.now() - Date.parse(iso)) / 1000);
-  if (seconds < 45) return 'Synced just now';
-  if (seconds < 3600) return `Synced ${Math.round(seconds / 60)} min ago`;
-  if (seconds < 86_400) return `Synced ${Math.round(seconds / 3600)} h ago`;
-  return `Synced ${new Date(iso).toLocaleDateString()}`;
-}
-
-function syncLine(account) {
-  if (account.syncing) return 'Syncing…';
-  if (account.lastError) return account.lastError;
-  const waiting = account.pending ? ` · ${account.pending} change${account.pending === 1 ? '' : 's'} waiting` : '';
-  return `${ago(account.lastSyncAt)}${waiting}`;
+/** One calm line. Backing up is automatic, so this only says what is happening. */
+function statusLine(account) {
+  if (account.lastError && !account.syncing) return account.lastError;
+  if (account.syncing || account.pending) return 'Backing up…';
+  return 'Your library is backed up';
 }
 
 const TITLES = {
@@ -61,7 +54,7 @@ export default function AccountSheet({ open, onClose, notify }) {
     if (!open) return undefined;
     setError(''); setPassword(''); setCode(''); setEmailOpen(false);
     load();
-    // The shell announces sync progress, so the status line moves on its own.
+    // The shell announces backup progress, so the status line moves on its own.
     const onStatus = (event) => { if (event.detail) setAccount(event.detail); };
     window.addEventListener('cn:account', onStatus);
     return () => window.removeEventListener('cn:account', onStatus);
@@ -83,14 +76,14 @@ export default function AccountSheet({ open, onClose, notify }) {
 
   async function submit(event) {
     event.preventDefault();
-    if (mode === 'signin') signedIn(await run(() => accountApi.login(email, password)), 'Signed in. Syncing your library.');
-    if (mode === 'register') signedIn(await run(() => accountApi.register(email, password)), 'Account created. Syncing your library.');
+    if (mode === 'signin') signedIn(await run(() => accountApi.login(email, password)), 'Signed in.');
+    if (mode === 'register') signedIn(await run(() => accountApi.register(email, password)), 'Account created.');
     if (mode === 'reset') signedIn(await run(() => accountApi.reset(email, code, password)), 'Password changed. You’re signed in.');
     if (mode === 'forgot' && await run(() => accountApi.forgot(email))) setMode('reset');
   }
 
   async function withGoogle() {
-    signedIn(await run(() => accountApi.google()), 'Signed in with Google. Syncing your library.');
+    signedIn(await run(() => accountApi.google()), 'Signed in with Google.');
   }
 
   /* ---- what this build can do ------------------------------------------ */
@@ -101,7 +94,7 @@ export default function AccountSheet({ open, onClose, notify }) {
     return (
       <VFBottomSheet open={open} title="Transcription" onClose={onClose}>
         {!account.unsupported && (
-          <p className="sheet-note account-note">Sync isn’t set up in this build, so everything stays on this phone.</p>
+          <p className="sheet-note account-note">Backup isn’t set up in this build, so everything stays on this phone.</p>
         )}
         <p className="sheet-note account-note">{TRANSCRIPTION}</p>
         <VFButton label="Done" variant="secondary" onPress={onClose} />
@@ -116,7 +109,7 @@ export default function AccountSheet({ open, onClose, notify }) {
     if (mode === 'delete') {
       return (
         <VFBottomSheet open={open} icon="warn" title="Delete your account?"
-          subtitle="Everything synced to it is erased from the server. Recordings on this phone stay on this phone."
+          subtitle="Everything backed up to it is erased from the server. Recordings on this phone stay on this phone."
           onClose={() => setMode('signin')}
         >
           {account.user?.hasPassword !== false && (
@@ -140,13 +133,10 @@ export default function AccountSheet({ open, onClose, notify }) {
           <span className="account-avatar" aria-hidden="true">{who.slice(0, 1).toUpperCase()}</span>
           <div className="account-id">
             <strong>{who}</strong>
-            <span className={account.lastError && !account.syncing ? 'is-error' : ''}>{syncLine(account)}</span>
+            <span className={account.lastError && !account.syncing ? 'is-error' : ''}>{statusLine(account)}</span>
           </div>
         </div>
         {error && <p className="account-error" role="alert">{error}</p>}
-        <VFButton label={account.syncing || busy ? 'Syncing…' : 'Sync now'} variant="secondary"
-          disabled={account.syncing || busy}
-          onPress={async () => { const next = await run(() => accountApi.sync()); if (next) setAccount(next); }} />
         <VFButton label="Sign out" variant="ghost" disabled={busy}
           onPress={async () => {
             const next = await run(() => accountApi.logout());

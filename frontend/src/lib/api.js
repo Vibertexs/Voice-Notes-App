@@ -75,7 +75,6 @@ export const accountApi = {
   google: () => api('/api/account/google', { method: 'POST' }),
   forgot: (email) => api('/api/account/forgot', { method: 'POST', body: { email } }),
   reset: (email, code, password) => api('/api/account/reset', { method: 'POST', body: { email, code, password } }),
-  sync: () => api('/api/account/sync', { method: 'POST' }),
   logout: () => api('/api/account/logout', { method: 'POST' }),
   remove: (password) => api('/api/account/delete', { method: 'POST', body: { password } }),
 };
