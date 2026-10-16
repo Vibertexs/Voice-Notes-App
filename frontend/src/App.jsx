@@ -5,6 +5,7 @@ import RecordScreen from './screens/RecordScreen';
 import PlaybackScreen from './screens/PlaybackScreen';
 import SearchScreen from './screens/SearchScreen';
 import MicDeniedScreen from './screens/MicDeniedScreen';
+import SignInGate from './screens/SignInGate';
 import RecordDock from './components/RecordDock';
 import DragGhost from './components/DragGhost';
 import DropTray from './components/DropTray';
@@ -12,7 +13,7 @@ import VFToast from './components/VFToast';
 import FolderEditSheet from './components/FolderEditSheet';
 import RecordingActionsSheet from './components/RecordingActionsSheet';
 import AccountSheet from './components/AccountSheet';
-import { libraryApi } from './lib/api';
+import { accountApi, libraryApi } from './lib/api';
 import useDragToFile from './lib/useDragToFile';
 
 /**
@@ -79,6 +80,29 @@ export default function App() {
   }, []);
 
   useEffect(() => { load(null); }, [load]);
+
+  /**
+   * Whether to ask for sign-in before anything else.
+   *
+   * Only where Google sign-in exists: a build without it (older binary, no
+   * Google Play, the desktop app, no server configured) opens straight in, so
+   * the gate can never be a wall with no door. The status comes from the phone
+   * shell, not the network, so this is answered at once. The shell announces
+   * every change (cn:account), which is how signing out, deleting the account
+   * or an expired session bring the gate back.
+   */
+  const [signIn, setSignIn] = useState('checking');   // checking | needed | open
+  useEffect(() => {
+    let alive = true;
+    const decide = (status) => {
+      if (!alive || !status) return;
+      setSignIn(status.configured && status.google && !status.signedIn ? 'needed' : 'open');
+    };
+    accountApi.status().then(decide).catch(() => { if (alive) setSignIn('open'); });
+    const onAccount = (event) => decide(event.detail);
+    window.addEventListener('cn:account', onAccount);
+    return () => { alive = false; window.removeEventListener('cn:account', onAccount); };
+  }, []);
 
   const openHome = useCallback(async () => {
     setWorkspace(null);
@@ -201,6 +225,17 @@ export default function App() {
   }
 
   /* ---- render --------------------------------------------------------- */
+
+  if (signIn === 'checking') return <Boot />;
+  // Never over a recording in progress: the phone keeps recording whatever the
+  // page shows, and unmounting the screen would lose the take's controls.
+  if (signIn === 'needed' && screen.name !== 'record') {
+    return (
+      <div className="app-shell">
+        <SignInGate onSignedIn={() => setSignIn('open')} />
+      </div>
+    );
+  }
 
   // The microphone is asked for when someone first taps record, not before they
   // have seen the app. This is where a refusal lands.

@@ -636,6 +636,16 @@ select.field { appearance: none; }
   background: var(--raised); color: var(--text-3); font-size: 11px; font-weight: 700;
 }
 .onboard-actions { display: grid; gap: var(--gap); margin-top: auto; padding-top: 34px; }
+.gate-points { display: grid; gap: 14px; margin-top: 34px; }
+.gate-points li {
+  position: relative; padding-left: 22px; color: var(--text-2);
+  font-size: var(--t-body-lg); line-height: 1.4;
+}
+.gate-points li::before {
+  content: ''; position: absolute; left: 0; top: .5em;
+  width: 8px; height: 8px; border-radius: var(--r-full); background: var(--primary);
+}
+.gate-note { text-align: center; color: var(--text-3); font-size: var(--t-meta-lg); line-height: 1.45; }
 
 /* ---- 5. Recording ----------------------------------------- */
 .rec {

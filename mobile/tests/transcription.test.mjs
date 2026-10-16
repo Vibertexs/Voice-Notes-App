@@ -346,6 +346,16 @@ res = await api.handleApi({ method: 'GET', path: '/api/settings', body: null });
 check('settings report the on-device engine, not a server',
   res.body.transcription_delivery === 'on_device' && res.body.transcription_engine === 'Whisper Small English', res.body);
 
+console.log('\n== signing in is required, but never as a dead end ==');
+const appJsx = readFileSync(join(here, '..', '..', 'frontend', 'src', 'App.jsx'), 'utf8');
+check('the gate only appears where Google sign-in exists',
+  /status\.configured && status\.google && !status\.signedIn/.test(appJsx),
+  'a build without Google (older binary, no Play services) would otherwise be locked out with no way in');
+check('and never over a recording in progress',
+  /signIn === 'needed' && screen\.name !== 'record'/.test(appJsx),
+  'the phone keeps recording whatever the page shows; unmounting the take would lose its controls');
+check('a failed status lookup opens the app rather than blocking it', /catch\(\(\) => \{ if \(alive\) setSignIn\('open'\)/.test(appJsx));
+
 console.log('\n' + pass + '/' + total + ' passed');
 // exitCode rather than exit(): sql.js tears its WASM heap down asynchronously,
 // and exiting out from under it aborts the process even when every check passed.

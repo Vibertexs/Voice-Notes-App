@@ -57,7 +57,7 @@ Use `adb exec-out`, never `adb shell cat`, for anything binary — CRLF translat
 
 ## Cloud sync
 
-Optional accounts and sync live in `backend/cloud/` (FastAPI + MongoDB Atlas, entry point
+Accounts and sync live in `backend/cloud/` (FastAPI + MongoDB Atlas, entry point
 `cloud_app.py`) — a separate server from the desktop `app.py`. Read `docs/cloud-api.md`
 before touching it. Two rules that are easy to break:
 
