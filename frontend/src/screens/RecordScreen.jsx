@@ -399,7 +399,7 @@ export default function RecordScreen({ folder, onSaved, onLeave, onDenied, notif
 
         <VFWaveform
           height={120}
-          levels={levels.length ? levels : new Array(64).fill(0.04)}
+          levels={levels}
           dim={!running}
         />
 

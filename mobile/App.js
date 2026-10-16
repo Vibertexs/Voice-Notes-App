@@ -32,6 +32,13 @@ import { google } from './src/googleAuth';
 const CLOUD_API_URL = process.env.EXPO_PUBLIC_CLOUD_API_URL ?? 'https://44-241-23-183.sslip.io';
 const DEVICE_NAME = Platform.OS === 'ios' ? 'iPhone' : (Platform.constants?.Model ?? 'Android phone');
 
+/** Tell the page something happened, as a DOM event it listens for. */
+function emitToPage(webRef, name, detail) {
+  webRef.current?.injectJavaScript(
+    `window.dispatchEvent(new CustomEvent(${JSON.stringify(name)}, { detail: ${JSON.stringify(detail ?? null)} })); true;`,
+  );
+}
+
 /**
  * Class Notes, as a native shell around the real web UI.
  *
@@ -65,15 +72,14 @@ export default function App() {
   useKeepAwake();
 
   /**
-   * The page learns about sync through two events rather than by polling:
-   * cn:data when changes from another device have landed (reload what is on
-   * screen), cn:account when sync status changes (the account sheet).
+   * The page learns about background work through events rather than by
+   * polling: cn:data when stored data changed underneath it (another device's
+   * sync, a finished transcript - reload what is on screen), cn:account when
+   * sync status changes (the account sheet), cn:progress while Whisper runs.
    */
   const cloud = useRef(null);
   if (!cloud.current) {
-    const emit = (name, detail) => webRef.current?.injectJavaScript(
-      `window.dispatchEvent(new CustomEvent(${JSON.stringify(name)}, { detail: ${JSON.stringify(detail ?? null)} })); true;`,
-    );
+    const emit = (name, detail) => emitToPage(webRef, name, detail);
     cloud.current = createCloud({
       openDatabase, exclusive, fetch: (...args) => fetch(...args),
       apiUrl: CLOUD_API_URL, deviceName: DEVICE_NAME, audioFile, google,
@@ -152,10 +158,21 @@ export default function App() {
         const file = audioFile(lecture.file_name);
         if (!file.exists) continue;
         try {
+          let shown = -1;
           const { transcript, segments } = await transcribeOnDevice(file.uri, {
-            onProgress: (progress) => markTranscriptionProgress(lecture.id, progress).catch(() => {}),
+            onProgress: (progress) => {
+              markTranscriptionProgress(lecture.id, progress).catch(() => {});
+              // Whole percents only: Whisper reports far more often than the
+              // number on screen can change.
+              const percent = Math.round(progress * 100);
+              if (percent !== shown) {
+                shown = percent;
+                emitToPage(webRef, 'cn:progress', { id: lecture.id, progress });
+              }
+            },
           });
           await saveTranscript(lecture.id, transcript, segments);
+          emitToPage(webRef, 'cn:data');
           cloud.current.schedule(1000);
         } catch (caught) {
           // Left pending on purpose: the audio is safe and the next drain

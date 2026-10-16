@@ -218,6 +218,29 @@ check('audio deleted with the lecture', !disk.has('file:///doc/recordings/rec1.m
 res = await GET('/api/library');
 check('library is empty again', res.body.workspaces.length === 0);
 
+console.log('\n== an untitled recording is named "Recording N" ==');
+async function untitled(id) {
+  await api.claimRecording({ id, title: 'Oct 15, 2:30 PM', fileName: `${id}.wav` });
+  await api.finishRecording({ id, durationMs: 1000, sizeBytes: 10 });
+  return (await POST('/api/lectures', { audio: { __recording: id }, title: '' })).body;
+}
+const first = await untitled('n1');
+check('the first is Recording 1', first.title === 'Recording 1', first.title);
+const second = await untitled('n2');
+check('the next is Recording 2', second.title === 'Recording 2', second.title);
+await DELETE(`/api/workspaces/${first.workspace_id}`);
+const third = await untitled('n3');
+check('deleting Recording 1 does not hand its name out again while 2 exists', third.title === 'Recording 3', third.title);
+await PATCH(`/api/workspaces/${third.workspace_id}`, { title: 'Recording 10' });
+const fourth = await untitled('n4');
+check('it counts from the highest number, not how many there are', fourth.title === 'Recording 11', fourth.title);
+const named = (await (async () => {
+  await api.claimRecording({ id: 'n5', title: 'x', fileName: 'n5.wav' });
+  await api.finishRecording({ id: 'n5', durationMs: 1000, sizeBytes: 10 });
+  return POST('/api/lectures', { audio: { __recording: 'n5' }, title: 'Mitosis review' });
+})()).body;
+check('a title the user typed is kept', named.title === 'Mitosis review', named.title);
+
 console.log('\n== an unknown route 404s rather than hanging the page ==');
 res = await GET('/api/does-not-exist');
 check('404', res.status === 404, res);

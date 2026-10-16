@@ -741,6 +741,20 @@ async function route({ method, path, body }) {
 }
 
 /**
+ * "Recording 4": one more than the highest "Recording N" in the library, so
+ * names never repeat even after one in the middle is deleted.
+ */
+async function nextRecordingTitle(db) {
+  const rows = await db.getAllAsync("SELECT title FROM workspaces WHERE title LIKE 'Recording %'");
+  let highest = 0;
+  for (const { title } of rows) {
+    const match = /^Recording (\d+)$/.exec(String(title).trim());
+    if (match) highest = Math.max(highest, Number(match[1]));
+  }
+  return `Recording ${highest + 1}`;
+}
+
+/**
  * Turns a finished native recording into a lecture. The audio never crossed
  * the bridge - the page sent a token naming the file already on disk.
  */
@@ -752,7 +766,7 @@ async function createLecture(db, body) {
   const captured = await db_.getFirstAsync('SELECT * FROM lectures WHERE id = ?', token);
   if (!captured) return fail(404, 'That recording is no longer on the device.');
 
-  const title = String(body?.title ?? '').trim() || captured.title;
+  const title = String(body?.title ?? '').trim() || await nextRecordingTitle(db_);
   let workspaceId = body?.workspace_id || null;
 
   if (!workspaceId) {
@@ -846,7 +860,7 @@ async function recover(db) {
       const at = nowIso();
       await db.runAsync(
         'INSERT INTO workspaces (id, folder_id, title, created_at, updated_at) VALUES (?, NULL, ?, ?, ?)',
-        workspaceId, row.title, at, at,
+        workspaceId, await nextRecordingTitle(db), at, at,
       );
       await db.runAsync(
         "UPDATE lectures SET status = 'recovered', workspace_id = ?, size_bytes = ? WHERE id = ?",

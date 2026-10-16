@@ -71,15 +71,16 @@ export default function SearchScreen({ onBack, onOpenResult, folders = [] }) {
 
   return (
     <main className="screen screen--search">
-      <header className="vf-bar">
+      <header className="vf-head">
         <button type="button" className="vf-round vf-round--plain" aria-label="Back" onClick={onBack}>
           <Icon name="back" strokeWidth={2.2} />
         </button>
-        <VFSearchField
-          autoFocus value={query} onChange={setQuery}
-          placeholder="Search recordings & transcripts" label={COPY.searchHint}
-        />
       </header>
+      <VFSearchField
+        className="search-bar"
+        autoFocus value={query} onChange={setQuery}
+        placeholder="Search recordings & transcripts" label={COPY.searchHint}
+      />
 
       {!term && recents.length > 0 && (
         <section className="vf-section">

@@ -27,9 +27,10 @@ also reload. Anything under `mobile/patches/` is Java and needs a new EAS build.
 `frontend/src/styles.css` is the single source of truth. Every colour, size and radius is a
 token on `:root`. **Use the tokens; do not introduce new colours.** Surfaces are dark but
 clearly separated from the background (contrast was raised on purpose; do not flatten it
-back). Colour is spent in two places: the coral→purple spectrum on the record button,
-waveforms, primary pills and section labels; and each folder's own tone, which washes its
-card, tints its contents and colours its icon. No hue outside the tone table.
+back). One red (`--primary`) is the app's colour: the record button, primary buttons and
+section labels are all that solid red - not a gradient. The coral→purple spectrum is only
+for waveforms. Each folder's own tone washes its card, tints its contents and colours its
+icon. No hue outside the tone table.
 
 Decisions already made, worth not relitigating:
 

@@ -3,6 +3,9 @@ import { useEffect, useRef, useState } from 'react';
 /** How many bars the live trace keeps. The handoff's session state says ~64. */
 const KEEP = 64;
 const SAMPLE_EVERY_MS = 48;
+/** A resting bar: what silence draws. */
+const IDLE = 0.05;
+const resting = () => new Array(KEEP).fill(IDLE);
 
 /**
  * The microphone, as a short list of numbers between 0 and 1.
@@ -21,14 +24,18 @@ const SAMPLE_EVERY_MS = 48;
  *
  * While paused it stops sampling but keeps what it has, so the trace stays on
  * screen instead of blanking.
+ *
+ * The trace always holds KEEP bars, starting at rest: new levels push in from
+ * the right and old ones leave on the left. Starting empty instead made the
+ * bars appear one by one when a take began, as if the waveform were loading.
  */
 export default function useLiveLevels(stream, active) {
-  const [levels, setLevels] = useState([]);
-  const buffer = useRef([]);
+  const [levels, setLevels] = useState(resting);
+  const buffer = useRef(resting());
   const live = useRef(active);
 
   useEffect(() => { live.current = active; }, [active]);
-  useEffect(() => { if (!stream) { buffer.current = []; setLevels([]); } }, [stream]);
+  useEffect(() => { if (!stream) { buffer.current = resting(); setLevels(buffer.current); } }, [stream]);
 
   useEffect(() => {
     if (!stream) return undefined;
@@ -61,8 +68,7 @@ export default function useLiveLevels(stream, active) {
       if (live.current) {
         if (time - lastAt >= SAMPLE_EVERY_MS) { target = read(); lastAt = time; }
         level += (target - level) * 0.16;
-        const next = [...buffer.current, Math.max(0.05, level)];
-        buffer.current = next.length > KEEP ? next.slice(-KEEP) : next;
+        buffer.current = [...buffer.current.slice(1), Math.max(IDLE, level)];
         setLevels(buffer.current);
       }
       frame = requestAnimationFrame(tick);

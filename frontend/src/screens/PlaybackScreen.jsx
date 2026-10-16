@@ -44,6 +44,11 @@ export default function PlaybackScreen({
 
   const status = selected?.transcription_status;
   const transcribing = ['pending', 'running'].includes(status);
+  // Whisper's progress, pushed by the phone shell as it happens (cn:progress).
+  // The workspace is only fetched when the screen opens, so its stored
+  // percentage alone would sit at whatever it was then.
+  const [liveProgress, setLiveProgress] = useState(null);
+  const progress = liveProgress ?? selected?.transcription_progress ?? 0;
   const here = markers.find((marker) => Math.abs((marker.time_seconds ?? 0) - position) < 3);
 
   useEffect(() => {
@@ -51,6 +56,14 @@ export default function PlaybackScreen({
     setPosition(0);
   }, [selected?.id, selected?.duration_seconds]);
   useEffect(() => { if (audio.current) audio.current.playbackRate = SPEEDS[speed]; }, [speed, selected?.id]);
+  useEffect(() => {
+    setLiveProgress(null);
+    const onProgress = (event) => {
+      if (event.detail?.id === selected?.id) setLiveProgress(event.detail.progress);
+    };
+    window.addEventListener('cn:progress', onProgress);
+    return () => window.removeEventListener('cn:progress', onProgress);
+  }, [selected?.id]);
 
   // While playing, read the clock every frame rather than waiting for
   // `timeupdate`: the spec throttles that to about 4Hz, which is a quarter of a
@@ -192,7 +205,7 @@ export default function PlaybackScreen({
 
       {transcribing && (
         <p className="transcript-note">
-          Transcribing · {Math.round((selected?.transcription_progress ?? 0) * 100)}%
+          Transcribing · {Math.round(progress * 100)}%
         </p>
       )}
       {/* Synced from another phone: the words came across, the audio never does. */}

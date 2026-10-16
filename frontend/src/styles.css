@@ -151,6 +151,7 @@
   --card-row-h:   68px;   --card-target-h: 88px;
   --icon-hero:    48px;   --icon-tile:     42px;  --icon-row: 40px;
   --icon-head:    60px;   /* folder screen header tile         */
+  --greet-h:      20px;   /* Home's greeting line               */
   --play-d:       46px;   --play-d-lg:     68px;
 
   /* The record button is persistent on Home, Folder and
@@ -517,8 +518,11 @@ select.field { appearance: none; }
 .banner button { margin-left: auto; color: inherit; font-size: 18px; }
 
 /* ---- Headers ---------------------------------------------- */
-.vf-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.vf-head h1 { font-size: var(--t-title); font-weight: 700; letter-spacing: var(--ls-title); }
+.vf-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  height: var(--hit);
+}
+.vf-head h1 { font-size: var(--t-title); font-weight: 700; letter-spacing: var(--ls-title); line-height: 1.2; }
 .vf-head-actions { display: flex; gap: var(--gap); }
 
 .vf-round {
@@ -550,12 +554,17 @@ select.field { appearance: none; }
 .vf-section { margin-top: 26px; }
 .vf-section--first { margin-top: 14px; }
 .vf-label {
-  width: fit-content; margin-bottom: 10px;
+  margin-bottom: 10px;
   font-size: var(--t-label); font-weight: 700;
   letter-spacing: var(--ls-label); text-transform: uppercase;
-  background: var(--spectrum); -webkit-background-clip: text; background-clip: text; color: transparent;
+  color: var(--primary-txt);
 }
-.vf-greeting { color: var(--text-3); font-size: var(--t-meta-lg); font-weight: 500; }
+/* A fixed height, because Search reserves exactly this much to keep its
+   field where Home's is. */
+.vf-greeting {
+  height: var(--greet-h); line-height: var(--greet-h);
+  color: var(--text-3); font-size: var(--t-meta-lg); font-weight: 500;
+}
 .vf-rows { display: grid; gap: var(--gap); }
 .vf-empty-line { margin-top: 24px; color: var(--text-4); font-size: var(--t-body); line-height: var(--lh-body); }
 .vf-empty { margin-top: 48px; text-align: center; }
@@ -564,6 +573,10 @@ select.field { appearance: none; }
 
 /* ---- 3. Home ---------------------------------------------- */
 .screen .vf-head + .vf-search { margin-top: 14px; }
+/* Search keeps its field exactly where Home's sits - greeting line, then a
+   44px row (the title on Home, the back arrow here), then the field - so
+   tapping the field does not make it jump sideways or down. */
+.screen--search { padding-top: calc(var(--top) + 12px + var(--greet-h)); }
 
 /* ---- 4. Folder -------------------------------------------- */
 .screen--folder { position: relative; overflow-x: hidden; }

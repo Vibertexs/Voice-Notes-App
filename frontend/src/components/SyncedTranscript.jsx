@@ -146,11 +146,14 @@ export default function SyncedTranscript({
   }, [activeIndex, term]);
 
   if (!segments?.length) {
+    // While Whisper runs, the playback screen already says so with the
+    // percentage; a second "Transcribing…" here repeated it.
+    if (['pending', 'running'].includes(status)) return null;
     return (
       <p className="transcript-note">
         {['ready', 'complete'].includes(status) ? 'No speech was recognised in this recording.'
           : status === 'unavailable' ? 'This recording has no transcript.'
-            : 'Transcribing…'}
+            : 'No transcript yet.'}
       </p>
     );
   }
