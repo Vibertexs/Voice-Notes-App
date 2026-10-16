@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef } from 'react';
+import { Fragment, memo, useEffect, useRef } from 'react';
 
 /**
  * The transcript, following playback the way lyrics do.
@@ -75,11 +75,20 @@ const Line = memo(function Line({ segment, state, seconds, term, onSeek, innerRe
     // actually spoken, which is the only way a line keeps up with a voice.
     const timed = segment.words;
     if (timed?.length) {
-      return timed.map((word, position) => (
-        <span key={position} className={`w ${(word.start ?? 0) <= seconds ? 'on' : ''}`}>
-          {word.word}
-        </span>
-      ));
+      // The word being said is the last one whose start has passed.
+      let now = -1;
+      timed.forEach((word, position) => { if ((word.start ?? 0) <= seconds) now = position; });
+      return timed.map((word, position) => {
+        const text = String(word.word ?? '');
+        // The separating space stays outside the span: the current word is
+        // lifted as an inline-block, and a block drops its own leading space.
+        return (
+          <Fragment key={position}>
+            {/^\s/.test(text) && ' '}
+            <span className={`w${position <= now ? ' on' : ''}${position === now ? ' now' : ''}`}>{text.trim()}</span>
+          </Fragment>
+        );
+      });
     }
 
     // Transcripts made before word timing existed: spread the words evenly and
@@ -91,7 +100,9 @@ const Line = memo(function Line({ segment, state, seconds, term, onSeek, innerRe
     return parts.map((part, position) => {
       if (!part.trim()) return part;
       index += 1;
-      return <span key={position} className={`w ${index <= spoken ? 'on' : ''}`}>{part}</span>;
+      return (
+        <span key={position} className={`w${index <= spoken ? ' on' : ''}${index === spoken ? ' now' : ''}`}>{part}</span>
+      );
     });
   })();
 
@@ -99,7 +110,7 @@ const Line = memo(function Line({ segment, state, seconds, term, onSeek, innerRe
     <button
       ref={innerRef}
       type="button"
-      className={`lyric is-${state}`}
+      className={`lyric is-${state}${term ? ' is-found' : ''}`}
       aria-current={state === 'active' ? 'true' : undefined}
       onClick={() => onSeek?.(at)}
     >

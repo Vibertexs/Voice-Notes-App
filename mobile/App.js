@@ -17,6 +17,7 @@ import {
 import { transcribeOnDevice } from './src/onDeviceWhisper';
 import { createCloud } from './src/cloudSync';
 import { google } from './src/googleAuth';
+import { createProgressSmoother } from './src/progressSmoother';
 
 /**
  * The sync server: the EC2 instance (docker-compose.yml), whose Elastic IP
@@ -158,12 +159,14 @@ export default function App() {
         const file = audioFile(lecture.file_name);
         if (!file.exists) continue;
         try {
+          // Whisper reports once per 30 seconds of audio, so the smoother keeps
+          // the bar moving in between (see progressSmoother.js).
           let shown = -1;
-          const { transcript, segments } = await transcribeOnDevice(file.uri, {
-            onProgress: (progress) => {
+          const smoother = createProgressSmoother({
+            audioSeconds: lecture.duration_seconds,
+            onChange: (progress) => {
               markTranscriptionProgress(lecture.id, progress).catch(() => {});
-              // Whole percents only: Whisper reports far more often than the
-              // number on screen can change.
+              // Whole percents only: the number on screen cannot change faster.
               const percent = Math.round(progress * 100);
               if (percent !== shown) {
                 shown = percent;
@@ -171,6 +174,14 @@ export default function App() {
               }
             },
           });
+          smoother.begin();
+          let result;
+          try {
+            result = await transcribeOnDevice(file.uri, { onProgress: smoother.report });
+          } finally {
+            smoother.stop();
+          }
+          const { transcript, segments } = result;
           await saveTranscript(lecture.id, transcript, segments);
           emitToPage(webRef, 'cn:data');
           cloud.current.schedule(1000);

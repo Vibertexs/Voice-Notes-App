@@ -20,6 +20,7 @@ const SUITES = [
   'local_api.test.mjs',
   'render.test.mjs',
   'sync.test.mjs',
+  'progress.test.mjs',
 ];
 
 let failed = 0;
