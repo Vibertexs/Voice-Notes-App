@@ -16,15 +16,12 @@ import { libraryApi } from './lib/api';
 import useDragToFile from './lib/useDragToFile';
 
 /**
- * Inbox is where a recording is when it is nowhere: `folder_id === null`.
- *
- * The handoff treats Inbox as a folder you can drop onto and record into, but
- * the store has no such row - unfiled recordings simply have no folder. Making
- * one real would mean a migration and a folder nobody can delete, so it is a
- * folder here and null underneath, in one place.
+ * A recording in no folder has `folder_id === null` and is simply listed on
+ * Home as "Unfiled". There is no Inbox: a folder nobody made and nobody can
+ * delete is not one the user asked for. `__out` is the drop strip's id for
+ * "take it out of its folder".
  */
-const INBOX = { id: '__inbox', name: 'Inbox', color: 'graphite', virtual: true };
-const toFolderId = (id) => (id === INBOX.id || id === '__out' ? null : id);
+const toFolderId = (id) => (id === '__out' ? null : id);
 
 function Boot() {
   return <main className="screen boot"><span className="spinner" /><p>Opening your recordings…</p></main>;
@@ -123,20 +120,12 @@ export default function App() {
     return () => window.removeEventListener('cn:data', onData);
   }, []);
 
-  /* ---- folders, with Inbox folded in --------------------------------- */
+  /* ---- folders -------------------------------------------------------- */
 
-  // Every folder is a row, in the order the store returns them (by name), with
-  // Inbox last: it is where things are when they are nowhere, so it follows the
-  // folders you made rather than leading them.
-  const folders = useMemo(() => {
-    const unfiledCount = screen.name === 'home' ? (library?.workspaces?.length ?? 0) : 0;
-    const inbox = { ...INBOX, lecture_count: unfiledCount };
-    return [...allFolders.filter((folder) => !folder.archived), inbox];
-  }, [allFolders, library?.workspaces?.length, screen.name]);
+  // Every folder is a row, in the order the store returns them (by name).
+  const folders = useMemo(() => allFolders.filter((folder) => !folder.archived), [allFolders]);
 
-  const currentFolder = screen.name === 'folder'
-    ? (screen.folderId === INBOX.id ? folders.find((folder) => folder.id === INBOX.id) : library?.current_folder)
-    : null;
+  const currentFolder = screen.name === 'folder' ? library?.current_folder : null;
 
   /* ---- actions -------------------------------------------------------- */
 
@@ -146,10 +135,10 @@ export default function App() {
     if (from === folderId) return;
     try {
       await libraryApi.updateWorkspace(item.id, { folder_id: folderId });
-      const name = folderId ? allFolders.find((f) => f.id === folderId)?.name : INBOX.name;
+      const name = folderId ? allFolders.find((f) => f.id === folderId)?.name : null;
       undo.current = { id: item.id, folderId: from };
       if (!quiet) {
-        notify(`Moved to ${name ?? 'the folder'}`, 'success', 'Undo');
+        notify(folderId ? `Moved to ${name ?? 'the folder'}` : 'Taken out of the folder', 'success', 'Undo');
       }
       await refresh();
     } catch (caught) { notify(caught.message, 'error'); }
@@ -158,11 +147,8 @@ export default function App() {
   const { drag, beginDrag, blockClick } = useDragToFile((item, targetId) => moveWorkspace(item, targetId));
 
   async function saveFolder({ name, color, icon = null }) {
-    // Inbox is not a stored folder. Saving it would fall through to "create" and
-    // make a second, real folder with the same name.
-    if (folderSheet?.folder?.virtual) return;
     try {
-      if (folderSheet?.folder && !folderSheet.folder.virtual) {
+      if (folderSheet?.folder) {
         await libraryApi.updateFolder(folderSheet.folder.id, { name, color, icon });
         notify('Folder updated');
       } else {
@@ -178,7 +164,7 @@ export default function App() {
   async function deleteFolder(folder) {
     try {
       await libraryApi.deleteFolder(folder.id);
-      notify(`“${folder.name}” deleted. Its recordings moved to ${INBOX.name}.`);
+      notify(`“${folder.name}” deleted. Its recordings are now unfiled.`);
       await openHome();
     } catch (caught) { notify(caught.message, 'error'); }
   }
@@ -204,10 +190,9 @@ export default function App() {
 
   /* ---- record --------------------------------------------------------- */
 
-  // Where a press records, per the handoff: Home to Inbox, Folder to that folder.
+  // Where a press records: Home leaves it unfiled, a folder records into that folder.
   function recordTarget() {
-    if (screen.name === 'folder') return currentFolder?.virtual ? null : currentFolder;
-    return null;
+    return screen.name === 'folder' ? currentFolder : null;
   }
   const [recordFolder, setRecordFolder] = useState(null);
   function startRecording() {

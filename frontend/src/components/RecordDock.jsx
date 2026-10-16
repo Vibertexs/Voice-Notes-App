@@ -12,7 +12,7 @@ import { COPY } from '../lib/copy';
  *
  * During a drag it is replaced, not covered: the same strip becomes the
  * drop-out zone, because that is where the thumb already is. A recording
- * that is already in Inbox has nowhere to be removed to, so it gets no zone.
+ * that is already in no folder has nowhere to be removed to, so it gets no zone.
  */
 export default function RecordDock({ onPress, drag = null, dropOut = false, over = false }) {
   if (drag && dropOut) {

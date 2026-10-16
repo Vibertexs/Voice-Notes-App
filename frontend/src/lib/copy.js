@@ -14,6 +14,7 @@ export const COPY = {
 
   finishTitle: 'Finish recording?',
   finishSub: 'Save this recording to {folder}?',
+  finishSubNone: 'Save this recording?',
   finishBtn: 'Finish Recording',
   slide: 'Slide to delete',
   release: 'Release to delete',
@@ -22,6 +23,7 @@ export const COPY = {
   savingSub: 'Please wait a moment.',
   savedTitle: 'Recording saved',
   savedSub: '“{title}” has been saved to {folder}.',
+  savedSubNone: '“{title}” has been saved.',
   canceledTitle: 'Recording deleted',
   canceledSub: 'Your recording has been discarded.',
 
@@ -54,5 +56,5 @@ export function fill(template, values = {}) {
   ));
 }
 
-/** The five colours the folder editor offers. Graphite is reserved for Inbox. */
+/** The five colours the folder editor offers. */
 export const SWATCHES = ['red', 'blue', 'violet', 'amber', 'green'];

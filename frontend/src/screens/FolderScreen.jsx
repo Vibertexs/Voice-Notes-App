@@ -30,13 +30,9 @@ export default function FolderScreen({
           <Icon name="back" strokeWidth={2.2} />
         </button>
         <span className="vf-bar-spacer" />
-        {/* Inbox is where recordings are when they are in no folder, not a folder
-            with a colour or a name of its own, so there is nothing to edit. */}
-        {!folder.virtual && (
-          <button type="button" className="vf-round vf-round--plain" aria-label="Edit folder" onClick={onEdit}>
-            <Icon name="more" strokeWidth={2.2} />
-          </button>
-        )}
+        <button type="button" className="vf-round vf-round--plain" aria-label="Edit folder" onClick={onEdit}>
+          <Icon name="more" strokeWidth={2.2} />
+        </button>
       </header>
 
       <div className="folder-head">

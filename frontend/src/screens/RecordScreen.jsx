@@ -83,7 +83,7 @@ export default function RecordScreen({ folder, onSaved, onLeave, onDenied, notif
   const timer = useRef(0);
 
   const levels = useLiveLevels(stream, phase === 'recording');
-  const destination = folder?.name ?? 'Inbox';
+  const destination = folder?.name ?? null;
 
   /**
    * Warn once, before the take gets long enough to be worth losing.
@@ -287,7 +287,7 @@ export default function RecordScreen({ folder, onSaved, onLeave, onDenied, notif
       <main className="screen outcome">
         <span className="outcome-mark outcome-mark--ok"><Icon name="check" strokeWidth={2.6} /></span>
         <h1>{COPY.savedTitle}</h1>
-        <p>{fill(COPY.savedSub, { title: saved.title || 'Your recording', folder: destination })}</p>
+        <p>{fill(destination ? COPY.savedSub : COPY.savedSubNone, { title: saved.title || 'Your recording', folder: destination })}</p>
         {queued && <p className="outcome-note"><i />Transcribing a more accurate version now. You can keep using the app.</p>}
         {saved.transcription_status === 'unavailable' && (
           <p className="outcome-note quiet">No speech was detected in this take, so there is no transcript yet.</p>
@@ -299,7 +299,7 @@ export default function RecordScreen({ folder, onSaved, onLeave, onDenied, notif
         )}
         <div className="outcome-actions">
           <VFButton label="View Recording" icon="play" onPress={() => onSaved(saved.workspace_id, saved)} />
-          <VFButton label={`Back to ${destination}`} variant="secondary" onPress={() => onLeave(saved)} />
+          <VFButton label={destination ? `Back to ${destination}` : 'Back to folders'} variant="secondary" onPress={() => onLeave(saved)} />
         </div>
       </main>
     );
@@ -345,7 +345,7 @@ export default function RecordScreen({ folder, onSaved, onLeave, onDenied, notif
         </button>
         <span className="vf-bar-copy rec-dest">
           <strong>New recording</strong>
-          <small>{destination}</small>
+          <small>{destination ?? 'Not in a folder'}</small>
         </span>
         <button type="button" className="vf-round vf-round--plain" aria-label="Recording continues when locked"
           onClick={() => notify?.('Recording keeps going with the screen off.')}>
@@ -428,7 +428,7 @@ export default function RecordScreen({ folder, onSaved, onLeave, onDenied, notif
       <VFBottomSheet
         open={sheet === 'finish'} icon="check"
         title={COPY.finishTitle}
-        subtitle={fill(COPY.finishSub, { folder: destination })}
+        subtitle={fill(destination ? COPY.finishSub : COPY.finishSubNone, { folder: destination })}
         onClose={() => setSheet('none')}
       >
         <VFButton label={COPY.finishBtn} disabled={phase === 'recording'} onPress={finish} />

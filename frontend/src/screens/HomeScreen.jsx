@@ -60,7 +60,7 @@ export default function HomeScreen({
 
       {unfiled.length > 0 && (
         <section className="vf-section" aria-label="Unfiled recordings">
-          <h2 className="vf-label">Recent</h2>
+          <h2 className="vf-label">Unfiled</h2>
           <ul className="vf-rows">
             {unfiled.map((workspace) => (
               <VFRecordingRow

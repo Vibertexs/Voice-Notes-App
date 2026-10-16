@@ -18,19 +18,18 @@ import VFFolderCard from './VFFolderCard';
 export default function DropTray({ drag, folders = [] }) {
   if (!drag) return null;
   const sourceId = drag.item?.folder_id ?? null;
-  const real = folders.filter((folder) => !folder.virtual);
-  if (!real.length) return null;
+  if (!folders.length) return null;
   const below = (drag.startY ?? 0) < window.innerHeight * 0.45;
 
   return (
     <div
       className={`drop-tray ${below ? 'is-bottom' : 'is-top'}`}
-      style={{ '--cols': real.length > 6 ? 4 : 3 }}
+      style={{ '--cols': folders.length > 6 ? 4 : 3 }}
       aria-hidden="true"
     >
       <p className="drop-tray-title">Drop on a folder</p>
       <div className="drop-tray-grid">
-        {real.map((folder) => {
+        {folders.map((folder) => {
           const isSource = folder.id === sourceId;
           return (
             <VFFolderCard

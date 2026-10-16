@@ -12,7 +12,7 @@ import { FOLDER_ICONS, Icon } from './Icon';
  * is made against the thing being chosen - a colour that looks right as a chip
  * does not always look right as a card.
  *
- * Deleting keeps the recordings and moves them to Inbox, which is why the
+ * Deleting keeps the recordings and leaves them unfiled, which is why the
  * button says so. A folder is a shelf, not a container.
  */
 export default function FolderEditSheet({ open, folder = null, onClose, onSave, onDelete }) {
@@ -87,7 +87,7 @@ export default function FolderEditSheet({ open, folder = null, onClose, onSave, 
         onPress={() => { onClose?.(); onSave?.({ name: name.trim(), color, icon }); }}
       />
 
-      {editing && !folder.virtual && (
+      {editing && (
         <VFButton
           label="Delete folder"
           variant="danger"

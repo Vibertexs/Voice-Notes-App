@@ -1154,7 +1154,7 @@ body.is-dragging { cursor: grabbing; user-select: none; -webkit-user-select: non
 /* ---- VFFolderCard -----------------------------------------
    Each folder is washed in its own colour, strongest behind the
    icon and fading across the card, with a ring in the same hue.
-   The wash strength is a per-tone variable (--wash-a) so Inbox's
+   The wash strength is a per-tone variable (--wash-a) so a graphite one
    graphite stays the quiet one. No card carries recording
    imagery.                                                    */
 .vf-card {

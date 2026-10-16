@@ -52,12 +52,12 @@ export default function VFGallery() {
       </Row>
 
       <Row title="VFFolderCard" note="row · target">
-        <VFFolderCard layout="row" title="Inbox" count={5} color="graphite" />
+        <VFFolderCard layout="row" title="Archive" count={5} color="graphite" />
         <VFFolderCard layout="row" title="Personal" count={0} color="green" />
         <div className="gal-grid3">
           <VFFolderCard layout="target" title="University" count={3} color="red" />
           <VFFolderCard layout="target" title="Work" meta="Drop to move" color="amber" active />
-          <VFFolderCard layout="target" title="Inbox" meta="Current" color="graphite" disabled />
+          <VFFolderCard layout="target" title="Archive" meta="Current" color="graphite" disabled />
         </div>
       </Row>
 
