@@ -8,7 +8,7 @@ import { useEffect, useRef } from 'react';
  * second inheriting what was left of the first.
  *
  * Where it sits is the screen's business: it has to clear the persistent record
- * button on Home, Folder and Organize, and the player on playback. The `lift`
+ * button on Home and Folder, and the player on playback. The `lift`
  * prop takes one of the tokens for that.
  *
  * Reference: docs/design/voiceflow/VFToast.dc.html

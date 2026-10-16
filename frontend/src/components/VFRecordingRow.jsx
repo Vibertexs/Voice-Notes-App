@@ -8,9 +8,10 @@ import { Icon } from './Icon';
  * whole reason the circle is 46px rather than an icon - it has to be hittable
  * without opening the screen behind it.
  *
- * `mode="drag"` is for Organize. It swaps the menu for a grip, hands pointer
- * events to the drag layer, and drops the row to 35% while its ghost is out, so
- * the list still shows where the recording came from.
+ * Holding a row picks it up (`onHold` hands the press to the drag layer); a
+ * press that moves first is a scroll. The row drops to 35% while its ghost is
+ * out, so the list still shows where the recording came from, and `guard`
+ * lets the owner swallow the tap that would otherwise follow a drop.
  *
  * `highlight` is the just-saved ring. It is a state of the row rather than an
  * animation, so returning to a folder can point at the new recording.
@@ -18,23 +19,24 @@ import { Icon } from './Icon';
  * Reference: docs/design/voiceflow/VFRecordingRow.dc.html
  */
 export default function VFRecordingRow({
-  title = 'Recording', date, duration, meta, snippet = '', mode = 'default',
+  title = 'Recording', date, duration, meta, snippet = '',
   playing = false, progress = -1, highlight = false, dragging = false,
-  onPress, onPlay, onMore, onDragStart,
+  onPress, onPlay, onMore, onHold, guard,
 }) {
-  const drag = mode === 'drag';
   const line = meta ?? [date, duration].filter(Boolean).join(' · ');
 
   return (
     <li
-      className={`vf-row${drag ? ' vf-row--drag' : ''}${highlight ? ' is-new' : ''}${dragging ? ' is-dragging' : ''}`}
-      onPointerDown={drag ? (event) => onDragStart?.(event) : undefined}
+      className={`vf-row${onHold ? ' is-holdable' : ''}${highlight ? ' is-new' : ''}${dragging ? ' is-dragging' : ''}`}
+      onPointerDown={onHold ? (event) => onHold(event) : undefined}
+      // A long press is a drag here, not the browser's own menu or text selection.
+      onContextMenu={onHold ? (event) => event.preventDefault() : undefined}
     >
       <button
         type="button"
         className={`vf-row-play${playing ? ' is-playing' : ''}`}
         aria-label={playing ? `Pause ${title}` : `Play ${title}`}
-        onClick={(event) => { event.stopPropagation(); if (!drag) onPlay?.(); }}
+        onClick={(event) => { event.stopPropagation(); if (!guard?.()) onPlay?.(); }}
       >
         {playing ? <span className="vf-row-pause"><i /><i /></span> : <Icon name="play" />}
       </button>
@@ -42,7 +44,7 @@ export default function VFRecordingRow({
       <button
         type="button"
         className="vf-row-open"
-        onClick={() => { if (!drag) onPress?.(); }}
+        onClick={() => { if (!guard?.()) onPress?.(); }}
       >
         <span className="vf-row-copy">
           <strong>{title}</strong>
@@ -54,14 +56,10 @@ export default function VFRecordingRow({
         </span>
       </button>
 
-      {drag
-        ? <span className="vf-row-grip" aria-hidden="true">{Array.from({ length: 6 }, (_, i) => <i key={i} />)}</span>
-        : (
-          <button type="button" className="vf-row-more" aria-label={`Options for ${title}`}
-            onClick={(event) => { event.stopPropagation(); onMore?.(); }}>
-            <i /><i /><i />
-          </button>
-        )}
+      <button type="button" className="vf-row-more" aria-label={`Options for ${title}`}
+        onClick={(event) => { event.stopPropagation(); if (!guard?.()) onMore?.(); }}>
+        <i /><i /><i />
+      </button>
     </li>
   );
 }

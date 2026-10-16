@@ -4,7 +4,7 @@ import { COPY } from '../lib/copy';
 /**
  * The persistent record button, and the only thing allowed in that strip.
  *
- * Home, Folder and Organize all show it, always idle, always in the same
+ * Home and Folder both show it, always idle, always in the same
  * place - so the one thing the app is for never moves between screens. The
  * fade under it is what lets a list scroll past without colliding with it;
  * screens reserve `--record-space` at their bottom so nothing ends up hidden

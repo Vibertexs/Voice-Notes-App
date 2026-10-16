@@ -146,7 +146,8 @@ export default function useDragToFile(onDrop) {
       ref.current.active = true;
       document.body.classList.add('is-dragging');
       navigator.vibrate?.(8);
-      setDrag({ item, x: from.x, y: from.y, over: null });
+      // startY lets the tray open on the side of the screen away from the finger.
+      setDrag({ item, x: from.x, y: from.y, startY: from.y, over: null });
     }, HOLD_MS);
   }, []);
 

@@ -19,7 +19,7 @@ import { libraryApi } from '../lib/api';
  */
 export default function RecordingActionsSheet({
   open, recording, audioUrl, subtitle, extras = [],
-  onClose, onChanged, onMove, onDelete, notify,
+  onClose, onChanged, onDelete, notify,
 }) {
   const [view, setView] = useState('menu');   // menu | rename
   const [title, setTitle] = useState('');
@@ -102,7 +102,6 @@ export default function RecordingActionsSheet({
       label: 'Share transcript',
       run: () => shareText(recording?.transcript || subtitle || recording?.title || '', 'Transcript'),
     },
-    { icon: 'move', label: 'Move to folder', run: () => { onClose?.(); onMove?.(); } },
     { icon: 'trash', label: 'Delete', run: () => { onClose?.(); onDelete?.(); }, danger: true },
   ];
 

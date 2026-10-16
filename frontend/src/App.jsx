@@ -4,13 +4,12 @@ import FolderScreen from './screens/FolderScreen';
 import RecordScreen from './screens/RecordScreen';
 import PlaybackScreen from './screens/PlaybackScreen';
 import SearchScreen from './screens/SearchScreen';
-import OrganizeScreen from './screens/OrganizeScreen';
 import MicDeniedScreen from './screens/MicDeniedScreen';
 import RecordDock from './components/RecordDock';
 import DragGhost from './components/DragGhost';
+import DropTray from './components/DropTray';
 import VFToast from './components/VFToast';
 import FolderEditSheet from './components/FolderEditSheet';
-import MoveToFolderSheet from './components/MoveToFolderSheet';
 import RecordingActionsSheet from './components/RecordingActionsSheet';
 import AccountSheet from './components/AccountSheet';
 import { libraryApi } from './lib/api';
@@ -58,9 +57,7 @@ export default function App() {
   const [toast, setToast] = useState(null);
   const [folderSheet, setFolderSheet] = useState(null);   // {folder} | {} for new
   const [actionSheet, setActionSheet] = useState(null);
-  const [moveSheet, setMoveSheet] = useState(null);
   const [accountOpen, setAccountOpen] = useState(false);
-  const [organizeFilter, setOrganizeFilter] = useState('all');
   const [highlightId, setHighlightId] = useState(null);
   const [pendingSeek, setPendingSeek] = useState(null);
   const undo = useRef(null);
@@ -82,30 +79,6 @@ export default function App() {
       setAllFolders(folders.folders ?? []);
       return next;
     } catch (caught) { setError(caught.message); return null; }
-  }, []);
-
-  /**
-   * Every recording there is, for Organize's "All" filter.
-   *
-   * /api/library answers for one folder at a time - with no folder it returns
-   * only the unfiled ones - and there is no endpoint that returns the lot. So
-   * All is assembled here, one call per folder. That is fine at the scale a
-   * phone holds and it keeps the change out of the API.
-   */
-  const loadEverything = useCallback(async () => {
-    setError('');
-    try {
-      const folders = (await libraryApi.allFolders()).folders ?? [];
-      setAllFolders(folders);
-      const parts = await Promise.all([
-        libraryApi.library(null),
-        ...folders.filter((folder) => !folder.archived).map((folder) => libraryApi.library(folder.id)),
-      ]);
-      setLibrary({
-        ...parts[0],
-        workspaces: parts.flatMap((part) => part.workspaces ?? []),
-      });
-    } catch (caught) { setError(caught.message); }
   }, []);
 
   useEffect(() => { load(null); }, [load]);
@@ -182,9 +155,12 @@ export default function App() {
     } catch (caught) { notify(caught.message, 'error'); }
   }, [allFolders, notify, refresh]);
 
-  const { drag, beginDrag } = useDragToFile((item, targetId) => moveWorkspace(item, targetId));
+  const { drag, beginDrag, blockClick } = useDragToFile((item, targetId) => moveWorkspace(item, targetId));
 
   async function saveFolder({ name, color, icon = null }) {
+    // Inbox is not a stored folder. Saving it would fall through to "create" and
+    // make a second, real folder with the same name.
+    if (folderSheet?.folder?.virtual) return;
     try {
       if (folderSheet?.folder && !folderSheet.folder.virtual) {
         await libraryApi.updateFolder(folderSheet.folder.id, { name, color, icon });
@@ -228,13 +204,9 @@ export default function App() {
 
   /* ---- record --------------------------------------------------------- */
 
-  // Where a press records, per the handoff: Home to Inbox, Folder to that
-  // folder, Organize to the folder the filter names.
+  // Where a press records, per the handoff: Home to Inbox, Folder to that folder.
   function recordTarget() {
     if (screen.name === 'folder') return currentFolder?.virtual ? null : currentFolder;
-    if (screen.name === 'organize' && organizeFilter !== 'all') {
-      return folders.find((folder) => folder.id === organizeFilter && !folder.virtual) ?? null;
-    }
     return null;
   }
   const [recordFolder, setRecordFolder] = useState(null);
@@ -265,7 +237,7 @@ export default function App() {
   if (error && !library) return <BootError error={error} retry={() => load(null)} />;
   if (!library && screen.name !== 'play' && screen.name !== 'record') return <Boot />;
 
-  const showDock = ['home', 'folder', 'organize'].includes(screen.name);
+  const showDock = ['home', 'folder'].includes(screen.name);
   const dragFrom = drag?.item?.folder_id ?? null;
   const overLabel = drag?.over
     ? (drag.over === '__out'
@@ -287,11 +259,13 @@ export default function App() {
           unfiled={library?.workspaces ?? []}
           onOpenFolder={openFolder}
           onNewFolder={() => setFolderSheet({ folder: null })}
-          onOrganize={() => { setOrganizeFilter('all'); setScreen({ name: 'organize' }); loadEverything(); }}
           onAccount={() => setAccountOpen(true)}
           onOpenSearch={() => setScreen({ name: 'search' })}
           onOpenWorkspace={openWorkspace}
           onWorkspaceMenu={(item) => setActionSheet({ recording: item })}
+          onPickUp={beginDrag}
+          blockClick={blockClick}
+          draggingId={drag?.item?.id}
         />
       )}
 
@@ -301,26 +275,12 @@ export default function App() {
           recordings={library?.workspaces ?? []}
           highlightId={highlightId}
           onBack={openHome}
-          onOrganize={() => { setOrganizeFilter(screen.folderId ?? 'all'); setScreen({ name: 'organize' }); }}
           onEdit={() => setFolderSheet({ folder: currentFolder })}
           onOpenWorkspace={openWorkspace}
           onWorkspaceMenu={(item) => setActionSheet({ recording: item })}
-        />
-      )}
-
-      {screen.name === 'organize' && (
-        <OrganizeScreen
-          folders={folders}
-          filter={organizeFilter}
-          recordings={(library?.workspaces ?? [])}
-          drag={drag}
-          onFilter={async (next) => {
-            setOrganizeFilter(next);
-            if (next === 'all') await loadEverything(); else await load(next);
-          }}
-          onBack={() => (screen.folderId ? openFolder(screen.folderId) : openHome())}
-          onDone={() => (screen.folderId ? openFolder(screen.folderId) : openHome())}
           onPickUp={beginDrag}
+          blockClick={blockClick}
+          draggingId={drag?.item?.id}
         />
       )}
 
@@ -368,7 +328,7 @@ export default function App() {
         <RecordDock
           onPress={startRecording}
           drag={drag}
-          dropOut={screen.name === 'organize' && Boolean(drag) && dragFrom !== null}
+          dropOut={Boolean(drag) && dragFrom !== null}
           over={drag?.over === '__out'}
         />
       )}
@@ -390,20 +350,12 @@ export default function App() {
         notify={notify}
         onChanged={refresh}
         onClose={() => setActionSheet(null)}
-        onMove={() => setMoveSheet(actionSheet?.recording)}
         onDelete={() => deleteWorkspace(actionSheet.recording)}
-      />
-
-      <MoveToFolderSheet
-        open={Boolean(moveSheet)}
-        recording={moveSheet}
-        folders={folders}
-        onClose={() => setMoveSheet(null)}
-        onMove={(target) => moveWorkspace(moveSheet, target.id)}
       />
 
       <AccountSheet open={accountOpen} onClose={() => setAccountOpen(false)} notify={notify} />
 
+      <DropTray drag={drag} folders={folders} />
       <DragGhost drag={drag} label={overLabel} />
 
       {toast && (

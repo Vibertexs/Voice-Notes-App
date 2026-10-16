@@ -16,8 +16,8 @@ import { greetingLine, recordingMeta } from '../lib/format';
  * doing that inline would mean the results had nowhere to go.
  */
 export default function HomeScreen({
-  folders = [], unfiled = [], onOpenFolder, onNewFolder, onOrganize, onAccount,
-  onOpenSearch, onOpenWorkspace, onWorkspaceMenu, onPlay,
+  folders = [], unfiled = [], onOpenFolder, onNewFolder, onAccount,
+  onOpenSearch, onOpenWorkspace, onWorkspaceMenu, onPlay, onPickUp, blockClick, draggingId,
   playingId, progress = -1,
 }) {
   return (
@@ -28,9 +28,6 @@ export default function HomeScreen({
         <div className="vf-head-actions">
           <button type="button" className="vf-round" aria-label="Account" onClick={onAccount}>
             <Icon name="person" strokeWidth={2.2} />
-          </button>
-          <button type="button" className="vf-round" aria-label="Organize" onClick={onOrganize}>
-            <Icon name="move" strokeWidth={2.2} />
           </button>
           <button type="button" className="vf-round" aria-label="New folder" onClick={onNewFolder}>
             <Icon name="plus" strokeWidth={2.6} />
@@ -75,6 +72,9 @@ export default function HomeScreen({
                 })}
                 playing={playingId === workspace.id}
                 progress={playingId === workspace.id ? progress : -1}
+                dragging={draggingId === workspace.id}
+                guard={blockClick}
+                onHold={onPickUp ? (event) => onPickUp(event, workspace) : undefined}
                 onPress={() => onOpenWorkspace(workspace.id)}
                 onPlay={() => onPlay?.(workspace)}
                 onMore={() => onWorkspaceMenu(workspace)}

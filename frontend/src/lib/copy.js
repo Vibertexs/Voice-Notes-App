@@ -45,8 +45,6 @@ export const COPY = {
   paused: 'PAUSED',
   live: 'REC',
 
-  orgSub: 'Drag a recording onto a folder',
-  orgEmpty: 'No recordings here.',
   dropOut: 'Drop to remove from folder',
 };
 

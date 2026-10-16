@@ -68,8 +68,8 @@ export default function VFGallery() {
             snippet="So first we start with the basic idea of a system, and then we can look at some examples of how it behaves." />
           <VFRecordingRow title="Discussion" date="Sep 12, 2026" duration="8:32" playing progress={0.42} />
           <VFRecordingRow title="Lecture 2" date="Today" duration="04:02" highlight />
-          <VFRecordingRow title="Seminar" date="Sep 9, 2026" duration="51:20" mode="drag" />
-          <VFRecordingRow title="Voice memo 3" date="Sep 8, 2026" duration="01:11" mode="drag" dragging />
+          <VFRecordingRow title="Seminar" date="Sep 9, 2026" duration="51:20" onHold={() => {}} />
+          <VFRecordingRow title="Voice memo 3" date="Sep 8, 2026" duration="01:11" onHold={() => {}} dragging />
         </ul>
       </Row>
 

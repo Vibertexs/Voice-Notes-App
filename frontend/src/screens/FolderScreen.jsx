@@ -16,7 +16,7 @@ import { countLabel, recordingMeta } from '../lib/format';
  * mean two record buttons on one screen, which is one too many.
  */
 export default function FolderScreen({
-  folder, recordings = [], onBack, onOrganize, onEdit,
+  folder, recordings = [], onBack, onEdit, onPickUp, blockClick, draggingId,
   onOpenWorkspace, onWorkspaceMenu, onPlay, playingId, progress = -1, highlightId,
 }) {
   if (!folder) return null;
@@ -30,12 +30,13 @@ export default function FolderScreen({
           <Icon name="back" strokeWidth={2.2} />
         </button>
         <span className="vf-bar-spacer" />
-        <button type="button" className="vf-round vf-round--plain" aria-label="Organize" onClick={onOrganize}>
-          <Icon name="move" strokeWidth={2.2} />
-        </button>
-        <button type="button" className="vf-round vf-round--plain" aria-label="Edit folder" onClick={onEdit}>
-          <Icon name="more" strokeWidth={2.2} />
-        </button>
+        {/* Inbox is where recordings are when they are in no folder, not a folder
+            with a colour or a name of its own, so there is nothing to edit. */}
+        {!folder.virtual && (
+          <button type="button" className="vf-round vf-round--plain" aria-label="Edit folder" onClick={onEdit}>
+            <Icon name="more" strokeWidth={2.2} />
+          </button>
+        )}
       </header>
 
       <div className="folder-head">
@@ -57,6 +58,9 @@ export default function FolderScreen({
                 duration_seconds: workspace.duration_seconds,
               })}
               highlight={workspace.id === highlightId}
+              dragging={draggingId === workspace.id}
+              guard={blockClick}
+              onHold={onPickUp ? (event) => onPickUp(event, workspace) : undefined}
               playing={playingId === workspace.id}
               progress={playingId === workspace.id ? progress : -1}
               onPress={() => onOpenWorkspace(workspace.id)}

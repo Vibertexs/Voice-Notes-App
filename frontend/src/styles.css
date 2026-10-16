@@ -156,7 +156,7 @@
   --play-d:       46px;   --play-d-lg:     68px;
 
   /* The record button is persistent on Home, Folder and
-     Organize, so its clearance is a layout constant rather than
+     Folder, so its clearance is a layout constant rather than
      a property of any one screen. */
   --record-lift:     40px;   /* above the bottom edge          */
   --record-fade:     160px;  /* fade-to-background over it     */
@@ -492,7 +492,7 @@ select.field { appearance: none; }
   min-height: 100dvh;
   padding: calc(var(--top) + 12px) var(--gut) calc(var(--bot) + 32px);
 }
-.screen--dock, .screen--folder, .screen--organize { padding-bottom: calc(var(--record-space) + var(--bot)); }
+.screen--dock, .screen--folder { padding-bottom: calc(var(--record-space) + var(--bot)); }
 
 .boot {
   display: grid; place-content: center; justify-items: center; gap: 14px;
@@ -811,9 +811,6 @@ select.field { appearance: none; }
   background: var(--chip); color: var(--text-2); font-size: 14px; font-weight: 500;
 }
 .chip.is-on { background: var(--text); color: var(--bg); font-weight: 650; }
-.chip-dot { width: 8px; height: 8px; border-radius: var(--r-full); background: var(--tone); }
-.chip-count { color: var(--text-4); font-variant-numeric: tabular-nums; }
-.chip.is-on .chip-count { color: rgba(10,10,13,.5); }
 
 .results { display: grid; gap: var(--gap); margin-top: 18px; }
 .result {
@@ -838,8 +835,26 @@ select.field { appearance: none; }
 }
 mark { background: rgba(var(--primary-rgb), .38); color: var(--text); border-radius: 3px; }
 
-/* ---- 19. Organize ----------------------------------------- */
-.org-targets { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--gap); margin-top: 16px; }
+/* ---- 19. Dragging a recording to a folder ------------------
+   The tray opens on the side of the screen away from the finger;
+   removing a recording from its folder is the strip where the
+   record button was (see .drop-out).                          */
+.drop-tray {
+  position: fixed; left: var(--gut); right: var(--gut); z-index: 80;
+  padding: 12px; border-radius: var(--r-sheet);
+  background: var(--sheet); box-shadow: var(--sh-sheet), inset 0 0 0 1px var(--hairline-2);
+  max-height: 52dvh; overflow: hidden;
+  animation: tray-in .22s var(--ease);
+}
+.drop-tray.is-top { top: calc(var(--top) + 10px); }
+.drop-tray.is-bottom { bottom: calc(var(--bot) + 108px); }
+.drop-tray-title {
+  margin: 2px 4px 10px; color: var(--text-3);
+  font-size: var(--t-label); font-weight: 700; letter-spacing: var(--ls-label); text-transform: uppercase;
+}
+.drop-tray-grid { display: grid; grid-template-columns: repeat(var(--cols, 3), 1fr); gap: var(--gap); }
+@keyframes tray-in { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .drop-tray { animation: none; } }
 .record-dock {
   position: fixed; inset: auto 0 0; z-index: 40;
   display: grid; place-items: center;
@@ -871,7 +886,7 @@ mark { background: rgba(var(--primary-rgb), .38); color: var(--text); border-rad
 .drag-ghost strong { display: block; font-size: var(--t-row); font-weight: 600; letter-spacing: var(--ls-row); }
 .drag-ghost small { display: block; margin-top: 2px; color: var(--text-3); font-size: var(--t-meta); }
 .drag-ghost.is-armed small { color: var(--primary-txt); font-weight: 600; }
-body.is-dragging { cursor: grabbing; }
+body.is-dragging { cursor: grabbing; user-select: none; -webkit-user-select: none; }
 
 /* ---- 12, 13, 14. Playback --------------------------------- */
 .play { padding-bottom: calc(272px + var(--bot)); }
@@ -1222,7 +1237,8 @@ body.is-dragging { cursor: grabbing; }
   box-shadow: 0 0 0 1.5px rgba(var(--primary-rgb), .7), 0 0 24px rgba(var(--primary-rgb), .18);
 }
 .vf-row.is-dragging { opacity: .35; box-shadow: inset 0 0 0 1.5px var(--grab); }
-.vf-row--drag { cursor: grab; touch-action: none; }
+/* A row that can be held: a long press is a drag, so the browser's own press behaviour is off. */
+.vf-row.is-holdable { -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
 .vf-row-play {
   display: grid; place-items: center; flex: none;
   width: var(--play-d); height: var(--play-d); border-radius: var(--r-full);
@@ -1260,12 +1276,6 @@ body.is-dragging { cursor: grabbing; }
 }
 .vf-row-more i { width: 4px; height: 4px; border-radius: 2px; background: var(--icon-mid); }
 .vf-row-more:hover { background: rgba(255,255,255,.06); }
-.vf-row-grip {
-  display: grid; grid-template-columns: 4px 4px; grid-auto-rows: 4px; gap: 4px;
-  align-content: center; justify-content: center;
-  flex: none; width: 40px; height: 40px;
-}
-.vf-row-grip i { border-radius: 2px; background: var(--text-4); }
 
 /* ---- The component sheet ----------------------------------
    TEMPORARY, with VFGallery.jsx.                             */
