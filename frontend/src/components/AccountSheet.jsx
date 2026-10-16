@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import VFBottomSheet from './VFBottomSheet';
 import VFButton from './VFButton';
+import AssistantsSheet from './AssistantsSheet';
 import { accountApi } from '../lib/api';
 
 /**
@@ -105,6 +106,12 @@ export default function AccountSheet({ open, onClose, notify }) {
 
   if (account.signedIn) {
     const who = account.user?.email ?? 'Signed in with Apple';
+    if (mode === 'assistants') {
+      return (
+        <AssistantsSheet open={open} serverUrl={account.server} notify={notify}
+          onClose={() => setMode('signin')} />
+      );
+    }
     if (mode === 'delete') {
       return (
         <VFBottomSheet open={open} icon="warn" title="Delete your account?"
@@ -136,6 +143,7 @@ export default function AccountSheet({ open, onClose, notify }) {
           </div>
         </div>
         {error && <p className="account-error" role="alert">{error}</p>}
+        <VFButton label="Connect an assistant" variant="secondary" onPress={() => setMode('assistants')} />
         <VFButton label="Sign out" variant="ghost" disabled={busy}
           onPress={async () => {
             const next = await run(() => accountApi.logout());

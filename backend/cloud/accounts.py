@@ -126,4 +126,6 @@ async def delete_account(database: Database, user_id: str) -> None:
     for collection in (database.transcripts, database.recordings, database.folders, database.password_resets):
         await collection.delete_many({"userId": user_id})
     await database.sessions.delete_many({"userId": user_id})
+    # An assistant must not keep reading lectures of an account that is gone.
+    await database.access_tokens.delete_many({"userId": user_id})
     await database.users.delete_one({"_id": user_id})

@@ -44,6 +44,14 @@ class Settings(BaseSettings):
     resend_api_key: str = ""
     email_from: str = "VoiceFlow <onboarding@resend.dev>"
 
+    # ---- assistants (MCP) -----------------------------------------------
+    # The address this server is reached at from outside, e.g. https://api.example.com.
+    # It is the MCP server's identity: access tokens are issued for exactly
+    # `<public_url>/mcp`, and the Host header is checked against it. Empty turns
+    # the MCP endpoint off.
+    public_url: str = ""
+    access_token_days: int = 365
+
     # ---- HTTP -----------------------------------------------------------
     # The phone app talks to this server from native code, which CORS does
     # not apply to. Origins are only needed for a future browser client.
@@ -67,6 +75,11 @@ class Settings(BaseSettings):
     def _check(self) -> "Settings":
         if not self.mongodb_uri:
             raise ValueError("MONGODB_URI is required")
+        self.public_url = self.public_url.strip().rstrip("/")
+        if self.public_url and not self.public_url.startswith(("https://", "http://")):
+            raise ValueError("PUBLIC_URL must start with https:// (or http:// for local development)")
+        if self.production and self.public_url.startswith("http://"):
+            raise ValueError("PUBLIC_URL must be https:// in production")
         if self.environment == "production":
             if len(self.jwt_secret) < 32:
                 raise ValueError(

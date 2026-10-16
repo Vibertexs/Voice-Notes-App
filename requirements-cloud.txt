@@ -10,3 +10,5 @@ argon2-cffi==25.1.0
 # [crypto] brings in cryptography, needed to verify Apple's RS256 tokens.
 PyJWT[crypto]==2.15.1
 httpx==0.28.1
+# The Model Context Protocol server and client (the assistant-facing endpoint).
+mcp==2.3.0

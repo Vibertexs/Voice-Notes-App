@@ -17,7 +17,7 @@ const { createCloud, segmentToCloud, segmentFromCloud, toMs } = loadCloudSync();
 /** Answers like backend/cloud, scripted. Accepts everything it is sent. */
 function fakeServer() {
   const server = {
-    pushes: [], replies: [], calls: [], refreshes: 0, googleBodies: [],
+    pushes: [], replies: [], calls: [], refreshes: 0, googleBodies: [], tokenCalls: [], revoked: [],
     accessValid: true, rejectIds: new Set(), invalidIds: new Set(),
   };
   const json = (status, body) => ({
@@ -35,6 +35,12 @@ function fakeServer() {
     if (path === '/v1/auth/google') { server.googleBodies.push(body); return json(200, tokens(0)); }
     if (path === '/v1/auth/refresh') { server.refreshes++; server.accessValid = true; return json(200, tokens(server.refreshes)); }
     if (path === '/v1/auth/logout') return json(204, null);
+    if (path === '/v1/me/tokens' && init.method === 'POST') {
+      server.tokenCalls.push(body);
+      return json(201, { id: 'tok_1', name: body.name, scopes: ['lectures:read'], token: 'vft_secret', lastUsedAt: null });
+    }
+    if (path === '/v1/me/tokens') return json(200, [{ id: 'tok_1', name: 'Claude', scopes: ['lectures:read'], lastUsedAt: null }]);
+    if (path === '/v1/me/tokens/tok_1' && init.method === 'DELETE') { server.revoked.push('tok_1'); return json(204, null); }
     if (path === '/v1/sync') {
       if (!server.accessValid) return json(401, { detail: 'Sign in to continue.' });
       const all = Object.values(body.changes).flat();
@@ -300,6 +306,27 @@ console.log('\n== signing in with Google ==');
   res = await oldPhone.POST('/api/account/google');
   check('...and a direct call is refused politely', res.status === 503 && /isn't available/.test(res.body.detail), res);
   oldCloud.stop();
+}
+
+// ---------------------------------------------------------------------------
+console.log('\n== assistants: tokens that let Claude read lectures ==');
+{
+  const tPhone = makePhone();
+  await tPhone.api.openDatabase();
+  const tServer = fakeServer();
+  const { cloud: tCloud } = cloudFor(tPhone, tServer);
+  res = await tPhone.GET('/api/account/tokens');
+  check('signed out, the list is refused rather than guessed', res.status === 401, res);
+  await tPhone.POST('/api/account/login', { email: 'student@example.com', password: 'pw' });
+  res = await tPhone.GET('/api/account/tokens');
+  check('signed in, the list comes from the server', res.status === 200 && res.body[0]?.name === 'Claude', res);
+  res = await tPhone.POST('/api/account/tokens', { name: '  Claude Desktop ' });
+  check('a token is made with a trimmed name', tServer.tokenCalls[0]?.name === 'Claude Desktop', tServer.tokenCalls);
+  check('...and its secret comes back for the page to show once', res.body?.token === 'vft_secret', res);
+  res = await tPhone.DELETE('/api/account/tokens/tok_1');
+  check('a token can be removed', res.status === 200 && tServer.revoked[0] === 'tok_1', res);
+  check('the token calls carried the sign-in', tServer.calls.filter((c) => c.path.startsWith('/v1/me/tokens')).every((c) => c.auth?.startsWith('Bearer ')));
+  tCloud.stop();
 }
 
 cloud.stop();

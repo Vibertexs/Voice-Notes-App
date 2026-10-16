@@ -10,6 +10,7 @@ Each test makes its own users, so tests never see each other's data.
 """
 from __future__ import annotations
 
+import asyncio
 import os
 import time
 import uuid
@@ -43,6 +44,8 @@ def _settings() -> Settings:
             apple_client_ids=[APPLE_CLIENT_ID],
             google_client_ids=[GOOGLE_CLIENT_ID],
             rate_limits_enabled=False,
+            # The MCP endpoint: tokens are for this address, and httpx's test host is "test".
+            public_url="http://test",
             # "auto" builds the Atlas index and uses regex until it is ready,
             # exactly as production does. Building one takes a minute or two,
             # so ordinary runs skip it.
@@ -111,14 +114,29 @@ async def app(fake_apple: FakeApple, fake_google: FakeGoogle, mailbox: MemorySen
         apple_verifier=AppleVerifier([APPLE_CLIENT_ID], fetch_keys=fake_apple.fetch),
         google_verifier=GoogleVerifier([GOOGLE_CLIENT_ID], fetch_keys=fake_google.fetch),
     )
-    async with application.router.lifespan_context(application):
-        try:
-            yield application
-        finally:
-            database = application.state.db
-            # Belt and braces: only ever drop a database this run created.
-            if database.db.name.startswith(TEST_DB_PREFIX):
-                await database.client.drop_database(database.db.name)
+    # The app's lifespan runs in a task of its own. The MCP transport opens an
+    # anyio task group at startup, and anyio insists it is closed by the same
+    # task that opened it; a session-scoped fixture is torn down by a different
+    # one. (A real server starts and stops in one task, so this is only a
+    # test-harness matter.)
+    started, stop = asyncio.Event(), asyncio.Event()
+
+    async def run_app():
+        async with application.router.lifespan_context(application):
+            started.set()
+            await stop.wait()
+
+    task = asyncio.create_task(run_app())
+    await asyncio.wait_for(started.wait(), timeout=60)
+    try:
+        yield application
+    finally:
+        database = application.state.db
+        # Belt and braces: only ever drop a database this run created.
+        if database.db.name.startswith(TEST_DB_PREFIX):
+            await database.client.drop_database(database.db.name)
+        stop.set()
+        await task
 
 
 @pytest.fixture(scope="session")

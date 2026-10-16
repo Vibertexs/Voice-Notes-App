@@ -8,7 +8,7 @@ generated themselves.
 from __future__ import annotations
 
 import logging
-from contextlib import asynccontextmanager
+from contextlib import AsyncExitStack, asynccontextmanager
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request
@@ -16,7 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-from backend.cloud import routes_auth, routes_library
+from backend.cloud import mcp_server, routes_auth, routes_library
 from backend.cloud.apple import AppleVerifier
 from backend.cloud.google import GoogleVerifier
 from backend.cloud.config import Settings, get_settings
@@ -107,6 +107,8 @@ def create_app(
     google_verifier: GoogleVerifier | None = None,
 ) -> FastAPI:
     settings = settings or get_settings()
+    runtime = mcp_server.Runtime()
+    mcp_app = mcp_server.create_mcp_app(settings, runtime)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -122,7 +124,13 @@ def create_app(
             app.state.apple = apple_verifier or AppleVerifier(settings.apple_client_ids)
             app.state.google = google_verifier or GoogleVerifier(settings.google_client_ids)
             app.state.search = Search(database, settings)
-            yield
+            runtime.database, runtime.search = database, app.state.search
+            async with AsyncExitStack() as stack:
+                if mcp_app is not None:
+                    # A mounted app's own startup does not run; the MCP transport needs it.
+                    await stack.enter_async_context(mcp_app.router.lifespan_context(mcp_app))
+                    log.info("MCP endpoint on at %s/mcp", settings.public_url)
+                yield
         finally:
             await database.close()
 
@@ -159,6 +167,10 @@ def create_app(
 
     app.include_router(routes_auth.router)
     app.include_router(routes_library.router)
+    if mcp_app is not None:
+        # Last, because it answers everything the routes above did not: its
+        # discovery document has to sit at the server root.
+        app.mount("/", mcp_app)
 
     # Outermost last: the body limit runs before anything reads the body.
     if settings.allowed_origins:

@@ -76,6 +76,9 @@ export const accountApi = {
   forgot: (email) => api('/api/account/forgot', { method: 'POST', body: { email } }),
   reset: (email, code, password) => api('/api/account/reset', { method: 'POST', body: { email, code, password } }),
   logout: () => api('/api/account/logout', { method: 'POST' }),
+  tokens: () => api('/api/account/tokens'),
+  createToken: (name) => api('/api/account/tokens', { method: 'POST', body: { name } }),
+  revokeToken: (id) => api(`/api/account/tokens/${encodeURIComponent(id)}`, { method: 'DELETE' }),
   remove: (password) => api('/api/account/delete', { method: 'POST', body: { password } }),
 };
 

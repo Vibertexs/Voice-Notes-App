@@ -157,12 +157,46 @@ email, with counters in MongoDB (so the limit holds across server instances) tha
 a TTL index removes. A wrong email and a wrong password take the same time and
 return the same message.
 
+## 4b. Assistants (MCP)
+
+An assistant - Claude, ChatGPT, anything that speaks the Model Context Protocol -
+can read a user's lectures through `POST /mcp`, a read-only MCP server mounted
+in the same app. It is on when `PUBLIC_URL` is set.
+
+**Connecting one (today).** In the app: person icon > *Connect an assistant* >
+*Create access token*. The token (`vft_...`, shown once, only its hash stored) and
+the server address go into the assistant. Tokens can only read, are separate from
+sign-in sessions, can be removed at any time, and die with the account. To try one
+from a terminal: `python scripts/mcp_check.py https://<server>/mcp vft_... "some words"`.
+
+**Tools** - each a thin wrapper over a query the REST API already runs, all
+read-only and scoped to the token's user (never to an argument):
+
+| Tool | What it does |
+|---|---|
+| `list_folders` | folders with recording counts and total length (`$lookup`) |
+| `list_recordings` | newest first; by folder name or id, or `unfiled`; paged by date |
+| `get_recording` | details, bookmarks (with the second each was set), the user's notes |
+| `get_transcript` | timestamped lines; `start_seconds`/`end_seconds` slice it in the database; cut at 20k characters with `nextStartSeconds` to continue |
+| `search_lectures` | where something was said, with the second (Atlas Search) |
+
+**Safety.** Transcript text is whatever was spoken, so it is returned as data and
+the server's instructions say it is not to be obeyed. Requests for a host other
+than `PUBLIC_URL`'s are refused (DNS-rebinding guard). Unauthenticated calls get a
+`401` pointing at `/.well-known/oauth-protected-resource/mcp`, as the spec asks.
+
+**Still to come:** OAuth, so an assistant can connect by signing the user in
+instead of pasting a token - the authorization server, consent page and
+registration the MCP spec requires. Until then the metadata names this server as
+its own authorization server but does not yet serve those endpoints.
+
 ## 5. The data model
 
 | Collection | One document per | Notes |
 |---|---|---|
 | `users` | account | partial unique indexes on `email` and `appleSub` (either may be absent) |
 | `sessions` | signed-in device | refresh-token hash; TTL-expired |
+| `access_tokens` | assistant allowed to read | token hash, scope `lectures:read`; TTL-expired |
 | `folders` | folder | |
 | `recordings` | recording | bookmarks and notes **embedded** - bounded, always read together |
 | `transcripts` | recording's words | **referenced**, same `_id` as the recording - unbounded, ~15k word timings per lecture, and a folder listing should never load them |
@@ -225,6 +259,8 @@ flashcards, attached files. Never: audio.
 | `GET /v1/recordings?folder=&before=&limit=` · `GET/PATCH/DELETE /v1/recordings/{id}` | |
 | `GET /v1/recordings/{id}/transcript?start=&end=&words=` | time slices cut server-side with `$filter` |
 | `GET /v1/search?q=` | hits carry the second the words were said |
+| `GET/POST /v1/me/tokens` · `DELETE /v1/me/tokens/{id}` | assistant tokens |
+| `POST /mcp` | the MCP server (assistant token) |
 | `GET /healthz` · `GET /readyz` | process up · database reachable |
 
 The REST routes are what the planned MCP server will call so an assistant can

@@ -6,6 +6,7 @@ Embed what is bounded, reference what is unbounded.
 
     users          one per account
     sessions       one per signed-in device; holds a hash of its refresh token
+    access_tokens  one per assistant allowed to read a user's lectures (hash only)
     folders        a user's folders
     recordings     metadata for one recording; bookmarks are embedded
     transcripts    the words of one recording, keyed by the recording's id
@@ -86,6 +87,17 @@ VALIDATORS: dict[str, dict[str, Any]] = {
             "expiresAt": _DATE,
         },
     },
+    "access_tokens": {
+        "bsonType": "object",
+        "required": ["userId", "tokenHash", "createdAt", "expiresAt"],
+        "properties": {
+            "userId": _STRING,
+            "tokenHash": _STRING,
+            "name": {"bsonType": "string", "maxLength": 60},
+            "createdAt": _DATE,
+            "expiresAt": _DATE,
+        },
+    },
     "folders": {
         "bsonType": "object",
         "required": ["userId", "name", "updatedAt", "syncedAt"],
@@ -146,6 +158,11 @@ def declared_indexes(settings: Settings) -> dict[str, list[dict[str, Any]]]:
             # field", so each session carries its own lifetime.
             _index([("expiresAt", ASCENDING)], "expiry_ttl", expireAfterSeconds=0),
         ],
+        "access_tokens": [
+            _index([("tokenHash", ASCENDING)], "token_hash_unique", unique=True),
+            _index([("userId", ASCENDING), ("createdAt", DESCENDING)], "by_user"),
+            _index([("expiresAt", ASCENDING)], "expiry_ttl", expireAfterSeconds=0),
+        ],
         "password_resets": [
             _index([("expiresAt", ASCENDING)], "expiry_ttl", expireAfterSeconds=0),
         ],
@@ -182,6 +199,8 @@ class Database:
     def recordings(self) -> AsyncCollection: return self.db["recordings"]
     @property
     def transcripts(self) -> AsyncCollection: return self.db["transcripts"]
+    @property
+    def access_tokens(self) -> AsyncCollection: return self.db["access_tokens"]
 
     async def ping(self) -> None:
         await self.db.command("ping")

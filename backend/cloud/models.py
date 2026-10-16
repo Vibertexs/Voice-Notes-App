@@ -123,6 +123,21 @@ class Tokens(Model):
     user: User
 
 
+class AccessTokenCreate(Model):
+    name: str = Field(min_length=1, max_length=60)
+
+
+class AccessTokenOut(UtcModel):
+    id: str
+    name: str
+    scopes: list[str]
+    created_at: datetime
+    expires_at: datetime
+    last_used_at: datetime | None = None
+    # Only present in the response that creates it. It cannot be read again.
+    token: str | None = None
+
+
 # ---------------------------------------------------------------------------
 # Synced documents
 # ---------------------------------------------------------------------------

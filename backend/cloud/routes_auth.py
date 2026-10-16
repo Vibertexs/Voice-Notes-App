@@ -24,7 +24,7 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, Response
 from pymongo import ReturnDocument
 from pymongo.errors import DuplicateKeyError
 
-from backend.cloud import ratelimit
+from backend.cloud import ratelimit, tokens
 from backend.cloud.accounts import (
     delete_account, end_sessions, normalize_email, rotate_session, start_session, user_out,
 )
@@ -35,7 +35,7 @@ from backend.cloud.config import Settings
 from backend.cloud.database import Database
 from backend.cloud.deps import DatabaseDep, PrincipalDep, SettingsDep, client_ip
 from backend.cloud.models import (
-    AppleSignIn, ChangePassword, DeleteAccount, ForgotPassword, GoogleSignIn, Login, Logout, Refresh,
+    AccessTokenCreate, AccessTokenOut, AppleSignIn, ChangePassword, DeleteAccount, ForgotPassword, GoogleSignIn, Login, Logout, Refresh,
     Register, ResetPassword, Tokens,
 )
 from backend.cloud.security import (
@@ -299,6 +299,28 @@ async def end_session(session_id: str, principal: PrincipalDep, database: Databa
     result = await database.sessions.delete_one({"_id": session_id, "userId": principal.user_id})
     if result.deleted_count == 0:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "That device is not signed in.")
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get("/me/tokens", response_model=list[AccessTokenOut])
+async def list_tokens(principal: PrincipalDep, database: DatabaseDep) -> list[dict[str, Any]]:
+    """The assistants allowed to read this account's lectures."""
+    return await tokens.list_for(database, principal.user_id)
+
+
+@router.post("/me/tokens", response_model=AccessTokenOut, status_code=status.HTTP_201_CREATED)
+async def create_token(body: AccessTokenCreate, principal: PrincipalDep, database: DatabaseDep,
+                       settings: SettingsDep) -> dict[str, Any]:
+    """Makes a read-only token for an assistant. The token is in this response
+    and nowhere else - it cannot be shown again."""
+    record, plain = await tokens.create(database, settings, principal.user_id, body.name)
+    return tokens.present(record, token=plain)
+
+
+@router.delete("/me/tokens/{token_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def revoke_token(token_id: str, principal: PrincipalDep, database: DatabaseDep) -> Response:
+    if not await tokens.revoke(database, principal.user_id, token_id):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "That token does not exist.")
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

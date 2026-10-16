@@ -639,7 +639,18 @@ export function createCloud({
     const action = path.split('?')[0].replace(/^\/api\/account\/?/, '').replace(/\/$/, '');
     try {
       if (method === 'GET' && action === '') return { status: 200, body: await status() };
-      if (!server) return { status: 503, body: { detail: "Sync isn't set up in this build." } };
+      if (!server) return { status: 503, body: { detail: "Backup isn't set up in this build." } };
+
+      // Assistants: the tokens that let Claude (or another assistant) read lectures.
+      if (action === 'tokens' && method === 'GET') return { status: 200, body: await authed('/v1/me/tokens') };
+      if (action === 'tokens' && method === 'POST') {
+        return { status: 200, body: await authed('/v1/me/tokens', { method: 'POST', body: { name: String(body?.name ?? '').trim() } }) };
+      }
+      if (action.startsWith('tokens/') && method === 'DELETE') {
+        await authed(`/v1/me/tokens/${encodeURIComponent(action.slice('tokens/'.length))}`, { method: 'DELETE' });
+        return { status: 200, body: { ok: true } };
+      }
+
       if (method !== 'POST') return { status: 405, body: { detail: 'Not allowed.' } };
 
       switch (action) {

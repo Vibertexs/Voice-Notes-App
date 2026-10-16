@@ -749,6 +749,19 @@ select.field { appearance: none; }
   color: var(--text-3); font-size: var(--t-meta);
 }
 .account-or::before, .account-or::after { content: ''; flex: 1; height: 1px; background: var(--hairline); }
+/* Assistants: the list of connected tokens, and the one-time secret. */
+.assist-label {
+  margin-bottom: -4px; color: var(--text-3);
+  font-size: var(--t-label); font-weight: 700; letter-spacing: var(--ls-label); text-transform: uppercase;
+}
+.assist-secret { font-family: var(--font-mono); font-size: 13px; letter-spacing: 0; }
+.assist-list { display: grid; gap: 2px; }
+.assist-row { display: flex; align-items: center; gap: 12px; padding: 10px 4px; }
+.assist-copy { display: grid; gap: 2px; flex: 1; min-width: 0; }
+.assist-copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--t-row); font-weight: 600; }
+.assist-copy small { color: var(--text-3); font-size: var(--t-meta); }
+.assist-remove { flex: none; padding: 8px 12px; border-radius: var(--r-full); color: var(--primary-txt); font-size: 14px; font-weight: 600; }
+.assist-remove:hover { background: var(--danger-bg); }
 .account-error { color: var(--primary-txt); font-size: var(--t-meta-lg); line-height: 1.4; }
 .account-who {
   display: flex; align-items: center; gap: 14px;
