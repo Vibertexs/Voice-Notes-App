@@ -1415,6 +1415,19 @@ body.is-dragging { cursor: grabbing; user-select: none; -webkit-user-select: non
 /* Searching, every matching line has to be readable, not receding. */
 .lyric.is-found { color: var(--text-2); }
 .lyric mark { font-weight: 700; }
+/* The reading view: no audio to follow, so every line is equal and a timestamp is a reference. */
+.lyrics--read { gap: 2px; }
+.read-line {
+  display: grid; grid-template-columns: 46px 1fr; gap: 10px; align-items: baseline;
+  padding: 8px 8px 8px 4px; border-radius: var(--r-input);
+  font-size: 19px; font-weight: 500; line-height: 1.5; color: var(--text-2);
+  transition: background .4s;
+}
+.read-line time {
+  color: var(--text-4); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums;
+}
+.read-line.is-jump { background: rgba(var(--primary-rgb), .16); }
+.read-line mark { color: var(--text); font-weight: 700; }
 .lyric-bookmark {
   display: inline-flex; align-items: center; gap: 6px; justify-self: start;
   padding: 3px 10px; border-radius: var(--r-full);

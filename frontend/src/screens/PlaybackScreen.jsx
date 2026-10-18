@@ -43,6 +43,10 @@ export default function PlaybackScreen({
   const folder = folders.find((entry) => entry.id === workspace.folder_id);
 
   const status = selected?.transcription_status;
+  // No audio file on this phone (it was recorded on another one): nothing to play or
+  // follow, so the screen is a reading view and the transport is left out.
+  const hasAudio = Boolean(selected?.audio_url);
+  const [jumpTo, setJumpTo] = useState(null);
   const transcribing = ['pending', 'running'].includes(status);
   // Whisper's progress, pushed by the phone shell as it happens (cn:progress).
   // The workspace is only fetched when the screen opens, so its stored
@@ -81,13 +85,21 @@ export default function PlaybackScreen({
 
   // A search result asked to open at a moment rather than at the start.
   useEffect(() => {
-    if (!pendingSeek || !audio.current) return;
+    if (!pendingSeek) return;
+    if (!hasAudio) {
+      // A search result opened here: show where the words are, since nothing can play.
+      setJumpTo({ seconds: pendingSeek.seconds ?? 0, at: Date.now() });
+      if (pendingSeek.term) { setSearching(true); setTerm(pendingSeek.term); }
+      onSeekHandled?.();
+      return;
+    }
+    if (!audio.current) return;
     const player = audio.current;
     const apply = () => { player.currentTime = pendingSeek.seconds ?? 0; player.play().catch(() => {}); };
     if (player.readyState >= 1) apply(); else player.addEventListener('loadedmetadata', apply, { once: true });
     if (pendingSeek.term) { setSearching(true); setTerm(pendingSeek.term); }
     onSeekHandled?.();
-  }, [pendingSeek, onSeekHandled]);
+  }, [pendingSeek, onSeekHandled, hasAudio]);
 
   const seek = useCallback((seconds) => {
     const player = audio.current;
@@ -209,10 +221,10 @@ export default function PlaybackScreen({
         </p>
       )}
       {/* Synced from another phone: the words came across, the audio never does. */}
-      {selected && !selected.audio_url && !transcribing && (
+      {selected && !hasAudio && !transcribing && (
         <p className="transcript-note transcript-note--cloud">
           <Icon name="cloud" strokeWidth={2} />
-          <span>Cloud only. The audio is on the phone that recorded this; its transcript and bookmarks are here.</span>
+          <span>Cloud only. The audio is on the phone that recorded this, so there is nothing to play here. Its transcript and bookmarks are.</span>
         </p>
       )}
 
@@ -224,6 +236,8 @@ export default function PlaybackScreen({
           term={term}
           markers={markers}
           onSeek={seek}
+          following={hasAudio}
+          jumpTo={jumpTo}
         />
       ) : (
         <section className="bookmark-list">
@@ -231,7 +245,11 @@ export default function PlaybackScreen({
             .sort((a, b) => a.time_seconds - b.time_seconds)
             .map((marker) => (
               <button key={marker.id} type="button" className="bookmark-row"
-                onClick={() => { seek(marker.time_seconds); setPane('transcript'); }}>
+                onClick={() => {
+                  if (hasAudio) seek(marker.time_seconds);
+                  else setJumpTo({ seconds: marker.time_seconds, at: Date.now() });
+                  setPane('transcript');
+                }}>
                 <time>{mmss(marker.time_seconds)}</time>
                 <span>{marker.label}</span>
               </button>
@@ -241,6 +259,7 @@ export default function PlaybackScreen({
       )}
 
       <div className="player">
+        {hasAudio && (<>
         <WaveScrubber
           durationSeconds={duration}
           currentSeconds={position}
@@ -274,6 +293,8 @@ export default function PlaybackScreen({
             <Icon name={here ? 'bookmarkOn' : 'bookmark'} strokeWidth={2} />
           </button>
         </div>
+
+        </>)}
 
         {/* The three ways out of the player, where they have always been. */}
         <div className="play-actions">

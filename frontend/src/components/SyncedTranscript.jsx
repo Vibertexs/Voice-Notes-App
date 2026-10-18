@@ -1,4 +1,5 @@
 import { Fragment, memo, useEffect, useRef } from 'react';
+import { mmss } from '../lib/format';
 
 /**
  * The transcript, following playback the way lyrics do.
@@ -121,6 +122,9 @@ const Line = memo(function Line({ segment, state, seconds, term, onSeek, innerRe
 
 export default function SyncedTranscript({
   segments, currentSeconds, onSeek, status, term = '', markers = [],
+  // False when there is no audio to follow (a recording from another phone): the
+  // transcript is then a plain document, and `jumpTo` ({seconds}) scrolls it.
+  following = true, jumpTo = null,
 }) {
   const listRef = useRef(null);
   const activeRef = useRef(null);
@@ -156,6 +160,20 @@ export default function SyncedTranscript({
     activeRef.current.scrollIntoView({ block: 'center', behavior: 'smooth' });
   }, [activeIndex, term]);
 
+  // Nothing is playing, so nothing is "current": bring the asked-for moment into view
+  // and mark it briefly, the way a bookmark would have seeked.
+  useEffect(() => {
+    if (following || !jumpTo || !listRef.current) return undefined;
+    const lines = [...listRef.current.querySelectorAll('[data-start]')];
+    let target = lines[0];
+    for (const line of lines) { if (Number(line.dataset.start) <= jumpTo.seconds) target = line; }
+    if (!target) return undefined;
+    target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    target.classList.add('is-jump');
+    const timer = window.setTimeout(() => target.classList.remove('is-jump'), 1800);
+    return () => window.clearTimeout(timer);
+  }, [jumpTo, following]);
+
   if (!segments?.length) {
     // While Whisper runs, the playback screen already says so with the
     // percentage; a second "Transcribing…" here repeated it.
@@ -171,6 +189,27 @@ export default function SyncedTranscript({
 
   if (term && !shown.length) {
     return <p className="transcript-note">Nothing matches “{term}”.</p>;
+  }
+
+  if (!following) {
+    return (
+      <div className="lyrics lyrics--read" ref={listRef}>
+        {shown.map((segment, index) => {
+          const bookmark = markers.find((marker) => (
+            Math.abs((marker.time_seconds ?? 0) - (segment.start_seconds ?? 0)) < 6
+          ));
+          return (
+            <div key={`${segment.start_seconds}-${index}`} className="lyric-wrap">
+              {bookmark && <span className="lyric-bookmark"><b>{bookmark.label}</b></span>}
+              <p className="read-line" data-start={segment.start_seconds ?? 0}>
+                <time>{mmss(segment.start_seconds ?? 0)}</time>
+                <span>{term ? mark(segment.text, term) : segment.text}</span>
+              </p>
+            </div>
+          );
+        })}
+      </div>
+    );
   }
 
   return (
