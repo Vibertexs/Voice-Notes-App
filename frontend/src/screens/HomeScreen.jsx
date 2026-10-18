@@ -73,6 +73,7 @@ export default function HomeScreen({
                 playing={playingId === workspace.id}
                 progress={playingId === workspace.id ? progress : -1}
                 dragging={draggingId === workspace.id}
+                cloudOnly={workspace.cloud_only}
                 guard={blockClick}
                 onHold={onPickUp ? (event) => onPickUp(event, workspace) : undefined}
                 onPress={() => onOpenWorkspace(workspace.id)}

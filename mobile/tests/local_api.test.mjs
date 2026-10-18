@@ -144,6 +144,7 @@ check('favouriting sticks', res.body.favorite === true, res.body);
 res = await GET(`/api/library?folder_id=${bio.id}`);
 check('a listed recording carries .duration_seconds',
   res.body.workspaces[0].duration_seconds > 0, res.body.workspaces[0]);
+check('a recording made on this phone is not cloud-only', res.body.workspaces[0].cloud_only === false, res.body.workspaces[0]);
 check('a listed recording carries .favorite', res.body.workspaces[0].favorite === true,
   res.body.workspaces[0]);
 

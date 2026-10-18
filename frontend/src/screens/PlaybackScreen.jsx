@@ -210,7 +210,10 @@ export default function PlaybackScreen({
       )}
       {/* Synced from another phone: the words came across, the audio never does. */}
       {selected && !selected.audio_url && !transcribing && (
-        <p className="transcript-note">The audio is on the phone that recorded this. Its transcript and bookmarks are here.</p>
+        <p className="transcript-note transcript-note--cloud">
+          <Icon name="cloud" strokeWidth={2} />
+          <span>Cloud only. The audio is on the phone that recorded this; its transcript and bookmarks are here.</span>
+        </p>
       )}
 
       {(searching || pane === 'transcript') ? (

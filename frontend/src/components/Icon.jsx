@@ -20,6 +20,7 @@ const PATHS = {
   /* A folder with no gap in it: the only filled glyph outside transport,
      because it sits on a saturated tile where an outline disappears. */
   folderSolid: <><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5h3.6c.6 0 1.2.3 1.6.7L12 7h6.5A2.5 2.5 0 0 1 21 9.5v8a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5Z" fill="currentColor" stroke="none" /></>,
+  cloud: <><path d="M7.2 18.5a4.3 4.3 0 0 1-.7-8.55 5.6 5.6 0 0 1 10.8 1.35 3.6 3.6 0 0 1-.4 7.2Z" /></>,
   person: <><circle cx="12" cy="8.5" r="3.6" /><path d="M5 19.5a7 7 0 0 1 14 0" /></>,
   lock: <><rect x="4.8" y="10.2" width="14.4" height="9.6" rx="2.6" /><path d="M8.2 10.2V7.6a3.8 3.8 0 0 1 7.6 0v2.6" /></>,
   warn: <><circle cx="12" cy="12" r="9" /><path d="M12 7v6M12 17h.01" /></>,

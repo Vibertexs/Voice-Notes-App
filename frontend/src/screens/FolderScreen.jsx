@@ -55,6 +55,7 @@ export default function FolderScreen({
               })}
               highlight={workspace.id === highlightId}
               dragging={draggingId === workspace.id}
+              cloudOnly={workspace.cloud_only}
               guard={blockClick}
               onHold={onPickUp ? (event) => onPickUp(event, workspace) : undefined}
               playing={playingId === workspace.id}

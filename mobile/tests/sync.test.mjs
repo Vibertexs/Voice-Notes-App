@@ -194,6 +194,7 @@ check('the early transcript waits in the stash', phone.sql('SELECT id FROM cloud
 await cloud.syncNow();
 check('...and is claimed when its recording arrives', phone.sql('SELECT id FROM cloud_stash').length === 0);
 res = await phone.GET('/api/library?folder_id=remoteFolder');
+check('a recording from another phone is marked cloud-only', res.body.workspaces[0]?.cloud_only === true, res.body.workspaces[0]);
 check('the folder and its recording appear', res.body.current_folder?.name === 'Chemistry' && res.body.workspaces[0]?.id === remoteId, res.body);
 res = await phone.GET(`/api/workspaces/${remoteId}`);
 const session = res.body.sessions?.[0];

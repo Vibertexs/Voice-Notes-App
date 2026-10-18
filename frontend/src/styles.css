@@ -1269,6 +1269,9 @@ body.is-dragging { cursor: grabbing; user-select: none; -webkit-user-select: non
 }
 .vf-row-play:hover { filter: brightness(1.15); }
 .vf-row-play.is-playing { background: var(--primary); }
+/* Nothing to play: the circle is a cloud, quieter than a play button. */
+.vf-row-play.is-cloud { background: var(--chip); color: var(--icon-mid); }
+.vf-row-play.is-cloud svg { width: 22px; height: 22px; margin-left: 0; }
 .screen--folder .vf-row-play:not(.is-playing) { background: rgba(var(--tone-rgb), .24); color: var(--tone-light); }
 .vf-row-play svg { width: 18px; height: 18px; margin-left: 2px; }
 .vf-row-pause { display: flex; gap: 4px; }
@@ -1474,3 +1477,5 @@ body.is-dragging { cursor: grabbing; user-select: none; -webkit-user-select: non
   margin-top: 18px; color: var(--text-4);
   font-size: var(--t-body); line-height: var(--lh-body);
 }
+.transcript-note--cloud { display: flex; align-items: flex-start; gap: 10px; }
+.transcript-note--cloud svg { flex: none; width: 18px; height: 18px; margin-top: 2px; color: var(--icon-mid); }

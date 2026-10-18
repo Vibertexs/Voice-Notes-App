@@ -13,6 +13,10 @@ import { Icon } from './Icon';
  * out, so the list still shows where the recording came from, and `guard`
  * lets the owner swallow the tap that would otherwise follow a drop.
  *
+ * `cloudOnly` is a recording whose audio is not on this phone - it came from another
+ * one. Its words are here, so it opens; but there is nothing to play, so the play
+ * circle shows a cloud instead, and the line under the title says so.
+ *
  * `highlight` is the just-saved ring. It is a state of the row rather than an
  * animation, so returning to a folder can point at the new recording.
  *
@@ -20,10 +24,11 @@ import { Icon } from './Icon';
  */
 export default function VFRecordingRow({
   title = 'Recording', date, duration, meta, snippet = '',
-  playing = false, progress = -1, highlight = false, dragging = false,
+  playing = false, progress = -1, highlight = false, dragging = false, cloudOnly = false,
   onPress, onPlay, onMore, onHold, guard,
 }) {
-  const line = meta ?? [date, duration].filter(Boolean).join(' · ');
+  const base = meta ?? [date, duration].filter(Boolean).join(' · ');
+  const line = cloudOnly ? [base, 'Cloud only'].filter(Boolean).join(' · ') : base;
 
   return (
     <li
@@ -34,11 +39,18 @@ export default function VFRecordingRow({
     >
       <button
         type="button"
-        className={`vf-row-play${playing ? ' is-playing' : ''}`}
-        aria-label={playing ? `Pause ${title}` : `Play ${title}`}
-        onClick={(event) => { event.stopPropagation(); if (!guard?.()) onPlay?.(); }}
+        className={`vf-row-play${playing ? ' is-playing' : ''}${cloudOnly ? ' is-cloud' : ''}`}
+        aria-label={cloudOnly ? `${title}: only in the cloud, the audio is not on this phone` : playing ? `Pause ${title}` : `Play ${title}`}
+        onClick={(event) => {
+          event.stopPropagation();
+          if (guard?.()) return;
+          // Nothing to play, so the circle opens the recording like the rest of the row.
+          if (cloudOnly) onPress?.(); else onPlay?.();
+        }}
       >
-        {playing ? <span className="vf-row-pause"><i /><i /></span> : <Icon name="play" />}
+        {cloudOnly
+          ? <Icon name="cloud" strokeWidth={2} />
+          : playing ? <span className="vf-row-pause"><i /><i /></span> : <Icon name="play" />}
       </button>
 
       <button

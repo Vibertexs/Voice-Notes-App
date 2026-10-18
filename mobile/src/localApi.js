@@ -370,6 +370,9 @@ async function workspaceJson(db, row, { includeSessions = false } = {}) {
     created_at: row.created_at,
     updated_at: row.updated_at,
     session_count: row.session_count ?? 0,
+    // A recording that came from another phone has its words and bookmarks here but
+    // no audio file: the page marks it so nobody taps play on nothing.
+    cloud_only: row.session_count > 0 && (row.local_audio ?? 0) === 0,
     duration_seconds: row.duration_seconds ?? null,
   };
   if (!includeSessions) return result;
@@ -471,11 +474,13 @@ async function route({ method, path, body }) {
     const workspaces = folderId
       ? await db.getAllAsync(
         `SELECT w.*, (SELECT COUNT(*) FROM lectures l WHERE l.workspace_id = w.id) AS session_count,
-                (SELECT SUM(l2.duration_seconds) FROM lectures l2 WHERE l2.workspace_id = w.id) AS duration_seconds
+                (SELECT SUM(l2.duration_seconds) FROM lectures l2 WHERE l2.workspace_id = w.id) AS duration_seconds,
+                (SELECT COUNT(*) FROM lectures l3 WHERE l3.workspace_id = w.id AND l3.file_name != '') AS local_audio
            FROM workspaces w WHERE w.folder_id = ? ORDER BY w.updated_at DESC`, folderId)
       : await db.getAllAsync(
         `SELECT w.*, (SELECT COUNT(*) FROM lectures l WHERE l.workspace_id = w.id) AS session_count,
-                (SELECT SUM(l2.duration_seconds) FROM lectures l2 WHERE l2.workspace_id = w.id) AS duration_seconds
+                (SELECT SUM(l2.duration_seconds) FROM lectures l2 WHERE l2.workspace_id = w.id) AS duration_seconds,
+                (SELECT COUNT(*) FROM lectures l3 WHERE l3.workspace_id = w.id AND l3.file_name != '') AS local_audio
            FROM workspaces w WHERE w.folder_id IS NULL ORDER BY w.updated_at DESC`);
 
     const materials = folderId
