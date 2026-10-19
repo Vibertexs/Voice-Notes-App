@@ -124,7 +124,7 @@ def create_app(
             app.state.apple = apple_verifier or AppleVerifier(settings.apple_client_ids)
             app.state.google = google_verifier or GoogleVerifier(settings.google_client_ids)
             app.state.search = Search(database, settings)
-            runtime.database, runtime.search = database, app.state.search
+            runtime.database, runtime.search, runtime.settings = database, app.state.search, settings
             async with AsyncExitStack() as stack:
                 if mcp_app is not None:
                     # A mounted app's own startup does not run; the MCP transport needs it.

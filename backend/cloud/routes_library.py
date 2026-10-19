@@ -4,11 +4,11 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Path, Query, Request, Response, status
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Path, Query, Request, Response, status
 
-from backend.cloud import library, sync
+from backend.cloud import library, semantic, sync
 from backend.cloud.common import ID_PATTERN, as_utc, utcnow
-from backend.cloud.deps import DatabaseDep, PrincipalDep
+from backend.cloud.deps import DatabaseDep, PrincipalDep, SettingsDep
 from backend.cloud.models import FolderCreate, FolderUpdate, RecordingUpdate, SyncRequest, SyncResult
 
 router = APIRouter(prefix="/v1")
@@ -17,7 +17,8 @@ DocId = Annotated[str, Path(pattern=ID_PATTERN)]
 
 
 @router.post("/sync", response_model=SyncResult, tags=["sync"])
-async def run_sync(body: SyncRequest, principal: PrincipalDep, database: DatabaseDep) -> SyncResult:
+async def run_sync(body: SyncRequest, principal: PrincipalDep, database: DatabaseDep, settings: SettingsDep,
+                   background: BackgroundTasks) -> SyncResult:
     """Push this device's changes, then pull everyone else's.
 
     Push comes first so a reply never carries back a change this request
@@ -26,6 +27,10 @@ async def run_sync(body: SyncRequest, principal: PrincipalDep, database: Databas
     """
     applied, rejected = await sync.push(database, principal.user_id, body.device_id, body.changes)
     changes, cursor, more = await sync.pull(database, principal.user_id, body.device_id, body.cursor)
+    # Passages for semantic search follow the transcripts, after the phone has its answer.
+    touched = set(applied["transcripts"]) | set(applied["recordings"])
+    if touched:
+        background.add_task(semantic.after_sync, database, settings, principal.user_id, touched)
     return SyncResult(
         cursor=cursor, more=more, server_time=utcnow(),
         applied=applied, rejected=rejected, changes=changes,
@@ -100,6 +105,26 @@ async def get_transcript(
 ) -> dict[str, Any]:
     return await library.get_transcript(
         database, principal.user_id, recording_id, start=start, end=end, words=words)
+
+
+@router.get("/search/similar", tags=["library"])
+async def search_similar(
+    principal: PrincipalDep, database: DatabaseDep, settings: SettingsDep,
+    q: Annotated[str, Query(min_length=1, max_length=500)],
+    limit: Annotated[int, Query(ge=1, le=20)] = 5,
+) -> dict[str, Any]:
+    """Passages closest in meaning to `q` (vector search). 503 when it is off or not ready."""
+    try:
+        found = await semantic.similar(database, settings, principal.user_id, q, limit)
+    except semantic.SemanticUnavailable as error:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(error)) from None
+    titles = {r["_id"]: r["title"] async for r in database.recordings.find(
+        {"_id": {"$in": [p["recordingId"] for p in found]}, "userId": principal.user_id, "deletedAt": None},
+        projection={"title": 1})}
+    return {"query": q, "results": [
+        {"recordingId": p["recordingId"], "title": titles[p["recordingId"]], "startSeconds": p["start"],
+         "passage": p["text"], "score": p.get("score")}
+        for p in found if p["recordingId"] in titles]}
 
 
 @router.get("/search", tags=["library"])

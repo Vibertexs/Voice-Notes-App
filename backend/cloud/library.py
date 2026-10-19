@@ -230,6 +230,8 @@ async def delete_recording(database: Database, user_id: str, recording_id: str) 
         {"_id": recording_id, "userId": user_id},
         {"$set": {**gone, "text": "", "segments": []}},
     )
+    from backend.cloud import semantic
+    await semantic.drop(database, user_id, recording_id)
 
 
 async def get_transcript(

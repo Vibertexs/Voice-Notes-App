@@ -163,6 +163,11 @@ def declared_indexes(settings: Settings) -> dict[str, list[dict[str, Any]]]:
             _index([("userId", ASCENDING), ("createdAt", DESCENDING)], "by_user"),
             _index([("expiresAt", ASCENDING)], "expiry_ttl", expireAfterSeconds=0),
         ],
+        # Derived from transcripts; rebuilt, never synced (see semantic.py).
+        "chunks": [_index([("userId", ASCENDING), ("recordingId", ASCENDING), ("n", ASCENDING)], "by_recording")],
+        "chunk_sets": [_index([("userId", ASCENDING)], "by_user")],
+        # One small document per day: what semantic search has used so far.
+        "usage": [_index([("day", ASCENDING)], "by_day", expireAfterSeconds=90 * 24 * 3600)],
         "password_resets": [
             _index([("expiresAt", ASCENDING)], "expiry_ttl", expireAfterSeconds=0),
         ],
@@ -201,6 +206,12 @@ class Database:
     def transcripts(self) -> AsyncCollection: return self.db["transcripts"]
     @property
     def access_tokens(self) -> AsyncCollection: return self.db["access_tokens"]
+    @property
+    def chunks(self) -> AsyncCollection: return self.db["chunks"]
+    @property
+    def chunk_sets(self) -> AsyncCollection: return self.db["chunk_sets"]
+    @property
+    def usage(self) -> AsyncCollection: return self.db["usage"]
 
     async def ping(self) -> None:
         await self.db.command("ping")
@@ -294,6 +305,10 @@ async def prepare_database(database: Database, settings: Settings) -> dict[str, 
     for name, wanted in declared_indexes(settings).items():
         indexes[name] = await _ensure_indexes(database.db[name], wanted)
     search = "skipped"
+    semantic = "skipped"
     if settings.search_backend != "regex":
         search = await _ensure_search_index(database)
-    return {"indexes": indexes, "search": search}
+        # Imported here: semantic.py imports this module.
+        from backend.cloud import semantic
+        semantic = await semantic.ensure_vector_index(database, settings)
+    return {"indexes": indexes, "search": search, "semantic": semantic}

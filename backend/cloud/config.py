@@ -59,6 +59,15 @@ class Settings(BaseSettings):
     max_body_bytes: int = 8 * 1024 * 1024
     docs_enabled: bool = True
 
+    # ---- semantic search --------------------------------------------------
+    # Atlas embeds each transcript passage itself; every passage indexed is billed
+    # per token, so volume is capped here. See backend/cloud/semantic.py.
+    semantic_search: bool = True
+    embed_model: str = "voyage-4-lite"
+    embed_daily_chunks: int = 2000        # passages indexed per UTC day, everyone
+    embed_user_max_chunks: int = 4000     # passages one user may hold
+    embed_daily_queries: int = 2000       # semantic searches per UTC day, everyone
+
     # ---- data -----------------------------------------------------------
     search_backend: Literal["auto", "atlas", "regex"] = "auto"
     tombstone_days: int = 180

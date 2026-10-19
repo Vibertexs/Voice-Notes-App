@@ -16,7 +16,7 @@ from tests.cloud.test_library import seed
 from tests.cloud.test_sync import recording, transcript
 
 HEADERS = {"Accept": "application/json, text/event-stream", "Content-Type": "application/json"}
-TOOLS = {"list_folders", "list_recordings", "get_recording", "get_transcript", "search_lectures"}
+TOOLS = {"list_folders", "list_recordings", "get_recording", "get_transcript", "search_lectures", "find_similar"}
 
 
 async def make_token(account: Account, name: str = "Claude Desktop") -> dict:

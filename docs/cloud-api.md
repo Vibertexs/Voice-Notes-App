@@ -178,7 +178,28 @@ read-only and scoped to the token's user (never to an argument):
 | `list_recordings` | newest first; by folder name or id, or `unfiled`; paged by date |
 | `get_recording` | details, bookmarks (with the second each was set), the user's notes |
 | `get_transcript` | timestamped lines; `start_seconds`/`end_seconds` slice it in the database; cut at 20k characters with `nextStartSeconds` to continue |
-| `search_lectures` | where something was said, with the second (Atlas Search) |
+| `search_lectures` | where exact words were said, with the second (Atlas Search) |
+| `find_similar` | passages by *meaning* (Atlas Vector Search); see below |
+
+**Semantic search (`find_similar`, `GET /v1/search/similar`).** Each transcript is
+cut into passages of about a minute (`chunks`), and Atlas embeds the `text` field
+itself with automated embedding - no embedding service, key or model of ours. A
+query is embedded the same way and matched with `$vectorSearch`, pre-filtered on
+`userId` so nobody else's passages are ever candidates. Chunks are derived data:
+rebuilt when a transcript changes (a hash means unchanged text is never embedded
+again), removed with the recording or account, and built lazily for older
+transcripts. Automated embedding is an Atlas **Preview** feature, so every path
+fails soft: if the index is building, off, or changed, the tool says so and points
+at `search_lectures`.
+
+**What it costs, and the limits that hold it down.** Embedding is billed per token
+(about a fiftieth of a cent per hour of lecture on `voyage-4-lite`), and every
+passage indexed is embedded, so volume is capped in code: `EMBED_DAILY_CHUNKS`
+(indexed per UTC day), `EMBED_USER_MAX_CHUNKS` (held per user),
+`EMBED_DAILY_QUERIES` (each search embeds its query), and `SEMANTIC_SEARCH=false`
+to switch it off. A reached cap skips the work; the recording is still saved. Usage
+is counted per day in `usage`. Atlas itself offers billing *alerts* but no hard
+cap, so set one (Organization > Alerts > Billing).
 
 **Safety.** Transcript text is whatever was spoken, so it is returned as data and
 the server's instructions say it is not to be obeyed. Requests for a host other
@@ -197,6 +218,7 @@ its own authorization server but does not yet serve those endpoints.
 | `users` | account | partial unique indexes on `email` and `appleSub` (either may be absent) |
 | `sessions` | signed-in device | refresh-token hash; TTL-expired |
 | `access_tokens` | assistant allowed to read | token hash, scope `lectures:read`; TTL-expired |
+| `chunks`, `chunk_sets`, `usage` | semantic search | derived passages (vector-indexed), their hashes, daily counters |
 | `folders` | folder | |
 | `recordings` | recording | bookmarks and notes **embedded** - bounded, always read together |
 | `transcripts` | recording's words | **referenced**, same `_id` as the recording - unbounded, ~15k word timings per lecture, and a folder listing should never load them |

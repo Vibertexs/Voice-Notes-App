@@ -128,4 +128,7 @@ async def delete_account(database: Database, user_id: str) -> None:
     await database.sessions.delete_many({"userId": user_id})
     # An assistant must not keep reading lectures of an account that is gone.
     await database.access_tokens.delete_many({"userId": user_id})
+    # Passages are copies of the transcripts, so they go with them.
+    await database.chunks.delete_many({"userId": user_id})
+    await database.chunk_sets.delete_many({"userId": user_id})
     await database.users.delete_one({"_id": user_id})
