@@ -17,6 +17,7 @@ import RecordingActionsSheet from './components/RecordingActionsSheet';
 import AccountSheet from './components/AccountSheet';
 import { accountApi, libraryApi } from './lib/api';
 import useDragToFile from './lib/useDragToFile';
+import useKeyboardScrollRestore from './lib/useKeyboardScrollRestore';
 
 /**
  * A recording in no folder has `folder_id === null` and is simply listed on
@@ -184,6 +185,7 @@ export default function App() {
   }, [allFolders, notify, refresh]);
 
   const { drag, beginDrag, blockClick } = useDragToFile((item, targetId) => moveWorkspace(item, targetId));
+  useKeyboardScrollRestore();
 
   async function saveFolder({ name, color, icon = null }) {
     try {
@@ -315,6 +317,7 @@ export default function App() {
           onPickUp={beginDrag}
           blockClick={blockClick}
           draggingId={drag?.item?.id}
+          dragOver={drag?.over ?? null}
         />
       )}
 
@@ -406,7 +409,8 @@ export default function App() {
       <RecordingNoticeSheet open={noticeOpen} serverUrl={serverUrl} onClose={() => setNoticeOpen(false)}
         onAccept={() => { setNoticeOpen(false); beginRecording(); }} />
 
-      <DropTray drag={drag} folders={folders} />
+      {/* On Home the folders are already on screen and take the drop themselves. */}
+      {screen.name !== 'home' && <DropTray drag={drag} folders={folders} />}
       <DragGhost drag={drag} label={overLabel} />
 
       {toast && (

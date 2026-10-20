@@ -158,11 +158,13 @@ export default function SearchScreen({ onBack, onOpenResult, folders = [] }) {
         className="search-bar"
         autoFocus value={query} onChange={setQuery}
         placeholder="Search recordings & transcripts" label={COPY.searchHint}
+        onSubmit={() => document.activeElement?.blur?.()}
       />
 
       <div className="chips search-options">
-        <button type="button" className={`chip${meaning ? ' is-on' : ''}`} aria-pressed={meaning} onClick={toggleMeaning}>
+        <button type="button" className="meaning-toggle" role="switch" aria-checked={meaning} onClick={toggleMeaning}>
           Also match by meaning
+          <span className="meaning-switch" aria-hidden="true" />
         </button>
       </div>
 

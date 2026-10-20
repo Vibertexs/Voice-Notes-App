@@ -11,13 +11,17 @@ import { greetingLine, recordingMeta } from '../lib/format';
  * Every folder is the same row, so the screen reads as one list and a new
  * folder lands where its name sorts rather than jumping to the top.
  *
+ * While a recording is being carried, every folder card is a drop target (`data-drop`),
+ * so it is filed by dropping it on the folder where it is already on screen; there is no
+ * separate picker. (The folder screen has no folder cards to drop on, so it shows a tray.)
+ *
  * The search field here does not search. Tapping it hands over to global
  * search, which has the recent-search chips and searches inside transcripts -
  * doing that inline would mean the results had nowhere to go.
  */
 export default function HomeScreen({
   folders = [], unfiled = [], onOpenFolder, onNewFolder, onAccount,
-  onOpenSearch, onOpenWorkspace, onWorkspaceMenu, onPlay, onPickUp, blockClick, draggingId,
+  onOpenSearch, onOpenWorkspace, onWorkspaceMenu, onPlay, onPickUp, blockClick, draggingId, dragOver = null,
   playingId, progress = -1,
 }) {
   return (
@@ -51,6 +55,8 @@ export default function HomeScreen({
               <VFFolderCard
                 key={folder.id} layout="row" title={folder.name}
                 count={folder.lecture_count ?? 0} color={folder.color} icon={folder.icon}
+                dropId={folder.id} active={dragOver === folder.id}
+                meta={dragOver === folder.id ? 'Release to move' : undefined}
                 onPress={() => onOpenFolder(folder.id)}
               />
             ))}

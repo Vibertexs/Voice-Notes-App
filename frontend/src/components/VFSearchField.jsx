@@ -48,7 +48,8 @@ export default function VFSearchField({
         onChange={(event) => set(event.target.value)}
         onFocus={() => { setFocused(true); onFocus?.(); }}
         onBlur={() => setFocused(false)}
-        onKeyDown={(event) => { if (event.key === 'Enter') onSubmit?.(current); }}
+        enterKeyHint="search"
+        onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); onSubmit?.(current); } }}
       />
       {Boolean(current) && (
         <button type="button" className="vf-search-clear" aria-label="Clear search"

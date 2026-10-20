@@ -81,8 +81,7 @@ const Line = memo(function Line({ segment, state, seconds, term, onSeek, innerRe
       timed.forEach((word, position) => { if ((word.start ?? 0) <= seconds) now = position; });
       return timed.map((word, position) => {
         const text = String(word.word ?? '');
-        // The separating space stays outside the span: the current word is
-        // lifted as an inline-block, and a block drops its own leading space.
+        // The separating space stays outside the span, so the word's own box is just the word.
         return (
           <Fragment key={position}>
             {/^\s/.test(text) && ' '}
