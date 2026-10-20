@@ -4,8 +4,8 @@ import App from './App';
 import VFGallery from './components/VFGallery';
 import './styles.css';
 
-// TEMPORARY, with VFGallery.jsx: the component sheet is reachable at #gallery
-// so it can be checked against the handoff without navigating the app.
+// Development aid: the component sheet (VFGallery.jsx) is reachable at #gallery so the
+// components can be checked against the design handoff without navigating the app.
 const gallery = window.location.hash === '#gallery';
 
 createRoot(document.getElementById('root')).render(

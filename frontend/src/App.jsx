@@ -157,6 +157,12 @@ export default function App() {
 
   // Every folder is a row, in the order the store returns them (by name).
   const folders = useMemo(() => allFolders.filter((folder) => !folder.archived), [allFolders]);
+  // The folder list (/api/folders) carries no recording counts; the library response does.
+  // Home's cards say how many recordings a folder holds, so they take the counts from it.
+  const homeFolders = useMemo(() => {
+    const counted = new Map((library?.folders ?? []).map((folder) => [folder.id, folder]));
+    return folders.map((folder) => ({ ...folder, lecture_count: counted.get(folder.id)?.lecture_count ?? folder.lecture_count }));
+  }, [folders, library]);
 
   const currentFolder = screen.name === 'folder' ? library?.current_folder : null;
 
@@ -298,7 +304,7 @@ export default function App() {
 
       {screen.name === 'home' && (
         <HomeScreen
-          folders={folders}
+          folders={homeFolders}
           unfiled={library?.workspaces ?? []}
           onOpenFolder={openFolder}
           onNewFolder={() => setFolderSheet({ folder: null })}

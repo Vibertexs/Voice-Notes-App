@@ -566,7 +566,9 @@ select.field { appearance: none; }
   height: var(--greet-h); line-height: var(--greet-h);
   color: var(--text-3); font-size: var(--t-meta-lg); font-weight: 500;
 }
-.vf-rows { display: grid; gap: var(--gap); }
+/* minmax(0, 1fr), not the default auto track: a long title (nowrap, ellipsis) would
+   otherwise widen the whole column past the screen and push a row's menu button off it. */
+.vf-rows { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--gap); }
 .vf-empty-line { margin-top: 24px; color: var(--text-4); font-size: var(--t-body); line-height: var(--lh-body); }
 .vf-empty { margin-top: 48px; text-align: center; }
 .vf-empty strong { display: block; font-size: 19px; font-weight: 700; letter-spacing: -.3px; }
@@ -838,7 +840,7 @@ select.field { appearance: none; }
 .chip.is-on { background: var(--text); color: var(--bg); font-weight: 650; }
 .search-options { margin-top: 12px; }
 
-.results { display: grid; gap: var(--gap); margin-top: 18px; }
+.results { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--gap); margin-top: 18px; }
 .result {
   display: block; width: 100%; padding: 14px;
   border-radius: var(--r-row); background: var(--surface); text-align: left;
@@ -1307,7 +1309,7 @@ body.is-dragging { cursor: grabbing; user-select: none; -webkit-user-select: non
 .vf-row-more:hover { background: rgba(255,255,255,.06); }
 
 /* ---- The component sheet ----------------------------------
-   TEMPORARY, with VFGallery.jsx.                             */
+   Development aid, used only by VFGallery.jsx (#gallery).     */
 .gal { padding: calc(var(--top) + 24px) var(--gut) 120px; }
 .gal > h1 { margin-bottom: 8px; font-size: var(--t-title); font-weight: 700; letter-spacing: var(--ls-title); }
 .gal-block { margin-top: 32px; }

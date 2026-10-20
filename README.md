@@ -13,6 +13,14 @@ down on the device by Whisper. Later you can replay a lecture with the words hig
 they're spoken, search every lecture by what was said, or even by what it *meant*, and let an
 AI assistant such as Claude or ChatGPT read your lectures if you choose to connect one.
 
+<p align="center">
+  <img src="docs/screenshots/home.png" alt="Folders and recordings" width="23%">
+  <img src="docs/screenshots/play.png" alt="A lecture's transcript with bookmarks and a waveform" width="23%">
+  <img src="docs/screenshots/search.png" alt="Search with exact matches and passages similar in meaning" width="23%">
+  <img src="docs/screenshots/assistants.png" alt="Connected AI assistants" width="23%">
+</p>
+<p align="center"><sub>The real interface, rendered at phone size with sample data.</sub></p>
+
 > **Status:** pre-release. The app and server are built, tested and deployed; the Google Play
 > listing is in preparation.
 
