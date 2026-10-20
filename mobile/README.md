@@ -101,5 +101,5 @@ npm test
 ```
 
 The suite drives `localApi.js` the way the real web client drives FastAPI, and
-asserts the JSON shapes the components actually read — the client is
+asserts the JSON shapes the components read — the client is
 unmodified, so a missing field is a broken screen, not a caught error.

@@ -38,8 +38,8 @@ cd mobile; npm test                                 # phone suites, including sy
 cd mobile; npm run test:e2e                         # two phones, the real server, real Atlas
 ```
 
-The API tests use a real MongoDB on purpose: most of what they check is MongoDB
-behaviour - unique indexes deciding races, upserts turning into duplicate-key
+The API tests run against a real MongoDB rather than a mock, because most of what they
+check is MongoDB behaviour - unique indexes deciding races, upserts turning into duplicate-key
 errors, validators refusing documents. Each run creates `voiceflow_test_<random>`
 and drops it afterwards.
 
@@ -77,7 +77,7 @@ The API also serves `/privacy`, `/terms`, `/recording-consent` and
 a store listing can link to real addresses without a separate website. The operator
 name, contact email and governing-law line come from `LEGAL_OPERATOR`,
 `LEGAL_CONTACT_EMAIL` and `LEGAL_JURISDICTION`. The text describes what the app and
-server actually do; change it in the same commit as any behaviour it describes, and
+server do; change it in the same commit as any behaviour it describes, and
 have a lawyer review it before a public launch.
 
 ### Point the phone at it

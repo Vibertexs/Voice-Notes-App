@@ -38,7 +38,7 @@ timings barely differ here because the network round trip dominates and 10,000 s
 documents is cheap; the *docs examined* column is the number that grows with the
 library, and it is the one that stays flat with the index.
 
-**2. The planner picked the wrong index, and the benchmark caught it.** The first run
+**2. The query planner chose the wrong index.** The first run
 showed the heavy user's queries examining 10,000 index keys though they own 1,000
 documents. The cause was the TTL index on `deletedAt`: every live document has
 `deletedAt: null`, so that index contains every document, and for

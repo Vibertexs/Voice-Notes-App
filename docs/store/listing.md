@@ -70,7 +70,7 @@ device or other IDs only if the form's definition requires it.
 ## Other declarations
 
 - **Target audience:** 13 and over (not designed for children).
-- **Content rating:** no violence, no user-to-user sharing; answer the questionnaire honestly (utility
+- **Content rating:** no violence, no user-to-user sharing; answer the questionnaire accurately (utility
   or reference app). It records audio, so say so where asked.
 - **Permissions:** microphone (to record), foreground service for microphone and media playback
   (to keep recording when the screen locks), notifications (recording status), internet.
