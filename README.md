@@ -90,20 +90,29 @@ account's data.
 Sign-in is handled by an OAuth authorization server implemented in this repository:
 
 ```mermaid
+%%{init: {"sequence": {"mirrorActors": false, "showSequenceNumbers": true, "messageMargin": 34, "actorMargin": 60}}}%%
 sequenceDiagram
-  participant You
-  participant AI as Claude / ChatGPT
-  participant Ekho as Ekho server (MCP + OAuth)
+  actor You
+  participant AI as Claude or ChatGPT
+  participant Ekho as Ekho server<br/>(MCP + OAuth)
   participant DB as MongoDB Atlas
-  You->>AI: Add Ekho as a connector
-  AI->>Ekho: discover (RFC 9728, RFC 8414), then register or fetch client metadata
-  AI->>You: open the Ekho sign-in page
-  You->>Ekho: Sign in with Google, approve (read-only)
-  Ekho->>AI: one-time code, then a short-lived token (PKCE, bound to this server)
-  AI->>Ekho: "what did I learn about mitosis?" (find_similar, topics, ...)
-  Ekho->>DB: $vectorSearch / $search / aggregation, filtered to you
-  DB-->>Ekho: passages
-  Ekho-->>AI: results, labelled as data and never as instructions
+
+  rect rgba(200, 64, 79, 0.08)
+    Note over You,DB: 1. Connect, once
+    You->>AI: Add the Ekho address as a connector
+    AI->>Ekho: Discover the server, identify the client (RFC 9728, 8414)
+    AI->>You: Open the Ekho sign-in page
+    You->>Ekho: Sign in with Google, approve read-only access
+    Ekho->>AI: Single-use code, exchanged (PKCE) for a short-lived token
+  end
+
+  rect rgba(40, 130, 220, 0.08)
+    Note over You,DB: 2. Ask, any time
+    AI->>Ekho: "What did I learn about mitosis?" (find_similar, topics, ...)
+    Ekho->>DB: $vectorSearch, $search or aggregation, filtered to your user ID
+    DB-->>Ekho: Matching passages
+    Ekho-->>AI: Results, labelled as data and never as instructions
+  end
 ```
 
 - PKCE is required. Clients identify themselves with client ID metadata documents, fetched through an SSRF guard
