@@ -34,11 +34,14 @@ jobs:
         run: npm run build
 
       # The phone suites run the real localApi.js and cloudSync.js under Node (sql.js
-      # stands in for SQLite), so they need none of the native modules. Skipping the
-      # install scripts keeps them from trying to patch native code.
+      # stands in for SQLite), so they need none of the native modules. Install scripts are
+      # skipped, then the one that matters is run on purpose: some checks read the patched
+      # Java of the audio capture module in node_modules, so the patch has to be applied.
       - name: Install the phone app's dependencies
         working-directory: mobile
-        run: npm ci --no-audit --no-fund --ignore-scripts
+        run: |
+          npm ci --no-audit --no-fund --ignore-scripts
+          npx patch-package
       - name: Phone tests
         working-directory: mobile
         run: npm test
