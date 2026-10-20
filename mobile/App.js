@@ -30,7 +30,7 @@ import { createProgressSmoother } from './src/progressSmoother';
  * Expo inlines it at bundle time, so a JS reload picks it up. No data leaves
  * the phone until the user signs in from the account sheet.
  */
-const CLOUD_API_URL = process.env.EXPO_PUBLIC_CLOUD_API_URL ?? 'https://44-241-23-183.sslip.io';
+const CLOUD_API_URL = process.env.EXPO_PUBLIC_CLOUD_API_URL ?? 'https://api.ekhoapp.tech';
 const DEVICE_NAME = Platform.OS === 'ios' ? 'iPhone' : (Platform.constants?.Model ?? 'Android phone');
 
 /** Tell the page something happened, as a DOM event it listens for. */
