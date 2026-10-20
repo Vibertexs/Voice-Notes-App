@@ -6,6 +6,7 @@ import PlaybackScreen from './screens/PlaybackScreen';
 import SearchScreen from './screens/SearchScreen';
 import MicDeniedScreen from './screens/MicDeniedScreen';
 import SignInGate from './screens/SignInGate';
+import AccountSwitchGate from './screens/AccountSwitchGate';
 import RecordDock from './components/RecordDock';
 import DragGhost from './components/DragGhost';
 import DropTray from './components/DropTray';
@@ -92,11 +93,15 @@ export default function App() {
    * or an expired session bring the gate back.
    */
   const [signIn, setSignIn] = useState('checking');   // checking | needed | open
+  // Another account's recordings are on this phone and the person has not said what to do with them.
+  const [switching, setSwitching] = useState(null);     // { recordings, folders, email } | null
   useEffect(() => {
     let alive = true;
     const decide = (status) => {
       if (!alive || !status) return;
       setSignIn(status.configured && status.google && !status.signedIn ? 'needed' : 'open');
+      setSwitching(status.signedIn && status.switchPending
+        ? { ...status.switchPending, email: status.user?.email ?? '' } : null);
     };
     accountApi.status().then(decide).catch(() => { if (alive) setSignIn('open'); });
     const onAccount = (event) => decide(event.detail);
@@ -233,6 +238,15 @@ export default function App() {
     return (
       <div className="app-shell">
         <SignInGate onSignedIn={() => setSignIn('open')} />
+      </div>
+    );
+  }
+
+  if (switching && screen.name !== 'record') {
+    return (
+      <div className="app-shell">
+        <AccountSwitchGate pending={switching} email={switching.email}
+          onDone={() => { setSwitching(null); openHome(); }} />
       </div>
     );
   }

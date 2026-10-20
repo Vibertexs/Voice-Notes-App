@@ -79,6 +79,7 @@ export const accountApi = {
   tokens: () => api('/api/account/tokens'),
   createToken: (name) => api('/api/account/tokens', { method: 'POST', body: { name } }),
   revokeToken: (id) => api(`/api/account/tokens/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  claim: (choice) => api('/api/account/claim', { method: 'POST', body: { choice } }),
   similar: (query) => api(`/api/account/similar?q=${encodeURIComponent(query)}`),
   connections: () => api('/api/account/connections'),
   disconnect: (id) => api(`/api/account/connections/${encodeURIComponent(id)}`, { method: 'DELETE' }),

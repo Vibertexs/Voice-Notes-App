@@ -157,6 +157,8 @@ export function createCloud({
       syncing: Boolean(syncing),
       lastSyncAt: await getState('last_sync_at'),
       lastError: await getState('last_error'),
+      // Set while this phone holds another account's recordings and the person has not said what to do with them.
+      switchPending: JSON.parse((await getState('switch_pending')) ?? 'null'),
     };
   }
 
@@ -196,6 +198,11 @@ export function createCloud({
       refresh_token: tokens.refreshToken,
       user: JSON.stringify(tokens.user),
     });
+    // The first account to sign in on this phone owns what is on it. It is only ever
+    // set here once; a different account signing in later is handled by signedIn().
+    if (tokens.user?.id && !(await getState('data_owner')) && !(await getState('switch_pending'))) {
+      await saveState({ data_owner: tokens.user.id });
+    }
   }
 
   async function forgetSession(reason = null) {
@@ -528,6 +535,8 @@ export function createCloud({
   }
 
   async function runSync() {
+    // Never upload while it is undecided whose recordings these are.
+    if (await getState('switch_pending')) return { changed: 0, rounds: 0 };
     const device = await deviceId();
     let changed = 0;
     let rounds = 0;
@@ -587,7 +596,13 @@ export function createCloud({
     }, delayMs);
   }
 
+  async function adoptOwner() {
+    const user = JSON.parse((await getState('user')) ?? 'null');
+    if (user?.id && !(await getState('data_owner'))) await saveState({ data_owner: user.id });
+  }
+
   function start() {
+    adoptOwner().catch(() => {});
     schedule(0);
     clearInterval(ticker);
     ticker = setInterval(() => schedule(0), PERIODIC_MS);
@@ -620,12 +635,76 @@ export function createCloud({
     });
   }
 
+  /** What is on the phone that belongs to somebody. */
+  async function localHoldings() {
+    const db = await openDatabase();
+    const recordings = await db.getFirstAsync('SELECT COUNT(*) AS n FROM workspaces');
+    const folders = await db.getFirstAsync('SELECT COUNT(*) AS n FROM folders');
+    return { recordings: recordings?.n ?? 0, folders: folders?.n ?? 0 };
+  }
+
+  /**
+   * Removes everything the library holds on this phone - recordings with their audio,
+   * notes, folders and anything waiting to sync - without queueing deletes for the
+   * server (the `applying` flag silences the triggers, as when sync applies changes).
+   * Settings and the sign-in itself are left alone.
+   */
+  async function wipeLocal() {
+    await exclusive(async () => {
+      const db = await openDatabase();
+      await setState(db, { applying: '1' });
+      try {
+        if (audioFile) {
+          const rows = await db.getAllAsync("SELECT file_name FROM lectures WHERE file_name != ''");
+          for (const row of rows) {
+            try { const file = audioFile(row.file_name); if (file.exists) file.delete(); } catch { /* already gone */ }
+          }
+        }
+        for (const table of ['session_markers', 'workspace_flashcards', 'workspace_study_notes', 'workspace_notes',
+          'materials', 'lectures', 'workspaces', 'folders', 'sync_outbox', 'cloud_stash']) {
+          await db.runAsync(`DELETE FROM ${table}`);
+        }
+      } finally {
+        await setState(db, { applying: null });
+      }
+    });
+    onData();
+  }
+
   async function signedIn(tokens) {
     await storeTokens(tokens);
+    const owner = await getState('data_owner');
+    const mine = tokens.user?.id ?? null;
+    if (owner && mine && owner !== mine) {
+      const held = await localHoldings();
+      if (held.recordings + held.folders > 0) {
+        // These recordings belong to another account. Uploading them to this one would
+        // hand that person's lectures to someone else, so nothing moves until asked.
+        await saveState({ cursor: null, last_error: null, switch_pending: JSON.stringify(held) });
+        announce();
+        return status();
+      }
+      // Nothing worth keeping: start clean, and forget changes queued for the other account.
+      await exclusive(async () => { await (await openDatabase()).runAsync('DELETE FROM sync_outbox'); });
+    }
     // A full pull: this may be a different account than last time.
-    await saveState({ cursor: null, last_error: null });
+    await saveState({ cursor: null, last_error: null, data_owner: mine ?? owner, switch_pending: null });
     await seedOutbox();
     syncNow().catch(() => {});
+    return status();
+  }
+
+  /** The person's answer to "this phone has another account's recordings". */
+  async function claim(choice) {
+    const pending = await getState('switch_pending');
+    const user = JSON.parse((await getState('user')) ?? 'null');
+    if (!pending || !user?.id) throw new CloudError('There is nothing to decide.', 409);
+    if (choice === 'clear') await wipeLocal();
+    else if (choice !== 'keep') throw new CloudError('Choose to keep the recordings or to remove them.', 400);
+    await saveState({ data_owner: user.id, switch_pending: null, cursor: null });
+    await seedOutbox();      // nothing left to queue after a wipe; everything, after "keep"
+    syncNow().catch(() => {});
+    announce();
     return status();
   }
 
@@ -705,6 +784,8 @@ export function createCloud({
         case 'sync':
           await syncNow();
           return { status: 200, body: await status() };
+        case 'claim':
+          return { status: 200, body: await claim(String(body?.choice ?? '')) };
         case 'logout': {
           const token = await getState('refresh_token');
           // Best effort: signing out of the phone must work offline too.

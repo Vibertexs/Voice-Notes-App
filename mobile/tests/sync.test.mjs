@@ -18,14 +18,14 @@ const { createCloud, segmentToCloud, segmentFromCloud, toMs } = loadCloudSync();
 function fakeServer() {
   const server = {
     pushes: [], replies: [], calls: [], refreshes: 0, googleBodies: [], tokenCalls: [], similarCalls: [], revoked: [],
-    accessValid: true, rejectIds: new Set(), invalidIds: new Set(),
+    accessValid: true, rejectIds: new Set(), invalidIds: new Set(), userId: 'usr_1',
   };
   const json = (status, body) => ({
     ok: status < 400, status, headers: { get: () => 'application/json' }, json: async () => body,
   });
   const tokens = (n) => ({
     accessToken: `access${n}`, refreshToken: `vfr_refresh${n}`, tokenType: 'bearer', expiresIn: 900,
-    user: { id: 'usr_1', email: 'student@example.com', createdAt: '2026-09-01T00:00:00Z', hasPassword: true, appleLinked: false },
+    user: { id: server.userId, email: 'student@example.com', createdAt: '2026-09-01T00:00:00Z', hasPassword: true, appleLinked: false },
   });
   server.fetch = async (url, init) => {
     const path = url.replace('https://cloud.test', '');
@@ -340,6 +340,90 @@ console.log('\n== assistants: tokens that let Claude read lectures ==');
   check('the connection calls carried the sign-in', tServer.calls.filter((c) => c.path.startsWith('/v1/me/connections')).every((c) => c.auth?.startsWith('Bearer ')));
   tCloud.stop();
 }
+
+// ---------------------------------------------------------------------------
+console.log('\n== signing in as a different account ==');
+{
+  const syncedDocs = (srv) => srv.pushes.flatMap((push) => Object.values(push.changes).flat());
+  /** A phone whose owner (usr_1) has recorded one lecture and backed it up, then signed out. */
+  async function ownersPhone() {
+    const phone = makePhone();
+    await phone.api.openDatabase();
+    const srv = fakeServer();
+    const { cloud } = cloudFor(phone, srv);
+    await phone.POST('/api/account/login', { email: 'a@example.com', password: 'pw' });
+    await phone.POST('/api/folders', { name: 'Private', color: 'red' });
+    const lecture = await recordLecture(phone, { title: "Owner lecture" });
+    await phone.POST('/api/account/sync');
+    await phone.POST('/api/account/logout');
+    srv.pushes.length = 0; srv.calls.length = 0;
+    return { phone, srv, cloud, lecture };
+  }
+  const count = (phone, table) => phone.sql(`SELECT COUNT(*) AS n FROM ${table}`)[0].n;
+
+  {
+    const { phone: p, srv, cloud, lecture } = await ownersPhone();
+    srv.userId = 'usr_2';
+    res = await p.POST('/api/account/login', { email: 'b@example.com', password: 'pw' });
+    check('a different account is told the phone holds recordings from another account',
+      res.body.switchPending?.recordings === 1 && res.body.switchPending?.folders === 1, res.body);
+    await p.POST('/api/account/sync');
+    check('nothing is uploaded while it is undecided', syncedDocs(srv).length === 0 && !srv.calls.some((c) => c.path === '/v1/sync'), srv.calls);
+    check('...and nothing is queued for the new account', outbox(p).length === 0, outbox(p));
+    check('the recordings are still on the phone', count(p, 'workspaces') === 1 && p.disk.size === 1);
+    res = await p.POST('/api/account/claim', { choice: 'maybe' });
+    check('an unknown answer is refused', res.status === 400, res);
+
+    res = await p.POST('/api/account/claim', { choice: 'keep' });
+    check('keeping them clears the question', res.status === 200 && res.body.switchPending === null, res);
+    await p.POST('/api/account/sync');
+    check('...and they are now backed up to the new account',
+      syncedDocs(srv).some((d) => d.id === lecture.workspaceId), syncedDocs(srv).map((d) => d.id));
+    res = await p.POST('/api/account/claim', { choice: 'keep' });
+    check('there is nothing to decide twice', res.status === 409, res);
+    cloud.stop();
+  }
+
+  {
+    const { phone: p, srv, cloud, lecture } = await ownersPhone();
+    check('(the audio is on the phone)', p.disk.has(`file:///doc/recordings/${lecture.lectureId}.wav`));
+    srv.userId = 'usr_2';
+    await p.POST('/api/account/login', { email: 'b@example.com', password: 'pw' });
+    res = await p.POST('/api/account/claim', { choice: 'clear' });
+    check('starting fresh clears the question', res.status === 200 && res.body.switchPending === null, res);
+    check('...removes the recordings, folders and notes',
+      count(p, 'workspaces') === 0 && count(p, 'lectures') === 0 && count(p, 'folders') === 0 && count(p, 'workspace_notes') === 0);
+    check('...and the audio files', p.disk.size === 0, [...p.disk.keys()]);
+    await p.POST('/api/account/sync');
+    check('...without sending the other account deletions to the new one', syncedDocs(srv).length === 0, syncedDocs(srv));
+    check('...and the sign-in survived', res.body.signedIn === true && res.body.user?.id === 'usr_2', res.body);
+    cloud.stop();
+  }
+
+  {
+    const { phone: p, srv, cloud } = await ownersPhone();
+    res = await p.POST('/api/account/login', { email: 'a@example.com', password: 'pw' });
+    check('the same account signing back in is not asked anything', res.body.switchPending === null, res.body);
+    check('...and its recordings are intact', count(p, 'workspaces') === 1);
+    cloud.stop();
+  }
+
+  {
+    const phone = makePhone();
+    await phone.api.openDatabase();
+    const srv = fakeServer();
+    const { cloud } = cloudFor(phone, srv);
+    await phone.POST('/api/account/login', { email: 'a@example.com', password: 'pw' });
+    await phone.POST('/api/account/logout');
+    srv.userId = 'usr_2';
+    res = await phone.POST('/api/account/login', { email: 'b@example.com', password: 'pw' });
+    check('a phone with nothing on it just switches', res.body.switchPending === null && res.body.user?.id === 'usr_2', res.body);
+    res = await phone.POST('/api/account/claim', { choice: 'keep' });
+    check('...so there is no question to answer', res.status === 409, res);
+    cloud.stop();
+  }
+}
+
 
 cloud.stop();
 done();
