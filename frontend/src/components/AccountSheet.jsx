@@ -89,6 +89,11 @@ export default function AccountSheet({ open, onClose, notify }) {
 
   /* ---- what this build can do ------------------------------------------ */
 
+  // Closing the assistants guide or the delete question (X, scrim, dragging down) closes the whole
+  // panel rather than dropping back to the account view underneath it; the next open starts
+  // from the account view again. A button that says "back" is the way to go back.
+  const closeAll = () => { setMode('signin'); setError(''); onClose?.(); };
+
   if (!account) return <VFBottomSheet open={open} title="Account" onClose={onClose} />;
 
   if (account.unsupported || !account.configured) {
@@ -110,14 +115,14 @@ export default function AccountSheet({ open, onClose, notify }) {
     if (mode === 'assistants') {
       return (
         <AssistantsSheet open={open} serverUrl={account.server} notify={notify} email={account.user?.email ?? ''}
-          onClose={() => setMode('signin')} />
+          onClose={closeAll} />
       );
     }
     if (mode === 'delete') {
       return (
         <VFBottomSheet open={open} icon="warn" title="Delete your account?"
           subtitle="Everything backed up to it is erased from the server. Recordings on this phone stay on this phone."
-          onClose={() => setMode('signin')}
+          onClose={closeAll}
         >
           {account.user?.hasPassword !== false && (
             <input className="sheet-input" type="password" autoComplete="current-password"
