@@ -199,18 +199,9 @@ benchmark is reproducible with `python scripts/benchmark.py`.
 
 ## Architecture
 
-```mermaid
-flowchart LR
-  subgraph Phone
-    UI["React UI<br/>(in a WebView)"] <-- bridge --> Shell["Expo native shell"]
-    Shell --> Whisper["whisper.cpp<br/>on-device"]
-    Shell --> Store[("SQLite +<br/>audio files")]
-  end
-  Store -- "text only<br/>(outbox sync)" --> API["FastAPI<br/>one server, Caddy HTTPS"]
-  API --> Mongo[("MongoDB Atlas<br/>Search + Vector Search")]
-  API --- MCP["MCP server + OAuth"]
-  MCP --> AI["Claude, ChatGPT,<br/>other assistants"]
-```
+<p align="center">
+  <img src="docs/diagrams/architecture.png" alt="Architecture: on the phone, a React UI in a WebView talks over a bridge to an Expo native shell, which sends audio to whisper.cpp and stores recordings and text in SQLite. Only text syncs to a FastAPI and MCP server running in Docker behind Caddy on AWS, which query MongoDB Atlas (Search, Vector Search, aggregation). Claude, ChatGPT and other assistants connect to the MCP server over HTTPS." width="900">
+</p>
 
 The phone is the source of truth for what it recorded. The server provides backup and search, and acts as the
 entry point for assistants.
