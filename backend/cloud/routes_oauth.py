@@ -50,33 +50,49 @@ PAGE = """<!doctype html>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex"><title>Connect to Ekho</title>
 <style nonce="{nonce}">
-:root {{ --bg:#0A0A0D; --surface:#1E1E25; --hairline:rgba(255,255,255,.09); --text:#F4F4F6; --muted:#A3A3AE; --primary:#FF2D55; }}
-@media (prefers-color-scheme: light) {{ :root {{ --bg:#F4F4F6; --surface:#FFFFFF; --hairline:rgba(0,0,0,.1); --text:#0A0A0D; --muted:#5A5A66; }} }}
+:root {{ --bg:#F4F4F6; --card:#FFFFFF; --line:rgba(0,0,0,.12); --text:#16161A; --muted:#62626E; --soft:#F4F4F6; --primary:#FF2D55; }}
+@media (prefers-color-scheme: dark) {{
+  :root {{ --bg:#0A0A0D; --card:#1E1E25; --line:rgba(255,255,255,.12); --text:#F4F4F6; --muted:#A3A3AE; --soft:#16161B; }}
+}}
 * {{ box-sizing: border-box; }}
-body {{ margin:0; min-height:100vh; display:grid; place-items:center; padding:24px 16px; background:var(--bg); color:var(--text);
-        font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }}
-main {{ width:100%; max-width:420px; background:var(--surface); border:1px solid var(--hairline); border-radius:26px; padding:28px 22px; }}
-.brand {{ color:var(--primary); font-weight:700; letter-spacing:.02em; margin:0 0 18px; }}
-h1 {{ font-size:24px; line-height:1.2; margin:0 0 12px; }}
-p {{ margin:0 0 14px; }} .muted {{ color:var(--muted); font-size:14px; }}
-ul {{ margin:0 0 18px; padding-left:20px; }} li {{ margin:4px 0; }}
-.actions {{ margin-top:20px; display:grid; gap:12px; justify-items:center; }}
-button.deny {{ background:none; border:0; color:var(--muted); font:inherit; padding:10px; cursor:pointer; text-decoration:underline; }}
-#status {{ min-height:1.4em; text-align:center; font-size:14px; }} #status.bad {{ color:var(--primary); }}
+body {{ margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px 16px;
+        background:var(--bg); color:var(--text); font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }}
+main {{ width:100%; max-width:420px; background:var(--card); border:1px solid var(--line); border-radius:16px; padding:32px 28px;
+        box-shadow:0 1px 3px rgba(0,0,0,.08); text-align:center; }}
+.brand {{ margin:0 0 20px; font-size:15px; font-weight:700; letter-spacing:.04em; color:var(--primary); }}
+h1 {{ margin:0 0 8px; font-size:22px; line-height:1.3; font-weight:650; }}
+.lead {{ margin:0 0 20px; color:var(--muted); font-size:15px; }}
+.can {{ margin:0 0 12px; padding:6px 16px; list-style:none; text-align:left; background:var(--soft); border:1px solid var(--line); border-radius:12px; }}
+.can li {{ display:flex; gap:10px; align-items:flex-start; padding:10px 0; font-size:15px; }}
+.can li + li {{ border-top:1px solid var(--line); }}
+.can svg {{ flex:none; margin-top:3px; color:var(--primary); }}
+.safe {{ margin:0 0 24px; color:var(--muted); font-size:13px; }}
+.note {{ margin:0 0 20px; padding:10px 12px; text-align:left; font-size:13px; color:var(--muted); border:1px solid var(--line); border-radius:10px; }}
+.note strong {{ color:var(--text); }}
+.step {{ margin:0 0 12px; font-size:13px; color:var(--muted); }}
+#google-button {{ display:flex; justify-content:center; min-height:44px; }}
+#status {{ min-height:1.4em; margin:10px 0 4px; font-size:14px; }} #status.bad {{ color:var(--primary); }}
+button.cancel {{ width:100%; padding:10px 14px; font:inherit; font-size:15px; color:var(--text); background:transparent;
+                 border:1px solid var(--line); border-radius:10px; cursor:pointer; }}
+button.cancel:hover {{ background:var(--soft); }}
+.foot {{ margin:16px 0 0; font-size:12px; color:var(--muted); }}
 </style></head>
 <body><main id="app" data-request="{request}" data-google="{google}">
-<p class="brand">Ekho</p>
-<h1>Connect {client} to your lectures?</h1>
-<p>{client} will be able to:</p>
-<ul><li>read your recording titles, folders and bookmarks</li><li>read your transcripts and notes</li><li>search them</li></ul>
-<p class="muted">It cannot change or delete anything, and it never gets audio: recordings stay on your phone.
-You can disconnect it any time from the app.</p>
+<p class="brand">EKHO</p>
+<h1>Connect {client} to your lectures</h1>
+<p class="lead">{client} is asking for read-only access to your Ekho library.</p>
+<ul class="can">
+  <li>{check}<span>Read your recording titles, folders and bookmarks</span></li>
+  <li>{check}<span>Read your transcripts and notes</span></li>
+  <li>{check}<span>Search across all your lectures</span></li>
+</ul>
+<p class="safe">It cannot change or delete anything, and it never gets audio. Recordings stay on your phone.</p>
 {warning}
-<div class="actions">
-  <div id="google-button"></div>
-  <div id="status" role="status"></div>
-  <button class="deny" id="deny" type="button">Cancel</button>
-</div>
+<p class="step">Sign in with the Google account you use in Ekho to approve.</p>
+<div id="google-button"></div>
+<div id="status" role="status"></div>
+<button class="cancel" id="deny" type="button">Cancel</button>
+<p class="foot">You can disconnect it any time in Ekho, under Assistants.</p>
 <script src="https://accounts.google.com/gsi/client" async defer nonce="{nonce}"></script>
 <script nonce="{nonce}">
 const app = document.getElementById('app');
@@ -101,12 +117,16 @@ document.getElementById('deny').addEventListener('click', async () => {{
 window.onload = () => {{
   if (!window.google) {{ say('Google sign-in could not load. Check your connection and reload.', true); return; }}
   google.accounts.id.initialize({{ client_id: app.dataset.google, callback: onCredential, nonce: request, ux_mode: 'popup' }});
+  const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
   google.accounts.id.renderButton(document.getElementById('google-button'),
-    {{ theme: 'filled_black', size: 'large', shape: 'pill', text: 'continue_with', width: 280 }});
+    {{ theme: dark ? 'filled_black' : 'outline', size: 'large', shape: 'rectangular', text: 'continue_with', width: 320 }});
 }};
 </script></main></body></html>"""
 
-UNVERIFIED = ('<p class="muted"><strong>{client}</strong> introduced itself to Ekho; this is not checked. '
+CHECK = ('<svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path fill="currentColor" '
+         'd="M7.7 13.6 4.3 10.2l-1.1 1.1 4.5 4.5L17 6.5l-1.1-1.1z"/></svg>')
+
+UNVERIFIED = ('<p class="note"><strong>{client}</strong> introduced itself to Ekho; this is not checked. '
               "After you approve you will be sent to <strong>{target}</strong>. Only continue if you just started this from {client}.</p>")
 
 ERROR_PAGE = ('<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
@@ -119,7 +139,7 @@ def render(description: dict[str, Any], google_client_id: str, nonce: str) -> st
     warning = "" if description["verified"] else UNVERIFIED.format(
         client=client, target=html.escape(description["redirectTo"]))
     return PAGE.format(nonce=nonce, request=html.escape(description["id"]), google=html.escape(google_client_id),
-                       client=client, warning=warning)
+                       client=client, warning=warning, check=CHECK)
 
 
 @router.get("/consent", response_class=HTMLResponse)
