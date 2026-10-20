@@ -42,7 +42,7 @@ class Settings(BaseSettings):
 
     # ---- email (password reset codes) -----------------------------------
     resend_api_key: str = ""
-    email_from: str = "VoiceFlow <onboarding@resend.dev>"
+    email_from: str = "Ekho <onboarding@resend.dev>"
 
     # ---- assistants (MCP) -----------------------------------------------
     # The address this server is reached at from outside, e.g. https://api.example.com.

@@ -176,7 +176,7 @@ export function createCloud({
         body: body === undefined ? undefined : JSON.stringify(body),
       });
     } catch {
-      throw new CloudError("Can't reach the VoiceFlow server. Check your connection.");
+      throw new CloudError("Can't reach the Ekho server. Check your connection.");
     }
     const type = response.headers?.get?.('content-type') ?? '';
     const data = type.includes('application/json') ? await response.json() : null;

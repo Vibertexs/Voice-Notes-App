@@ -6,7 +6,7 @@ import { accountApi } from '../lib/api';
 /**
  * The assistants allowed to read your lectures.
  *
- * Two ways in. The usual one: add VoiceFlow as a connector in Claude or ChatGPT with
+ * Two ways in. The usual one: add Ekho as a connector in Claude or ChatGPT with
  * the address below and sign in when it asks; the assistant then appears here as
  * "Signed in" and can be disconnected. The manual one, for tools that cannot sign
  * in: make a token here and paste it with the address. Either way the assistant can

@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Class Notes",
+    "name": "Ekho",
     "slug": "class-notes",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -13,7 +13,7 @@
         "UIBackgroundModes": [
           "audio"
         ],
-        "NSMicrophoneUsageDescription": "Class Notes needs the microphone to record your lectures. Audio stays on this device."
+        "NSMicrophoneUsageDescription": "Ekho needs the microphone to record your lectures. Audio stays on this device."
       }
     },
     "android": {

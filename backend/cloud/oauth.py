@@ -167,10 +167,10 @@ class OAuthProvider:
         """Called with a valid client and redirect; parks the request and sends the
         person to the page where they sign in and approve it."""
         if params.resource and params.resource.rstrip("/") != self.resource:
-            raise AuthorizeError("invalid_target", "That is not the VoiceFlow server.")
+            raise AuthorizeError("invalid_target", "That is not the Ekho server.")
         scopes = params.scopes or list(tokens.SCOPES)
         if not set(scopes) <= set(tokens.SCOPES):
-            raise AuthorizeError("invalid_scope", "VoiceFlow only offers read access to lectures.")
+            raise AuthorizeError("invalid_scope", "Ekho only offers read access to lectures.")
         db, now = self._db(), utcnow()
         request_id = secrets.token_urlsafe(32)
         await db.oauth_requests.insert_one({

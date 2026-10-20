@@ -18,7 +18,7 @@ export default function MicDeniedScreen({ onOpenSettings, onSkip }) {
       <p className="onboard-tagline">{COPY.micSub}</p>
       <ol className="onboard-path">
         <li>Open Settings</li>
-        <li>Apps &rsaquo; VoiceFlow &rsaquo; Permissions</li>
+        <li>Apps &rsaquo; Ekho &rsaquo; Permissions</li>
         <li>Turn on Microphone</li>
       </ol>
       <div className="onboard-actions">

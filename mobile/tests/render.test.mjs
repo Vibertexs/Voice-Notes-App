@@ -126,7 +126,7 @@ await settle(200);
 const root = document_.getElementById('root');
 const text = root ? root.textContent : '';
 const onLoadingScreen = /Opening your (lecture )?library/i.test(text);
-const onErrorScreen = /Couldn.t open Class Notes/i.test(text);
+const onErrorScreen = /Couldn.t open (Ekho|Class Notes|VoiceFlow)/i.test(text);
 
 console.log('== the page boots ==');
 check('no script errors while loading', pageErrors.length === 0, pageErrors.join(' | '));

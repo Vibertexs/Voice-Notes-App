@@ -360,8 +360,8 @@ def create_mcp_app(settings: Settings, runtime: Runtime) -> tuple[Starlette, OAu
     resource = f"{settings.public_url}/mcp"
     provider = OAuthProvider(runtime, settings)
     server = MCPServer(
-        "VoiceFlow",
-        title="VoiceFlow lectures",
+        "Ekho",
+        title="Ekho lectures",
         instructions=INSTRUCTIONS,
         auth_server_provider=provider,
         auth=AuthSettings(

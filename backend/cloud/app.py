@@ -136,9 +136,9 @@ def create_app(
             await database.close()
 
     app = FastAPI(
-        title="VoiceFlow Cloud API",
+        title="Ekho Cloud API",
         version="1.0.0",
-        summary="Accounts and sync for VoiceFlow. Transcripts and metadata only - audio never leaves the phone.",
+        summary="Accounts and sync for Ekho. Transcripts and metadata only - audio never leaves the phone.",
         lifespan=lifespan,
         docs_url="/docs" if settings.docs_enabled else None,
         redoc_url=None,

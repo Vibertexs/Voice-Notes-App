@@ -31,7 +31,7 @@ function Boot() {
 function BootError({ error, retry }) {
   return (
     <main className="screen boot">
-      <h1>Couldn’t open VoiceFlow</h1>
+      <h1>Couldn’t open Ekho</h1>
       <p>{error}</p>
       <button type="button" className="vf-btn vf-btn--primary" onClick={retry}>Try again</button>
     </main>
@@ -243,7 +243,7 @@ export default function App() {
     return (
       <div className="app-shell">
         <MicDeniedScreen
-          onOpenSettings={() => notify('Open Settings › Apps › VoiceFlow › Permissions.', 'info')}
+          onOpenSettings={() => notify('Open Settings › Apps › Ekho › Permissions.', 'info')}
           onSkip={() => setScreen({ name: 'home' })}
         />
         {toast && (

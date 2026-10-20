@@ -32,7 +32,7 @@ export default function SignInGate({ onSignedIn }) {
   return (
     <main className="screen onboard gate">
       <span className="onboard-mark"><Icon name="mic" strokeWidth={2} /></span>
-      <h1>VoiceFlow</h1>
+      <h1>Ekho</h1>
       <p className="onboard-tagline">Record. Learn. Revisit.</p>
       <ul className="gate-points">
         <li>Transcripts are made on your phone.</li>

@@ -48,7 +48,7 @@ def _provider(request: Request) -> Any:
 PAGE = """<!doctype html>
 <html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="robots" content="noindex"><title>Connect to VoiceFlow</title>
+<meta name="robots" content="noindex"><title>Connect to Ekho</title>
 <style nonce="{nonce}">
 :root {{ --bg:#0A0A0D; --surface:#1E1E25; --hairline:rgba(255,255,255,.09); --text:#F4F4F6; --muted:#A3A3AE; --primary:#FF2D55; }}
 @media (prefers-color-scheme: light) {{ :root {{ --bg:#F4F4F6; --surface:#FFFFFF; --hairline:rgba(0,0,0,.1); --text:#0A0A0D; --muted:#5A5A66; }} }}
@@ -65,7 +65,7 @@ button.deny {{ background:none; border:0; color:var(--muted); font:inherit; padd
 #status {{ min-height:1.4em; text-align:center; font-size:14px; }} #status.bad {{ color:var(--primary); }}
 </style></head>
 <body><main id="app" data-request="{request}" data-google="{google}">
-<p class="brand">VoiceFlow</p>
+<p class="brand">Ekho</p>
 <h1>Connect {client} to your lectures?</h1>
 <p>{client} will be able to:</p>
 <ul><li>read your recording titles, folders and bookmarks</li><li>read your transcripts and notes</li><li>search them</li></ul>
@@ -106,12 +106,12 @@ window.onload = () => {{
 }};
 </script></main></body></html>"""
 
-UNVERIFIED = ('<p class="muted"><strong>{client}</strong> introduced itself to VoiceFlow; this is not checked. '
+UNVERIFIED = ('<p class="muted"><strong>{client}</strong> introduced itself to Ekho; this is not checked. '
               "After you approve you will be sent to <strong>{target}</strong>. Only continue if you just started this from {client}.</p>")
 
 ERROR_PAGE = ('<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
-              '<title>VoiceFlow</title><body style="font:16px system-ui;background:#0A0A0D;color:#F4F4F6;padding:32px 16px">'
-              '<p style="color:#FF2D55;font-weight:700">VoiceFlow</p><p>{message}</p></body>')
+              '<title>Ekho</title><body style="font:16px system-ui;background:#0A0A0D;color:#F4F4F6;padding:32px 16px">'
+              '<p style="color:#FF2D55;font-weight:700">Ekho</p><p>{message}</p></body>')
 
 
 def render(description: dict[str, Any], google_client_id: str, nonce: str) -> str:
@@ -160,7 +160,7 @@ async def approve(body: Approve, request: Request, settings: SettingsDep, databa
     if user is None:
         raise HTTPException(
             status.HTTP_403_FORBIDDEN,
-            "That Google account does not have a VoiceFlow account yet. Open the app, sign in there, then try again.")
+            "That Google account does not have an Ekho account yet. Open the app, sign in there, then try again.")
     redirect = await provider.approve(body.request, user["_id"])
     if redirect is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, STALE)

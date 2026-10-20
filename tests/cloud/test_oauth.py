@@ -176,7 +176,7 @@ async def test_only_an_existing_account_can_approve_and_only_for_this_request(cl
     request_id = await assistant.start()
 
     stranger = await approve(client, fake_google, request_id, unique_id("google."))
-    assert stranger.status_code == 403 and "does not have a VoiceFlow account" in stranger.json()["detail"]
+    assert stranger.status_code == 403 and "does not have an Ekho account" in stranger.json()["detail"]
     assert await db.users.count_documents({"googleSub": {"$exists": True}, "createdAt": {"$exists": False}}) == 0
 
     elsewhere = await approve(client, fake_google, request_id, sub, nonce="a-credential-for-another-page-entirely")

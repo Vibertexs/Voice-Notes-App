@@ -1,4 +1,4 @@
-# VoiceFlow
+# Ekho (internal code name: VoiceFlow)
 
 A lecture recorder that transcribes on the phone. No audio ever leaves the device.
 

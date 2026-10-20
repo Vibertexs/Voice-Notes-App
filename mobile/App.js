@@ -366,7 +366,7 @@ export default function App() {
   if (fatal) {
     return (
       <SafeAreaView style={styles.center}>
-        <Text style={styles.errorTitle}>Class Notes could not start</Text>
+        <Text style={styles.errorTitle}>Ekho could not start</Text>
         <Text style={styles.errorBody}>{fatal}</Text>
       </SafeAreaView>
     );

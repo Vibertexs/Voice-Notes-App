@@ -33,7 +33,7 @@ export const COPY = {
   noResSub: 'Nothing matches “{q}”. Try a different word.',
 
   micTitle: 'Microphone access is off',
-  micSub: 'VoiceFlow needs the microphone to record and transcribe. Turn it on in Settings.',
+  micSub: 'Ekho needs the microphone to record and transcribe. Turn it on in Settings.',
 
   storageTitle: 'Storage almost full',
   // The handoff writes this with a literal 9. The sentence is kept exactly as

@@ -141,8 +141,8 @@ async def forgot_password(
         # Sent after the response, so the response takes as long whether an
         # email went out or not.
         background.add_task(
-            request.app.state.email.send, email, "Your VoiceFlow reset code",
-            f"Your VoiceFlow password reset code is {code}.\n\n"
+            request.app.state.email.send, email, "Your Ekho reset code",
+            f"Your Ekho password reset code is {code}.\n\n"
             f"It expires in {settings.password_reset_minutes} minutes. If you did not ask for it, ignore this email.",
         )
     return {"ok": True, "detail": "If that email has an account, a code is on its way."}

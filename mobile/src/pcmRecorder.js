@@ -119,7 +119,7 @@ export async function requestMicrophonePermission() {
     PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
     {
       title: 'Microphone',
-      message: 'Class Notes records lectures so you can replay and search them later.',
+      message: 'Ekho records lectures so you can replay and search them later.',
       buttonPositive: 'Allow',
     },
   );
