@@ -20,8 +20,8 @@ import { google } from './src/googleAuth';
 import { createProgressSmoother } from './src/progressSmoother';
 
 /**
- * The sync server: the EC2 instance (docker-compose.yml), whose Elastic IP
- * gives it a fixed sslip.io name and a Let's Encrypt certificate.
+ * The sync server: the EC2 instance (docker-compose.yml) behind Caddy, reached at
+ * api.ekhoapp.tech with a Let's Encrypt certificate.
  *
  * Point a development build somewhere else - a local uvicorn, say - with
  *
