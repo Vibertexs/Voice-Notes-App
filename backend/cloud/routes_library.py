@@ -119,13 +119,15 @@ async def search_similar(
         found = await semantic.similar(database, settings, principal.user_id, q, limit)
     except semantic.SemanticUnavailable as error:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(error)) from None
-    titles = {r["_id"]: r["title"] async for r in database.recordings.find(
+    recordings = {r["_id"]: r async for r in database.recordings.find(
         {"_id": {"$in": [p["recordingId"] for p in found]}, "userId": principal.user_id, "deletedAt": None},
-        projection={"title": 1})}
+        projection={"title": 1, "folderId": 1, "createdAt": 1})}
     return {"query": q, "results": [
-        {"recordingId": p["recordingId"], "title": titles[p["recordingId"]], "startSeconds": p["start"],
-         "passage": p["text"], "score": p.get("score")}
-        for p in found if p["recordingId"] in titles]}
+        {"recordingId": p["recordingId"], "title": recordings[p["recordingId"]]["title"],
+         "folderId": recordings[p["recordingId"]].get("folderId"),
+         "createdAt": recordings[p["recordingId"]].get("createdAt"),
+         "startSeconds": p["start"], "passage": p["text"], "score": p.get("score")}
+        for p in found if p["recordingId"] in recordings]}
 
 
 @router.get("/search", tags=["library"])

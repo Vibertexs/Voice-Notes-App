@@ -3,7 +3,7 @@ import VFSearchField from '../components/VFSearchField';
 import { Icon } from '../components/Icon';
 import { COPY, fill } from '../lib/copy';
 import { dateLabel, mmss } from '../lib/format';
-import { libraryApi } from '../lib/api';
+import { accountApi, libraryApi } from '../lib/api';
 
 const RECENTS_KEY = 'vf.recent-searches';
 
@@ -21,12 +21,41 @@ function Highlighted({ text, term }) {
   ));
 }
 
+function ResultList({ items, term, onOpen, folderOf }) {
+  return (
+    <ul className="results">
+      {items.map((result) => (
+        <li key={`${result.lecture_id}-${result.start_seconds ?? 'x'}`}>
+          <button type="button" className="result" onClick={() => onOpen(result)}>
+            <strong>{result.title || result.workspace_title}</strong>
+            <span className="result-meta">
+              {folderOf(result) && <i className="result-dot" data-tone={folderOf(result).color} />}
+              {[folderOf(result)?.name, dateLabel(result.created_at)].filter(Boolean).join(' · ')}
+            </span>
+            {result.start_seconds != null && (
+              <span className="result-at">{mmss(result.start_seconds)}</span>
+            )}
+            {Boolean(result.excerpt) && (
+              <span className="result-snippet"><Highlighted text={result.excerpt} term={term} /></span>
+            )}
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 /**
  * Search across everything.
  *
  * It searches what was said, not just what things are called, which is why a
  * result is a card with a snippet rather than a row with a title: the useful
  * part of the answer is the sentence, and the timestamp is how you get to it.
+ *
+ * Below the exact matches, when signed in and online, passages that mean the same
+ * thing are offered too ("bread" finds the lecture about sandwiches). They come
+ * from the server, which holds the transcripts, and are a bonus: if the call fails
+ * or nothing is close enough, the section is simply absent.
  *
  * Recent searches are kept per device in localStorage. They are a convenience,
  * not data - if the store is unavailable the screen still works, it just
@@ -37,8 +66,11 @@ export default function SearchScreen({ onBack, onOpenResult, folders = [] }) {
   const [results, setResults] = useState([]);
   const [searched, setSearched] = useState(false);
   const [note, setNote] = useState('');
+  const [similar, setSimilar] = useState([]);
+  const [similarState, setSimilarState] = useState('idle');   // idle | loading | done
   const [recents, setRecents] = useState(readRecents);
   const ticket = useRef(0);
+  const similarTicket = useRef(0);
 
   const term = query.trim();
 
@@ -59,13 +91,43 @@ export default function SearchScreen({ onBack, onOpenResult, folders = [] }) {
     return () => window.clearTimeout(timer);
   }, [term]);
 
+  // Slower than the exact search: each one is a round trip and a (tiny) metered
+  // embedding, so it waits for a pause in typing and for a word worth meaning-matching.
+  useEffect(() => {
+    const mine = ++similarTicket.current;
+    if (term.length < 3) { setSimilar([]); setSimilarState('idle'); return undefined; }
+    setSimilarState('loading');
+    const timer = window.setTimeout(async () => {
+      try {
+        const found = await accountApi.similar(term);
+        if (mine !== similarTicket.current) return;
+        setSimilar(found.results ?? []);
+      } catch {
+        if (mine !== similarTicket.current) return;
+        setSimilar([]);        // signed out, offline, off or still being set up: no section, no error
+      }
+      setSimilarState('done');
+    }, 650);
+    return () => window.clearTimeout(timer);
+  }, [term]);
+
+  // A recording that already matched the words is not offered again as "similar".
+  const seen = new Set(results.map((result) => result.workspace_id));
+  const related = similar
+    .filter((passage) => !seen.has(passage.recordingId))
+    .map((passage) => ({
+      lecture_id: passage.recordingId, workspace_id: passage.recordingId, folder_id: passage.folderId ?? null,
+      title: passage.title, created_at: passage.createdAt, start_seconds: passage.startSeconds,
+      excerpt: passage.passage.length > 180 ? `${passage.passage.slice(0, 180).trimEnd()}…` : passage.passage,
+    }));
+
   const remember = (text) => {
     const next = [text, ...recents.filter((entry) => entry !== text)].slice(0, 8);
     setRecents(next);
     try { window.localStorage.setItem(RECENTS_KEY, JSON.stringify(next)); } catch { /* private mode */ }
   };
 
-  const open = (result) => { remember(term); onOpenResult(result, term); };
+  const open = (result, highlight = term) => { remember(term); onOpenResult(result, highlight); };
 
   const folderOf = (result) => folders.find((folder) => folder.id === result.folder_id);
 
@@ -95,29 +157,16 @@ export default function SearchScreen({ onBack, onOpenResult, folders = [] }) {
 
       {!term && <p className="vf-empty-line">{COPY.searchHint}</p>}
 
-      {term && results.length > 0 && (
-        <ul className="results">
-          {results.map((result) => (
-            <li key={`${result.lecture_id}-${result.start_seconds ?? 'x'}`}>
-              <button type="button" className="result" onClick={() => open(result)}>
-                <strong>{result.title || result.workspace_title}</strong>
-                <span className="result-meta">
-                  {folderOf(result) && <i className="result-dot" data-tone={folderOf(result).color} />}
-                  {[folderOf(result)?.name, dateLabel(result.created_at)].filter(Boolean).join(' · ')}
-                </span>
-                {result.start_seconds != null && (
-                  <span className="result-at">{mmss(result.start_seconds)}</span>
-                )}
-                {Boolean(result.excerpt) && (
-                  <span className="result-snippet"><Highlighted text={result.excerpt} term={term} /></span>
-                )}
-              </button>
-            </li>
-          ))}
-        </ul>
+      {term && results.length > 0 && <ResultList items={results} term={term} onOpen={open} folderOf={folderOf} />}
+
+      {term && related.length > 0 && (
+        <section className="vf-section">
+          <h2 className="vf-label">Similar in meaning</h2>
+          <ResultList items={related} term="" onOpen={(result) => open(result, '')} folderOf={folderOf} />
+        </section>
       )}
 
-      {term && searched && !results.length && (
+      {term && searched && !results.length && !related.length && similarState !== 'loading' && (
         <div className="vf-empty">
           <strong>{COPY.noResTitle}</strong>
           <p>{note || fill(COPY.noResSub, { q: term })}</p>

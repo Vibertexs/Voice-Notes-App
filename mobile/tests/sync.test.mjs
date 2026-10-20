@@ -17,7 +17,7 @@ const { createCloud, segmentToCloud, segmentFromCloud, toMs } = loadCloudSync();
 /** Answers like backend/cloud, scripted. Accepts everything it is sent. */
 function fakeServer() {
   const server = {
-    pushes: [], replies: [], calls: [], refreshes: 0, googleBodies: [], tokenCalls: [], revoked: [],
+    pushes: [], replies: [], calls: [], refreshes: 0, googleBodies: [], tokenCalls: [], similarCalls: [], revoked: [],
     accessValid: true, rejectIds: new Set(), invalidIds: new Set(),
   };
   const json = (status, body) => ({
@@ -41,6 +41,7 @@ function fakeServer() {
     }
     if (path === '/v1/me/tokens') return json(200, [{ id: 'tok_1', name: 'Claude', scopes: ['lectures:read'], lastUsedAt: null }]);
     if (path === '/v1/me/tokens/tok_1' && init.method === 'DELETE') { server.revoked.push('tok_1'); return json(204, null); }
+    if (path.startsWith('/v1/search/similar')) { server.similarCalls.push(path); return json(200, { query: 'bread', results: [{ recordingId: 'w1', title: 'Lunch', startSeconds: 3, passage: 'sandwiches', score: 0.8 }] }); }
     if (path === '/v1/me/connections') return json(200, [{ id: 'grt_1', name: 'Claude', scopes: ['lectures:read'], lastUsedAt: null }]);
     if (path === '/v1/me/connections/grt_1' && init.method === 'DELETE') { server.revoked.push('grt_1'); return json(204, null); }
     if (path === '/v1/sync') {
@@ -329,6 +330,9 @@ console.log('\n== assistants: tokens that let Claude read lectures ==');
   res = await tPhone.DELETE('/api/account/tokens/tok_1');
   check('a token can be removed', res.status === 200 && tServer.revoked[0] === 'tok_1', res);
   check('the token calls carried the sign-in', tServer.calls.filter((c) => c.path.startsWith('/v1/me/tokens')).every((c) => c.auth?.startsWith('Bearer ')));
+  res = await tPhone.GET('/api/account/similar?q=slices%20of%20bread');
+  check('a meaning search goes to the server with the words typed', res.status === 200 && res.body.results[0]?.recordingId === 'w1'
+    && tServer.similarCalls[0] === '/v1/search/similar?q=slices%20of%20bread&limit=8', tServer.similarCalls);
   res = await tPhone.GET('/api/account/connections');
   check('assistants that signed in are listed', res.status === 200 && res.body[0]?.id === 'grt_1', res);
   res = await tPhone.DELETE('/api/account/connections/grt_1');

@@ -650,6 +650,11 @@ export function createCloud({
         await authed(`/v1/me/tokens/${encodeURIComponent(action.slice('tokens/'.length))}`, { method: 'DELETE' });
         return { status: 200, body: { ok: true } };
       }
+      // Search by meaning: the server finds passages whose sense is close to the words typed.
+      if (action === 'similar' && method === 'GET') {
+        const q = new URLSearchParams(path.split('?')[1] ?? '').get('q') ?? '';
+        return { status: 200, body: await authed(`/v1/search/similar?q=${encodeURIComponent(q.slice(0, 200))}&limit=8`) };
+      }
       // Assistants that connected by signing in (Claude, ChatGPT...), as opposed to pasted tokens.
       if (action === 'connections' && method === 'GET') return { status: 200, body: await authed('/v1/me/connections') };
       if (action.startsWith('connections/') && method === 'DELETE') {

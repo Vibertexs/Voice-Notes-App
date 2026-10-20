@@ -275,6 +275,25 @@ async def test_the_tool_returns_passages_with_titles_and_times(client, monkeypat
     assert hit["similarity"] == 0.812 and len(hit["passage"]) <= 700
 
 
+async def test_the_rest_endpoint_says_where_each_passage_lives(client, monkeypatch, make_account):
+    """The app lists a meaning match like any other result, so it needs the folder and date too."""
+    account = await make_account()
+    rid, gone = unique_id(), unique_id()
+    await put(account, rid, lecture([(0, 8, "x")]), title="Cell biology")
+
+    async def fake_similar(database, settings, user_id, text, limit=5):
+        assert user_id == account.id
+        return [{"recordingId": rid, "start": 12.0, "end": 40.0, "text": "Mitochondria make ATP.", "score": 0.81},
+                {"recordingId": gone, "start": 1.0, "end": 2.0, "text": "a deleted recording", "score": 0.9}]
+    monkeypatch.setattr(semantic, "similar", fake_similar)
+
+    response = await account.get("/v1/search/similar", params={"q": "bread"})
+    assert response.status_code == 200
+    (hit,) = response.json()["results"]                                         # the deleted recording is not listed
+    assert hit["recordingId"] == rid and hit["title"] == "Cell biology" and hit["startSeconds"] == 12.0
+    assert hit["passage"] == "Mitochondria make ATP." and hit["createdAt"] and "folderId" in hit
+
+
 # ---------------------------------------------------------------------------
 # A real vector query (opt-in: builds an Atlas index, takes a couple of minutes)
 # ---------------------------------------------------------------------------
