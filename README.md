@@ -89,7 +89,22 @@ account's data.
 
 Sign-in is handled by an OAuth authorization server implemented in this repository:
 
-<p align="center"><img src="docs/diagrams/sign-in-flow.png" alt="Sign-in sequence: the user adds Ekho as a connector in Claude or ChatGPT, the assistant discovers the OAuth endpoints and opens the Ekho sign-in page, the user signs in with Google and approves read-only access, Ekho issues a one-time code and then a short-lived token bound to the server, and the assistant calls the read-only tools, which query MongoDB Atlas filtered to that user and return results labelled as data" width="860"></p>
+```mermaid
+sequenceDiagram
+  participant You
+  participant AI as Claude / ChatGPT
+  participant Ekho as Ekho server (MCP + OAuth)
+  participant DB as MongoDB Atlas
+  You->>AI: Add Ekho as a connector
+  AI->>Ekho: discover (RFC 9728, RFC 8414), then register or fetch client metadata
+  AI->>You: open the Ekho sign-in page
+  You->>Ekho: Sign in with Google, approve (read-only)
+  Ekho->>AI: one-time code, then a short-lived token (PKCE, bound to this server)
+  AI->>Ekho: "what did I learn about mitosis?" (find_similar, topics, ...)
+  Ekho->>DB: $vectorSearch / $search / aggregation, filtered to you
+  DB-->>Ekho: passages
+  Ekho-->>AI: results, labelled as data and never as instructions
+```
 
 - PKCE is required. Clients identify themselves with client ID metadata documents, fetched through an SSRF guard
   that rejects private addresses and connects to the address it validated, or through dynamic client registration.
@@ -184,7 +199,18 @@ benchmark is reproducible with `python scripts/benchmark.py`.
 
 ## Architecture
 
-<p align="center"><img src="docs/diagrams/architecture.png" alt="Architecture: on the phone, a React UI in a WebView talks over a bridge to an Expo native shell, which uses whisper.cpp for on-device transcription and SQLite plus audio files as the source of truth; only text syncs to a FastAPI server, which queries MongoDB Atlas, and an MCP server with OAuth lets Claude, ChatGPT and other assistants read lectures" width="860"></p>
+```mermaid
+flowchart LR
+  subgraph Phone
+    UI["React UI<br/>(in a WebView)"] <-- bridge --> Shell["Expo native shell"]
+    Shell --> Whisper["whisper.cpp<br/>on-device"]
+    Shell --> Store[("SQLite +<br/>audio files")]
+  end
+  Store -- "text only<br/>(outbox sync)" --> API["FastAPI<br/>one server, Caddy HTTPS"]
+  API --> Mongo[("MongoDB Atlas<br/>Search + Vector Search")]
+  API --- MCP["MCP server + OAuth"]
+  MCP --> AI["Claude, ChatGPT,<br/>other assistants"]
+```
 
 The phone is the source of truth for what it recorded. The server provides backup and search, and acts as the
 entry point for assistants.
