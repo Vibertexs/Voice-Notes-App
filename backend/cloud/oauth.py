@@ -92,8 +92,37 @@ def clean_name(value: Any) -> str | None:
     return name[:80] or None
 
 
+class Client(OAuthClientInformationFull):
+    """A registered client, with one rule the SDK's exact matching lacks.
+
+    An app on the person's own machine (Claude Code, an editor) listens on a port it
+    picks each time, so it cannot register the address it will use. RFC 8252 section 7.3
+    therefore has servers ignore the port when the redirect is to this machine
+    (localhost, 127.0.0.1 or [::1]) - and only then. Scheme, host and path must still
+    equal a registered address, so this cannot be used to reach anywhere else.
+    """
+
+    def validate_redirect_uri(self, redirect_uri: Any) -> Any:
+        if redirect_uri is not None and not (self.redirect_uris and redirect_uri in self.redirect_uris):
+            if _loopback_match(str(redirect_uri), [str(uri) for uri in self.redirect_uris or []]):
+                return redirect_uri
+        return super().validate_redirect_uri(redirect_uri)
+
+
+def _loopback_match(requested: str, registered: list[str]) -> bool:
+    try:
+        asked = urlsplit(requested)
+        if asked.scheme != "http" or asked.hostname not in _LOOPBACK or asked.fragment:
+            return False
+        return any(
+            (known := urlsplit(uri)).scheme == "http" and known.hostname == asked.hostname and known.path == asked.path
+            for uri in registered)
+    except ValueError:
+        return False
+
+
 def _present(client_id: str, doc: dict[str, Any]) -> OAuthClientInformationFull:
-    return OAuthClientInformationFull(
+    return Client(
         client_id=client_id, redirect_uris=doc["redirectUris"], client_name=doc.get("name"),
         token_endpoint_auth_method="none", grant_types=["authorization_code", "refresh_token"],
         response_types=["code"], scope=" ".join(tokens.SCOPES),

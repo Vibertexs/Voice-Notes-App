@@ -138,6 +138,41 @@ def test_redirect_rules():
     assert not oauth.valid_redirect("https:///nohost") and not oauth.valid_redirect("https://a.example/cb#x")
 
 
+@pytest.mark.parametrize("registered, asked, allowed", [
+    ("http://localhost:1111/callback", "http://localhost:46404/callback", True),         # the port is the app's to pick
+    ("http://127.0.0.1:1111/cb", "http://127.0.0.1:9/cb", True),
+    ("http://[::1]:1111/cb", "http://[::1]:9/cb", True),
+    ("http://localhost:1111/callback", "http://localhost:9/other", False),                # a different path is a different address
+    ("http://localhost:1111/callback", "http://127.0.0.1:9/callback", False),             # and so is a different host
+    ("http://localhost:1111/callback", "https://localhost:9/callback", False),            # or scheme
+    ("https://app.example:443/cb", "https://app.example:444/cb", False),                  # off this machine, the port counts
+    ("https://app.example/cb", "http://localhost:9/cb", False),                           # nothing registered here to match
+])
+async def test_only_a_loopback_redirect_may_change_its_port(client, registered, asked, allowed):
+    assistant = Assistant(client)
+    assert (await assistant.register(redirect_uris=[registered])).status_code == 201
+    response = await assistant.authorize(redirect_uri=asked)
+    if allowed:
+        assert response.status_code == 302 and urlsplit(response.headers["location"]).path == "/oauth/consent"
+    else:
+        assert response.status_code == 400                                                   # refused, and not redirected anywhere
+
+
+async def test_a_local_app_on_another_port_completes_the_flow(client, db, fake_google, account: Account):
+    """What Claude Code does: registers one port, then listens on a different one."""
+    sub = await sign_in_google(db, account)
+    assistant = Assistant(client)
+    await assistant.register(redirect_uris=["http://localhost:1111/callback"])
+    elsewhere = "http://localhost:46404/callback"
+    request_id = await assistant.start(redirect_uri=elsewhere)
+    redirect = (await approve(client, fake_google, request_id, sub)).json()["redirect"]
+    assert redirect.startswith(elsewhere + "?")                                   # the code goes to the port it asked for
+    code = query_of(redirect)["code"]
+    assert (await assistant.exchange(code, redirect_uri="http://localhost:9/callback")).status_code == 400
+    again = (await approve(client, fake_google, await assistant.start(redirect_uri=elsewhere), sub)).json()["redirect"]
+    assert (await assistant.exchange(query_of(again)["code"], redirect_uri=elsewhere)).status_code == 200
+
+
 # ---------------------------------------------------------------------------
 # The whole flow
 # ---------------------------------------------------------------------------
