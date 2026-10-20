@@ -32,6 +32,11 @@ LIMITS = {
     "reset:email": (10, 900),
     "apple:ip": (20, 60),
     "google:ip": (20, 60),
+    # Assistant sign-in (oauth.py). /authorize and /token can make the server fetch a
+    # client's metadata, so they are limited; registration creates stored rows.
+    "consent:ip": (30, 60),
+    "oauth:ip": (240, 60),
+    "oauth_register:ip": (20, 3600),
 }
 
 

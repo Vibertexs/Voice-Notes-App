@@ -6,7 +6,7 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Path, Query, Request, Response, status
 
-from backend.cloud import library, semantic, sync
+from backend.cloud import insights, library, semantic, sync
 from backend.cloud.common import ID_PATTERN, as_utc, utcnow
 from backend.cloud.deps import DatabaseDep, PrincipalDep, SettingsDep
 from backend.cloud.models import FolderCreate, FolderUpdate, RecordingUpdate, SyncRequest, SyncResult
@@ -30,6 +30,7 @@ async def run_sync(body: SyncRequest, principal: PrincipalDep, database: Databas
     # Passages for semantic search follow the transcripts, after the phone has its answer.
     touched = set(applied["transcripts"]) | set(applied["recordings"])
     if touched:
+        background.add_task(insights.after_sync, database, principal.user_id, touched)
         background.add_task(semantic.after_sync, database, settings, principal.user_id, touched)
     return SyncResult(
         cursor=cursor, more=more, server_time=utcnow(),

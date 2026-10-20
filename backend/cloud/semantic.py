@@ -246,7 +246,7 @@ async def index_ready(database: Database) -> bool:
 
 
 async def similar(database: Database, settings: Settings, user_id: str, text: str, limit: int = 5) -> list[dict[str, Any]]:
-    """Passages whose meaning is closest to `text`, best first."""
+    """Passages whose meaning is close to `text` (at least `embed_min_score`), best first."""
     text = text.strip()[:500]
     if not text:
         return []
@@ -276,4 +276,6 @@ async def similar(database: Database, settings: Settings, user_id: str, text: st
         # Atlas answers a query against a missing or still-building index with nothing,
         # not an error. "Nothing similar" and "not ready yet" must not sound alike.
         raise SemanticUnavailable("Semantic search is still being set up or is temporarily unavailable.")
-    return found
+    # Nearest is not the same as relevant: with nothing about the question in the
+    # library, the "best" passage is still returned. Drop the ones too far away.
+    return [passage for passage in found if float(passage.get("score", 0.0)) >= settings.embed_min_score]

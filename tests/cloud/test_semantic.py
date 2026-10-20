@@ -205,6 +205,41 @@ async def test_a_blank_query_costs_nothing(db, app, account: Account):
     assert await semantic.similar(db, app.state.settings, account.id, "   ") == []
 
 
+class _FakeChunks:
+    """Stands in for the vector query, which needs a real Atlas index."""
+    def __init__(self, scored: list[float]) -> None:
+        self.scored = scored
+
+    async def aggregate(self, pipeline):
+        async def rows():
+            for i, score in enumerate(self.scored):
+                yield {"recordingId": "r", "start": float(i), "end": float(i + 1), "text": f"passage {i}", "score": score}
+        return rows()
+
+
+class _WithFakeChunks:
+    def __init__(self, real, scored: list[float]) -> None:
+        self._real, self.chunks = real, _FakeChunks(scored)
+
+    def __getattr__(self, name):
+        return getattr(self._real, name)
+
+
+async def test_passages_too_far_from_the_question_are_dropped(db, app, account: Account):
+    """Vector search always returns its nearest neighbours; on real recordings a true
+    match scored 0.756 and an unrelated passage 0.629. Only the first should survive."""
+    settings = app.state.settings.model_copy(update={"search_backend": "atlas"})
+    database = _WithFakeChunks(db, [0.756, 0.70, 0.629])
+    found = await semantic.similar(database, settings, account.id, "slices of bread with fillings")
+    assert [p["score"] for p in found] == [0.756, 0.70]
+
+    nothing = await semantic.similar(_WithFakeChunks(db, [0.5, 0.4]), settings, account.id, "an unrelated question")
+    assert nothing == []                                         # empty means "nothing about it", not "not ready"
+
+    strict = settings.model_copy(update={"embed_min_score": 0.9})
+    assert await semantic.similar(database, strict, account.id, "slices of bread with fillings") == []
+
+
 # ---------------------------------------------------------------------------
 # What callers see
 # ---------------------------------------------------------------------------

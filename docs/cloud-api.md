@@ -163,11 +163,17 @@ An assistant - Claude, ChatGPT, anything that speaks the Model Context Protocol 
 can read a user's lectures through `POST /mcp`, a read-only MCP server mounted
 in the same app. It is on when `PUBLIC_URL` is set.
 
-**Connecting one (today).** In the app: person icon > *Connect an assistant* >
-*Create access token*. The token (`vft_...`, shown once, only its hash stored) and
-the server address go into the assistant. Tokens can only read, are separate from
-sign-in sessions, can be removed at any time, and die with the account. To try one
-from a terminal: `python scripts/mcp_check.py https://<server>/mcp vft_... "some words"`.
+**Connecting one.** Two ways, both read-only and both ending up in the app's
+*Assistants* sheet where they can be removed at any time:
+
+1. *Sign in* (the normal way, see "Signing in" below): add `https://<server>/mcp` as
+   a connector in Claude or ChatGPT and sign in with Google when it asks.
+2. *Paste a token*, for tools that cannot sign in: person icon > *Assistants* >
+   *Create access token*. The token (`vft_...`, shown once, only its hash stored)
+   and the server address go into the assistant. To try one from a terminal:
+   `python scripts/mcp_check.py https://<server>/mcp vft_... "some words"`.
+
+Either kind is separate from sign-in sessions and dies with the account.
 
 **Tools** - each a thin wrapper over a query the REST API already runs, all
 read-only and scoped to the token's user (never to an argument):
@@ -180,6 +186,7 @@ read-only and scoped to the token's user (never to an argument):
 | `get_transcript` | timestamped lines; `start_seconds`/`end_seconds` slice it in the database; cut at 20k characters with `nextStartSeconds` to continue |
 | `search_lectures` | where exact words were said, with the second (Atlas Search) |
 | `find_similar` | passages by *meaning* (Atlas Vector Search); see below |
+| `topics` | the words said most, in how many recordings; optionally one folder or date range (aggregation over `term_sets`); see below |
 
 **Semantic search (`find_similar`, `GET /v1/search/similar`).** Each transcript is
 cut into passages of about a minute (`chunks`), and Atlas embeds the `text` field
@@ -191,6 +198,20 @@ again), removed with the recording or account, and built lazily for older
 transcripts. Automated embedding is an Atlas **Preview** feature, so every path
 fails soft: if the index is building, off, or changed, the tool says so and points
 at `search_lectures`.
+
+Vector search always returns its nearest neighbours however far away they are, so
+results scoring under `EMBED_MIN_SCORE` (default 0.70) are dropped: on real
+recordings a true match scored 0.756 and an unrelated passage 0.629. An empty list
+therefore means "nothing about that", and is distinct from "the index is not ready".
+
+**Topics (`topics`).** "What came up most in Chemistry?" answered by the database,
+not by an assistant reading transcripts. Each recording's 40 most-said words
+(`{w, n}`, stop words removed) are counted once, when it syncs, into `term_sets` -
+the *computed pattern*. The query is `$match` (this user, optionally these
+recordings) > `$unwind` > `$group` (sum mentions, count recordings) > `$sort` >
+`$limit`. Counting words on every request instead took 8.7 s for a user with 1,000
+lectures; this takes 62 ms (`docs/benchmark.md`). The trade: a word counts for a
+recording only if it is among that recording's most-said.
 
 **What it costs, and the limits that hold it down.** Embedding is billed per token
 (about a fiftieth of a cent per hour of lecture on `voyage-4-lite`), and every
@@ -206,10 +227,33 @@ the server's instructions say it is not to be obeyed. Requests for a host other
 than `PUBLIC_URL`'s are refused (DNS-rebinding guard). Unauthenticated calls get a
 `401` pointing at `/.well-known/oauth-protected-resource/mcp`, as the spec asks.
 
-**Still to come:** OAuth, so an assistant can connect by signing the user in
-instead of pasting a token - the authorization server, consent page and
-registration the MCP spec requires. Until then the metadata names this server as
-its own authorization server but does not yet serve those endpoints.
+**Signing in (OAuth).** The person adds the server's address as a connector, the
+assistant discovers everything from `/.well-known/oauth-protected-resource/mcp` and
+`/.well-known/oauth-authorization-server`, and:
+
+1. The assistant identifies itself either by **Client ID Metadata Document** (its
+   `client_id` is an https URL that serves a small JSON document; fetched with SSRF
+   guards, see `cimd.py`) or by **Dynamic Client Registration** (`POST /register`).
+   Clients are always public: no secret, PKCE (S256) required.
+2. `GET /authorize` (validated by the MCP SDK) parks the request in `oauth_requests`
+   and redirects to `/oauth/consent?request=...`.
+3. That page names the assistant and what it may do (read lectures, nothing else) and
+   offers Google sign-in. The credential's nonce is the request id, and only an
+   *existing* account can approve; connecting an assistant never creates one.
+4. Approving redirects back to the assistant with a one-time code and `iss` (RFC 9207).
+5. `POST /token` exchanges the code (plus the PKCE verifier) for an access token
+   (`vfo_`, 1 hour) and a refresh token (`vfr_`, 90 days, **rotated on every use**).
+   Tokens are bound to `<PUBLIC_URL>/mcp` (RFC 8707); a request naming another
+   resource is refused.
+
+A code or refresh token presented twice is what a thief with a copy does, so it
+revokes the whole grant. `POST /revoke` ends a grant from the assistant's side;
+`GET /v1/me/connections` and `DELETE /v1/me/connections/{id}` are the app's side.
+`/authorize`, `/token` and `/register` are rate limited per address. Collections:
+`oauth_clients`, `oauth_requests`, `oauth_codes`, `oauth_grants`, `oauth_tokens` -
+hashes only, all expiring through TTL indexes. The Google credential is verified with
+the same verifier as the phone's sign-in, so the **Web** OAuth client in Google Cloud
+needs `https://<server>` under *Authorized JavaScript origins* for the consent page.
 
 ## 5. The data model
 
@@ -219,6 +263,8 @@ its own authorization server but does not yet serve those endpoints.
 | `sessions` | signed-in device | refresh-token hash; TTL-expired |
 | `access_tokens` | assistant allowed to read | token hash, scope `lectures:read`; TTL-expired |
 | `chunks`, `chunk_sets`, `usage` | semantic search | derived passages (vector-indexed), their hashes, daily counters |
+| `term_sets` | recording | derived: its 40 most-said words, for `topics` |
+| `oauth_clients`, `oauth_requests`, `oauth_codes`, `oauth_grants`, `oauth_tokens` | assistants that sign in | see "Signing in"; hashes only, TTL-expired |
 | `folders` | folder | |
 | `recordings` | recording | bookmarks and notes **embedded** - bounded, always read together |
 | `transcripts` | recording's words | **referenced**, same `_id` as the recording - unbounded, ~15k word timings per lecture, and a folder listing should never load them |

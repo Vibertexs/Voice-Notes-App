@@ -41,6 +41,8 @@ function fakeServer() {
     }
     if (path === '/v1/me/tokens') return json(200, [{ id: 'tok_1', name: 'Claude', scopes: ['lectures:read'], lastUsedAt: null }]);
     if (path === '/v1/me/tokens/tok_1' && init.method === 'DELETE') { server.revoked.push('tok_1'); return json(204, null); }
+    if (path === '/v1/me/connections') return json(200, [{ id: 'grt_1', name: 'Claude', scopes: ['lectures:read'], lastUsedAt: null }]);
+    if (path === '/v1/me/connections/grt_1' && init.method === 'DELETE') { server.revoked.push('grt_1'); return json(204, null); }
     if (path === '/v1/sync') {
       if (!server.accessValid) return json(401, { detail: 'Sign in to continue.' });
       const all = Object.values(body.changes).flat();
@@ -327,6 +329,11 @@ console.log('\n== assistants: tokens that let Claude read lectures ==');
   res = await tPhone.DELETE('/api/account/tokens/tok_1');
   check('a token can be removed', res.status === 200 && tServer.revoked[0] === 'tok_1', res);
   check('the token calls carried the sign-in', tServer.calls.filter((c) => c.path.startsWith('/v1/me/tokens')).every((c) => c.auth?.startsWith('Bearer ')));
+  res = await tPhone.GET('/api/account/connections');
+  check('assistants that signed in are listed', res.status === 200 && res.body[0]?.id === 'grt_1', res);
+  res = await tPhone.DELETE('/api/account/connections/grt_1');
+  check('...and can be disconnected', res.status === 200 && tServer.revoked.includes('grt_1'), res);
+  check('the connection calls carried the sign-in', tServer.calls.filter((c) => c.path.startsWith('/v1/me/connections')).every((c) => c.auth?.startsWith('Bearer ')));
   tCloud.stop();
 }
 

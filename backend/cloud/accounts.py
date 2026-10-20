@@ -131,4 +131,8 @@ async def delete_account(database: Database, user_id: str) -> None:
     # Passages are copies of the transcripts, so they go with them.
     await database.chunks.delete_many({"userId": user_id})
     await database.chunk_sets.delete_many({"userId": user_id})
+    await database.term_sets.delete_many({"userId": user_id})
+    # Assistants that signed in: their grants, tokens and any code not yet collected.
+    for collection in (database.oauth_grants, database.oauth_tokens, database.oauth_codes):
+        await collection.delete_many({"userId": user_id})
     await database.users.delete_one({"_id": user_id})

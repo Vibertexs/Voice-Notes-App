@@ -24,7 +24,7 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, Response
 from pymongo import ReturnDocument
 from pymongo.errors import DuplicateKeyError
 
-from backend.cloud import ratelimit, tokens
+from backend.cloud import oauth, ratelimit, tokens
 from backend.cloud.accounts import (
     delete_account, end_sessions, normalize_email, rotate_session, start_session, user_out,
 )
@@ -321,6 +321,22 @@ async def create_token(body: AccessTokenCreate, principal: PrincipalDep, databas
 async def revoke_token(token_id: str, principal: PrincipalDep, database: DatabaseDep) -> Response:
     if not await tokens.revoke(database, principal.user_id, token_id):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "That token does not exist.")
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get("/me/connections")
+async def list_connections(principal: PrincipalDep, database: DatabaseDep) -> list[dict[str, Any]]:
+    """Assistants this account let in by signing in (Claude, ChatGPT...), as opposed to
+    the hand-made tokens above."""
+    return await oauth.list_grants(database, principal.user_id)
+
+
+@router.delete("/me/connections/{grant_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def disconnect(grant_id: str, principal: PrincipalDep, request: Request) -> Response:
+    """Cuts one assistant off: its access and refresh tokens stop working at once."""
+    provider = getattr(request.app.state, "oauth", None)
+    if provider is None or not await provider.revoke_grant(principal.user_id, grant_id):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "That connection does not exist.")
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

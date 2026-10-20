@@ -16,7 +16,7 @@ from tests.cloud.test_library import seed
 from tests.cloud.test_sync import recording, transcript
 
 HEADERS = {"Accept": "application/json, text/event-stream", "Content-Type": "application/json"}
-TOOLS = {"list_folders", "list_recordings", "get_recording", "get_transcript", "search_lectures", "find_similar"}
+TOOLS = {"list_folders", "list_recordings", "get_recording", "get_transcript", "search_lectures", "find_similar", "topics"}
 
 
 async def make_token(account: Account, name: str = "Claude Desktop") -> dict:
@@ -95,10 +95,10 @@ async def test_no_token_gets_a_challenge_pointing_at_the_discovery_document(clie
     response = await rpc(client, None, "tools/list")
     assert response.status_code == 401
     challenge = response.headers["www-authenticate"]
-    assert challenge.startswith("Bearer") and 'resource_metadata="http://test/.well-known/oauth-protected-resource/mcp"' in challenge
+    assert challenge.startswith("Bearer") and 'resource_metadata="http://localhost/.well-known/oauth-protected-resource/mcp"' in challenge
 
     metadata = (await client.get("/.well-known/oauth-protected-resource/mcp")).json()
-    assert metadata["resource"] == "http://test/mcp"
+    assert metadata["resource"] == "http://localhost/mcp"
     assert metadata["scopes_supported"] == ["lectures:read"] and metadata["bearer_methods_supported"] == ["header"]
 
 

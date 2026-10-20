@@ -45,7 +45,7 @@ def _settings() -> Settings:
             google_client_ids=[GOOGLE_CLIENT_ID],
             rate_limits_enabled=False,
             # The MCP endpoint: tokens are for this address, and httpx's test host is "test".
-            public_url="http://test",
+            public_url="http://localhost",
             # "auto" builds the Atlas index and uses regex until it is ready,
             # exactly as production does. Building one takes a minute or two,
             # so ordinary runs skip it.
@@ -142,7 +142,7 @@ async def app(fake_apple: FakeApple, fake_google: FakeGoogle, mailbox: MemorySen
 @pytest.fixture(scope="session")
 async def client(app) -> httpx.AsyncClient:
     transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(transport=transport, base_url="http://test") as http:
+    async with httpx.AsyncClient(transport=transport, base_url="http://localhost") as http:
         yield http
 
 

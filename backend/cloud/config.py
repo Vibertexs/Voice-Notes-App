@@ -51,6 +51,10 @@ class Settings(BaseSettings):
     # the MCP endpoint off.
     public_url: str = ""
     access_token_days: int = 365
+    # Assistants that connect by signing in (OAuth) get short-lived access tokens and
+    # a refresh token that is replaced each time it is used.
+    oauth_access_minutes: int = 60
+    oauth_refresh_days: int = 90
 
     # ---- HTTP -----------------------------------------------------------
     # The phone app talks to this server from native code, which CORS does
@@ -67,6 +71,10 @@ class Settings(BaseSettings):
     embed_daily_chunks: int = 2000        # passages indexed per UTC day, everyone
     embed_user_max_chunks: int = 4000     # passages one user may hold
     embed_daily_queries: int = 2000       # semantic searches per UTC day, everyone
+    # Vector search always returns the nearest passages, however far away they are.
+    # Anything scoring below this is dropped as not about the question. Measured on
+    # real recordings: a true match scored 0.756, an unrelated one 0.629.
+    embed_min_score: float = 0.70
 
     # ---- data -----------------------------------------------------------
     search_backend: Literal["auto", "atlas", "regex"] = "auto"

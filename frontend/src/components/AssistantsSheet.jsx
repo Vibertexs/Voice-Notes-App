@@ -6,11 +6,12 @@ import { accountApi } from '../lib/api';
 /**
  * The assistants allowed to read your lectures.
  *
- * Connecting one means making a token here and pasting it, with the server
- * address, into the assistant. The token can only read: search, list, and fetch
- * transcripts. It cannot change or delete anything, and it can be removed here
- * at any time. It is shown once, when it is made, because only a hash of it is
- * kept - exactly like a password.
+ * Two ways in. The usual one: add VoiceFlow as a connector in Claude or ChatGPT with
+ * the address below and sign in when it asks; the assistant then appears here as
+ * "Signed in" and can be disconnected. The manual one, for tools that cannot sign
+ * in: make a token here and paste it with the address. Either way the assistant can
+ * only read - search, list, fetch transcripts - never change or delete. A token is
+ * shown once, when it is made, because only a hash of it is kept, like a password.
  *
  * What an assistant reads leaves the app's own backup and goes to that
  * assistant's company. The sheet says so plainly rather than burying it.
@@ -25,20 +26,28 @@ function ago(iso) {
 }
 
 export default function AssistantsSheet({ open, onClose, serverUrl, notify }) {
-  const [tokens, setTokens] = useState(null);
+  const [assistants, setAssistants] = useState(null);   // signed-in connections, then tokens
   const [name, setName] = useState('Claude');
   const [fresh, setFresh] = useState(null);       // the token just made, shown once
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
   const load = useCallback(async () => {
-    try { setTokens(await accountApi.tokens()); }
-    catch (caught) { setError(caught.message); setTokens([]); }
+    try {
+      const [tokens, connections] = await Promise.all([
+        accountApi.tokens(),
+        accountApi.connections().catch(() => []),     // an older server has no such route
+      ]);
+      setAssistants([
+        ...connections.map((item) => ({ ...item, kind: 'connection' })),
+        ...tokens.map((item) => ({ ...item, kind: 'token' })),
+      ]);
+    } catch (caught) { setError(caught.message); setAssistants([]); }
   }, []);
 
   useEffect(() => {
     if (!open) return;
-    setError(''); setFresh(null); setTokens(null);
+    setError(''); setFresh(null); setAssistants(null);
     load();
   }, [open, load]);
 
@@ -52,10 +61,11 @@ export default function AssistantsSheet({ open, onClose, serverUrl, notify }) {
     finally { setBusy(false); }
   }
 
-  async function remove(token) {
+  async function remove(item) {
     try {
-      await accountApi.revokeToken(token.id);
-      notify?.(`“${token.name}” can no longer read your lectures.`);
+      if (item.kind === 'connection') await accountApi.disconnect(item.id);
+      else await accountApi.revokeToken(item.id);
+      notify?.(`“${item.name}” can no longer read your lectures.`);
       load();
     } catch (caught) { setError(caught.message); }
   }
@@ -93,19 +103,29 @@ export default function AssistantsSheet({ open, onClose, serverUrl, notify }) {
     <VFBottomSheet open={open} title="Assistants"
       subtitle="Let an AI assistant read your lectures. It can search and read them, never change or delete them."
       onClose={onClose}>
-      {tokens?.length > 0 && (
+      {assistants?.length > 0 && (
         <ul className="assist-list">
-          {tokens.map((token) => (
-            <li key={token.id} className="assist-row">
+          {assistants.map((item) => (
+            <li key={`${item.kind}-${item.id}`} className="assist-row">
               <span className="assist-copy">
-                <strong>{token.name}</strong>
-                <small>{ago(token.lastUsedAt)}</small>
+                <strong>{item.name}</strong>
+                <small>{item.kind === 'connection' ? 'Signed in · ' : ''}{ago(item.lastUsedAt)}</small>
               </span>
-              <button type="button" className="assist-remove" onClick={() => remove(token)}>Remove</button>
+              <button type="button" className="assist-remove" onClick={() => remove(item)}>
+                {item.kind === 'connection' ? 'Disconnect' : 'Remove'}
+              </button>
             </li>
           ))}
         </ul>
       )}
+      <label className="assist-label" htmlFor="assist-address">Connector address</label>
+      <input id="assist-address" className="sheet-input assist-secret" readOnly value={address}
+        onFocus={(event) => event.target.select()} />
+      <VFButton label="Copy address" variant="secondary" onPress={() => copy(address, 'Address')} />
+      <p className="sheet-note account-note">
+        In Claude or ChatGPT, add a custom connector with this address and sign in when asked.
+        If a tool can’t sign in, make an access token instead.
+      </p>
       <input className="sheet-input" aria-label="Assistant name" placeholder="Name, e.g. Claude" maxLength={60}
         value={name} onChange={(event) => setName(event.target.value)} />
       {error && <p className="account-error" role="alert">{error}</p>}

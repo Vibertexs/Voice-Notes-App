@@ -7,6 +7,7 @@ Embed what is bounded, reference what is unbounded.
     users          one per account
     sessions       one per signed-in device; holds a hash of its refresh token
     access_tokens  one per assistant allowed to read a user's lectures (hash only)
+    oauth_*        assistants that connect by signing in: clients, grants, codes, tokens
     folders        a user's folders
     recordings     metadata for one recording; bookmarks are embedded
     transcripts    the words of one recording, keyed by the recording's id
@@ -134,7 +135,13 @@ def declared_indexes(settings: Settings) -> dict[str, list[dict[str, Any]]]:
     instead of being scanned.
     """
     tombstone_ttl = settings.tombstone_days * 24 * 3600
-    tombstones = _index([("deletedAt", ASCENDING)], "tombstone_ttl", expireAfterSeconds=tombstone_ttl)
+    # Partial, so it holds only deleted documents. A full index on deletedAt holds
+    # every live document too (all with deletedAt: null), and the planner will pick it
+    # for `{userId, deletedAt: null}` over the userId index - measured: 10,000 index
+    # keys examined for a user who owns 1,000 documents. Live documents are not in
+    # this index, so it can no longer answer "not deleted".
+    tombstones = _index([("deletedAt", ASCENDING)], "tombstone_ttl_partial", expireAfterSeconds=tombstone_ttl,
+                        partialFilterExpression={"deletedAt": {"$type": "date"}})
     # Sync pulls walk documents in (syncedAt, _id) order. The _id makes the
     # order total, so a page boundary can never fall between two documents
     # that share a millisecond.
@@ -163,9 +170,24 @@ def declared_indexes(settings: Settings) -> dict[str, list[dict[str, Any]]]:
             _index([("userId", ASCENDING), ("createdAt", DESCENDING)], "by_user"),
             _index([("expiresAt", ASCENDING)], "expiry_ttl", expireAfterSeconds=0),
         ],
+        # Assistants that connect by signing in (see oauth.py). Everything here is
+        # short-lived or sliding, and expires through TTL indexes.
+        "oauth_clients": [_index([("expiresAt", ASCENDING)], "expiry_ttl", expireAfterSeconds=0)],
+        "oauth_requests": [_index([("expiresAt", ASCENDING)], "expiry_ttl", expireAfterSeconds=0)],
+        "oauth_codes": [_index([("expiresAt", ASCENDING)], "expiry_ttl", expireAfterSeconds=0)],
+        "oauth_grants": [
+            _index([("userId", ASCENDING), ("clientId", ASCENDING)], "by_user_client", unique=True),
+            _index([("expiresAt", ASCENDING)], "expiry_ttl", expireAfterSeconds=0),
+        ],
+        "oauth_tokens": [
+            _index([("grantId", ASCENDING)], "by_grant"),
+            _index([("expiresAt", ASCENDING)], "expiry_ttl", expireAfterSeconds=0),
+        ],
         # Derived from transcripts; rebuilt, never synced (see semantic.py).
         "chunks": [_index([("userId", ASCENDING), ("recordingId", ASCENDING), ("n", ASCENDING)], "by_recording")],
         "chunk_sets": [_index([("userId", ASCENDING)], "by_user")],
+        # Each recording's most-said words, worked out once (see insights.py).
+        "term_sets": [_index([("userId", ASCENDING)], "by_user")],
         # One small document per day: what semantic search has used so far.
         "usage": [_index([("day", ASCENDING)], "by_day", expireAfterSeconds=90 * 24 * 3600)],
         "password_resets": [
@@ -210,6 +232,18 @@ class Database:
     def chunks(self) -> AsyncCollection: return self.db["chunks"]
     @property
     def chunk_sets(self) -> AsyncCollection: return self.db["chunk_sets"]
+    @property
+    def oauth_clients(self) -> AsyncCollection: return self.db["oauth_clients"]
+    @property
+    def oauth_requests(self) -> AsyncCollection: return self.db["oauth_requests"]
+    @property
+    def oauth_codes(self) -> AsyncCollection: return self.db["oauth_codes"]
+    @property
+    def oauth_grants(self) -> AsyncCollection: return self.db["oauth_grants"]
+    @property
+    def oauth_tokens(self) -> AsyncCollection: return self.db["oauth_tokens"]
+    @property
+    def term_sets(self) -> AsyncCollection: return self.db["term_sets"]
     @property
     def usage(self) -> AsyncCollection: return self.db["usage"]
 

@@ -650,6 +650,12 @@ export function createCloud({
         await authed(`/v1/me/tokens/${encodeURIComponent(action.slice('tokens/'.length))}`, { method: 'DELETE' });
         return { status: 200, body: { ok: true } };
       }
+      // Assistants that connected by signing in (Claude, ChatGPT...), as opposed to pasted tokens.
+      if (action === 'connections' && method === 'GET') return { status: 200, body: await authed('/v1/me/connections') };
+      if (action.startsWith('connections/') && method === 'DELETE') {
+        await authed(`/v1/me/connections/${encodeURIComponent(action.slice('connections/'.length))}`, { method: 'DELETE' });
+        return { status: 200, body: { ok: true } };
+      }
 
       if (method !== 'POST') return { status: 405, body: { detail: 'Not allowed.' } };
 

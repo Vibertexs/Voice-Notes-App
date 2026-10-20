@@ -16,7 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-from backend.cloud import mcp_server, routes_auth, routes_library
+from backend.cloud import mcp_server, routes_auth, routes_library, routes_oauth
 from backend.cloud.apple import AppleVerifier
 from backend.cloud.google import GoogleVerifier
 from backend.cloud.config import Settings, get_settings
@@ -108,7 +108,7 @@ def create_app(
 ) -> FastAPI:
     settings = settings or get_settings()
     runtime = mcp_server.Runtime()
-    mcp_app = mcp_server.create_mcp_app(settings, runtime)
+    mcp_app, oauth_provider = mcp_server.create_mcp_app(settings, runtime)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -124,6 +124,7 @@ def create_app(
             app.state.apple = apple_verifier or AppleVerifier(settings.apple_client_ids)
             app.state.google = google_verifier or GoogleVerifier(settings.google_client_ids)
             app.state.search = Search(database, settings)
+            app.state.oauth = oauth_provider
             runtime.database, runtime.search, runtime.settings = database, app.state.search, settings
             async with AsyncExitStack() as stack:
                 if mcp_app is not None:
@@ -167,6 +168,7 @@ def create_app(
 
     app.include_router(routes_auth.router)
     app.include_router(routes_library.router)
+    app.include_router(routes_oauth.router)
     if mcp_app is not None:
         # Last, because it answers everything the routes above did not: its
         # discovery document has to sit at the server root.
