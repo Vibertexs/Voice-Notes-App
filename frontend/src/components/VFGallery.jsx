@@ -33,7 +33,7 @@ export default function VFGallery() {
 
   return (
     <main className="gal">
-      <h1>VoiceFlow components</h1>
+      <h1>Ekho components</h1>
 
       <Row title="VFButton" note="primary · secondary · ghost · danger · sm · disabled · icons">
         <VFButton label="Finish Recording" />
@@ -120,7 +120,7 @@ export default function VFGallery() {
 
       <VFBottomSheet
         open={sheet === 'warn'} icon="warn"
-        title="Storage almost full" subtitle="VoiceFlow is using 8.2 GB. Free up space to keep recording."
+        title="Storage almost full" subtitle="Ekho is using 8.2 GB. Free up space to keep recording."
         onClose={() => setSheet('none')}
       >
         <VFButton label="Free up space" />

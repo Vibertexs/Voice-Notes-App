@@ -1,4 +1,4 @@
-"""Connect to the VoiceFlow MCP server the way an assistant does, and try it.
+"""Connect to the Ekho MCP server the way an assistant does, and try it.
 
     python scripts/mcp_check.py https://your-server/mcp vft_yourtoken [search words]
 

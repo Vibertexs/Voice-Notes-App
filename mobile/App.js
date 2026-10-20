@@ -41,7 +41,7 @@ function emitToPage(webRef, name, detail) {
 }
 
 /**
- * Class Notes, as a native shell around the real web UI.
+ * Ekho, as a native shell around the real web UI.
  *
  * The screen is the web build, unmodified, running in a WebView - which is why
  * it looks exactly like the desktop app. Everything the browser cannot do on a

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Restore a VoiceFlow backup from S3.
+# Restore a Ekho backup from S3.
 #
 #   restore.sh --list
 #   restore.sh                              latest backup  -> voiceflow_restore_<date>

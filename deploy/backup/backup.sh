@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Nightly backup of the VoiceFlow database to S3.
+# Nightly backup of the Ekho database to S3.
 #
 #   backup.sh            dump, verify, upload, clean up
 #   backup.sh --check    exit non-zero if the newest backup is missing or stale

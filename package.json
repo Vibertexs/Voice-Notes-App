@@ -1,13 +1,9 @@
 {
   "name": "voice-notes-app",
   "version": "1.0.0",
-  "description": "This is the first foundation test for the class voice-notes app: prove that we can turn an audio recording into text before building the Expo mobile UI.",
+  "description": "Ekho: a private lecture recorder. This is the React interface that the Expo app shows in a WebView (see mobile/).",
   "private": true,
-  "directories": {
-    "doc": "docs"
-  },
   "dependencies": {
-    "pdfjs-dist": "^6.3.289",
     "react": "^19.2.4",
     "react-dom": "^19.2.4"
   },
@@ -23,7 +19,7 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "type": "module",
   "bugs": {
     "url": "https://github.com/Vibertexs/Voice-Notes-App/issues"
@@ -35,8 +31,6 @@
     "eslint": "^9.39.1",
     "eslint-plugin-react": "^7.37.5",
     "globals": "^16.5.0",
-    "typescript": "^5.9.3",
-    "typescript-eslint": "^8.48.1",
     "vite": "^8.3.0"
   }
 }

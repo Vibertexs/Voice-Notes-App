@@ -1,6 +1,6 @@
 """Letting an assistant connect by signing in, instead of by pasted token.
 
-The person clicks "connect" in Claude or ChatGPT, lands on a VoiceFlow page, signs
+The person clicks "connect" in Claude or ChatGPT, lands on a Ekho page, signs
 in with Google, approves, and the assistant is handed a token for their lectures.
 This module is the authorization server behind that: the MCP SDK speaks the
 protocol (discovery, /authorize, /token, /register, /revoke) and calls the methods

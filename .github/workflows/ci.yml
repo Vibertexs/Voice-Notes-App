@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [main, mobile/on-device-whisper]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      api_tests:
+        description: "Also run the API tests (needs the MONGODB_URI secret and an Atlas network rule that admits GitHub's runners)"
+        type: boolean
+        default: false
+
+jobs:
+  web-and-phone:
+    name: Lint, build and phone tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            mobile/package-lock.json
+
+      - name: Install the web UI's dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Lint
+        run: npm run lint
+      - name: Build the web UI
+        run: npm run build
+
+      # The phone suites run the real localApi.js and cloudSync.js under Node (sql.js
+      # stands in for SQLite), so they need none of the native modules. Skipping the
+      # install scripts keeps them from trying to patch native code.
+      - name: Install the phone app's dependencies
+        working-directory: mobile
+        run: npm ci --no-audit --no-fund --ignore-scripts
+      - name: Phone tests
+        working-directory: mobile
+        run: npm test
+
+  api:
+    name: API tests (manual)
+    # These use a real MongoDB on purpose (see docs/cloud-api.md). Atlas only admits
+    # allow-listed addresses, so this runs on demand, not on every push.
+    if: github.event_name == 'workflow_dispatch' && inputs.api_tests
+    runs-on: ubuntu-latest
+    env:
+      MONGODB_URI: ${{ secrets.MONGODB_URI }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - run: pip install -r requirements-dev.txt
+      - run: python -m pytest -q

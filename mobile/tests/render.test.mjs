@@ -111,7 +111,7 @@ const document_ = dom.window.document;
 
 // Wait for the app's actual home landmark rather than sampling at a fixed
 // moment. An earlier version slept and then matched loose text, so it passed
-// while the page was still on its loading screen. VoiceFlow starts on its
+// while the page was still on its loading screen. Ekho starts on its
 // The folder index is the Home screen's stable landmark: its search field.
 // Recording intentionally lives in the navigation rather than being duplicated
 // as a button on the screen itself.
@@ -126,7 +126,7 @@ await settle(200);
 const root = document_.getElementById('root');
 const text = root ? root.textContent : '';
 const onLoadingScreen = /Opening your (lecture )?library/i.test(text);
-const onErrorScreen = /Couldn.t open (Ekho|Class Notes|VoiceFlow)/i.test(text);
+const onErrorScreen = /Couldn.t open (Ekho|Ekho|Ekho)/i.test(text);
 
 console.log('== the page boots ==');
 check('no script errors while loading', pageErrors.length === 0, pageErrors.join(' | '));

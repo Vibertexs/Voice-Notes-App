@@ -1,126 +1,150 @@
-# Voice Notes Whisper POC
+<div align="center">
 
-This is a local-first student lecture workspace: capture a recording, write notes beside it, attach class materials, and review a durable transcript later.
+<img src="docs/store/feature-graphic-1024x500.png" alt="Ekho: Record. Learn. Revisit." width="720">
 
-## Why this path
+# Ekho
 
-The POC uses `faster-whisper`, an open-source Whisper implementation backed by CTranslate2. It is a practical first backend choice because the mobile app can upload a recording to a small server endpoint later, while we keep the speech-to-text engine swappable.
+**A lecture recorder that transcribes on your phone. Your audio never leaves it.**
 
-## Setup
+</div>
 
-```powershell
+Ekho is an Android-first app for students. Press record in class, and the words are written
+down on the device by Whisper. Later you can replay a lecture with the words highlighted as
+they're spoken, search every lecture by what was said, or even by what it *meant*, and let an
+AI assistant such as Claude or ChatGPT read your lectures if you choose to connect one.
+
+> **Status:** pre-release. The app and server are built, tested and deployed; the Google Play
+> listing is in preparation.
+
+## What it does
+
+- **Records and transcribes on the device.** Speech-to-text runs locally with whisper.cpp
+  (`small.en`). No audio is ever uploaded, and there is no per-minute transcription bill.
+- **Follows along.** Playback highlights each word as it's spoken. Bookmark moments while
+  recording and add your own notes.
+- **Organizes.** Folders with colours and icons; search across all transcripts, with an
+  optional "match by meaning" so a search for *bread* finds the lecture about sandwiches.
+- **Backs up the text, not the audio.** Sign in with Google and your transcripts, titles,
+  folders, bookmarks and notes sync to your account and between phones.
+- **Works with your AI assistant.** Add Ekho as a connector in Claude or ChatGPT, sign in, and
+  the assistant can search and read your lectures (read-only, and revocable from the app).
+- **Is careful with other people's words.** A "get permission first" notice before the first
+  recording, and privacy policy, terms and a recording-consent notice built in.
+
+## How it works
+
+```mermaid
+flowchart LR
+  subgraph Phone
+    UI["React UI<br/>(in a WebView)"] <-- bridge --> Shell["Expo native shell"]
+    Shell --> Whisper["whisper.cpp<br/>on-device"]
+    Shell --> Store[("SQLite +<br/>audio files")]
+  end
+  Store -- "text only<br/>(outbox sync)" --> API["FastAPI<br/>one server, Caddy HTTPS"]
+  API --> Mongo[("MongoDB Atlas<br/>Search + Vector Search")]
+  API --- MCP["MCP server + OAuth"]
+  MCP --> AI["Claude, ChatGPT,<br/>other assistants"]
+```
+
+The phone screen *is* a web page: `frontend/` is a React + Vite app that is built into a single
+HTML file and shown in a `react-native-webview`. The native shell (`mobile/App.js`) owns
+recording, file storage and Whisper, and talks to the page over a small bridge. The phone is
+the source of truth for what it recorded; the server is a backup and a way to search it.
+
+## Design decisions worth reading
+
+**Privacy by architecture, not by policy.** Audio is recorded and transcribed on the device
+and has no code path to the server. Only text and metadata sync.
+
+**Offline-first sync.** Every local edit is captured by SQLite triggers into a transactional
+outbox. Sync is last-write-wins on the edit time, with a server-assigned cursor (so a phone
+with a wrong clock can't hide changes from other phones), tombstoned deletes, and paging.
+Applying the server's changes switches the triggers off so they aren't echoed back.
+
+**MongoDB, used on purpose** ([`docs/cloud-api.md`](docs/cloud-api.md),
+[`docs/benchmark.md`](docs/benchmark.md)):
+- *Embed what is bounded, reference what is unbounded:* bookmarks live inside the recording;
+  transcripts (thousands of word timings) are their own collection.
+- Every index leads with `userId` and follows ESR; each synced collection has a `$jsonSchema`
+  validator, so a document that sync could never see can't be written.
+- **Atlas Search** for exact words and **Atlas Vector Search** with automated embeddings for
+  meaning, filtered by user before anything else, with daily and per-user cost caps in code.
+- A **10,000-lecture benchmark** with `explain()` found two real problems: the planner chose a
+  full `deletedAt` TTL index over the `userId` index (10,000 keys examined for 1,000 documents;
+  fixed with a partial index), and counting words on demand took 8.7 s for a heavy user. Counting
+  each recording's top words once at sync time (the *computed pattern*) made the same query
+  about 140x faster.
+
+**An MCP server with real OAuth.** Assistants connect over MCP (streamable HTTP). Sign-in is
+OAuth with PKCE, client ID metadata documents (fetched behind an SSRF guard) or dynamic
+registration, RFC 8707 resource binding, RFC 9207 `iss`, refresh-token rotation with reuse
+detection that revokes the whole grant, hashed secrets, and a consent page bound to the request
+by a Google nonce. Tokens are read-only and each tool is scoped to the token's user.
+
+**Safe account switching.** The phone remembers whose recordings it holds. If a different
+account signs in, nothing uploads until the person chooses to add the recordings to the new
+account, start fresh, or sign out.
+
+## Repository map
+
+| Path | What |
+|---|---|
+| `frontend/src/` | the UI: React components, `styles.css` (design tokens), screens |
+| `mobile/` | Expo app: native shell, on-device Whisper, SQLite API (`localApi.js`), sync client |
+| `mobile/patches/` | Java fixes to the audio capture module (need a native build) |
+| `backend/cloud/` | the API: accounts, sync, search, MCP + OAuth, legal pages |
+| `deploy/` | Caddyfile and nightly backup scripts |
+| `docs/` | API reference, benchmark, store assets, original design handoff |
+| `tests/cloud/` | API tests, run against a real throwaway MongoDB database |
+| `scripts/` | benchmark and an MCP smoke-test client |
+
+## Running it
+
+You need Node 22+, Python 3.14, and a MongoDB Atlas cluster (the free tier works).
+
+**The API**
+
+```bash
 python -m venv .venv
-.\.venv\Scripts\python -m pip install -r requirements.txt
-npm install
-npm run build
+.venv/bin/pip install -r requirements-dev.txt          # Windows: .venv\Scripts\pip
+cp .env.example .env                                   # set MONGODB_URI at least
+.venv/bin/python -m uvicorn cloud_app:app --reload     # http://127.0.0.1:8000/docs
 ```
 
-`npm run build` compiles the React interface into a local bundle that FastAPI
-serves. Build artifacts and the student library under `data/` are deliberately
-excluded from Git.
+**The phone UI** (the web build is inlined into the app)
 
-## Create a Sample Audio File
-
-```powershell
-.\scripts\make_sample_audio.ps1
+```bash
+npm install && npm run build
+cd mobile && npm install && npm run build:web
 ```
 
-## Transcribe
+The native modules (Whisper, the PCM recorder, Google sign-in) mean the app runs in an
+[Expo development build](https://docs.expo.dev/develop/development-builds/introduction/), not
+Expo Go: `npx eas build --profile development --platform android`, then `npx expo start`. After
+that, UI changes need only `npm run build` + `npm run build:web` and a JS reload.
 
-```powershell
-.\.venv\Scripts\python transcribe.py .\sample-class-note.wav --output transcript.json
+**Tests**
+
+```bash
+cd mobile && npm test               # 7 suites: bridge, waveform, transcription, local API, render, sync, progress
+python -m pytest                    # API, against a throwaway Atlas database (needs MONGODB_URI)
+cd mobile && npm run test:e2e       # two simulated phones through the real server
 ```
 
-The first transcription run downloads the `small.en` Whisper model. It is the
-app's fixed, high-accuracy final-transcription model.
+## Documentation
 
-## What Success Looks Like
+- [`docs/cloud-api.md`](docs/cloud-api.md): the API, data model, sync protocol, MCP and OAuth, deploy, backups
+- [`docs/benchmark.md`](docs/benchmark.md): the 10,000-lecture benchmark and what it found
+- [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md): open-source software and models used
 
-The command should print JSON with:
+## Privacy and recording
 
-- `text`: the full transcript
-- `segments`: timestamped transcript chunks
-- `duration_seconds`: audio length
-- `elapsed_seconds`: transcription runtime
+Ekho transcribes on the device and never receives audio. The privacy policy, terms and
+recording-and-consent notice are served by the API (`/privacy`, `/terms`, `/recording-consent`)
+and linked from the app. **Always get permission before recording anyone**; laws and school
+rules vary. This is general information, not legal advice.
 
-## Development architecture
+## License
 
-```text
-backend/
-  config.py            paths and limits
-  database.py          connection policy, schema, row lookups
-  schemas.py           request models
-  serializers.py       row -> JSON shapes
-  settings.py          product defaults (high-accuracy transcription)
-  routers/             one module per part of the product
-  services/            transcription jobs, search index, segments,
-                       material text extraction, local AI, study drafts
-frontend/
-  src/App.jsx                 # application state and navigation
-  src/components/             # library, folder, capture, and workspace UI
-  src/lib/api.js              # typed-in-one-place HTTP boundary
-backend/
-  schemas.py                  # FastAPI request contracts
-  settings.py                 # product-wide transcription configuration
-  services/study.py           # local note and study-guide domain logic
-app.py                         # FastAPI composition and HTTP routes
-transcription.py               # reusable local Whisper adapter
-```
-
-For frontend-only development, use `npm run dev` and open the Vite URL. It
-proxies `/api` requests to the FastAPI server. Before running the bundled app
-at port 8000, use `npm run build`.
-
-## Try the Browser UI
-
-The local browser UI is a student lecture library. **Record & note** opens a
-ready-to-record screen; the student explicitly presses the large record button
-before the microphone is requested. When saved, it becomes an editable
-lecture page with that recording attached. Reopen the page to keep writing or
-record another session on the same topic. Every recording has a lecture page;
-historical loose recordings are migrated safely into one-session pages on
-startup. Drag a lecture card onto a folder to organize it, or onto the visible
-parent target to move it out one level.
-**Imported files** can be kept class-wide in a folder or attached directly to
-one lecture page. Use a lecture's **Attach file** action for a GoodNotes export,
-slides, a handout, or a reading that belongs with that session; export GoodNotes
-pages as PDFs first. The file action accepts PDF, `.docx`, `.pptx`, text, and
-Markdown files up to 25 MB each. Compatible text is extracted locally and
-becomes a source for Class AI, while the original remains on this computer under
-`data/`, which is intentionally excluded from Git. Scanned PDFs need OCR, and
-older `.doc`/`.ppt` files should be exported to PDF, `.docx`, or `.pptx` first.
-
-```powershell
-.\.venv\Scripts\python -m uvicorn app:app --reload
-```
-
-Then open http://127.0.0.1:8000, allow microphone access, record a short note,
-pause it, and select **Done — save lecture**. This development server is intentionally bound
-to your computer; do not expose it to the internet without authentication,
-HTTPS, and stronger upload controls.
-
-After you tap Done, the app always transcribes the complete saved recording with
-the high-accuracy local `small.en` model. The capture screen stays focused on
-recording and notes; the durable transcript appears on the lecture page after it
-is processed. The model is downloaded only the first time it is used.
-
-Recordings receive a timestamped default title when no name is entered, and can
-be renamed later. Use **Delete recording** in the app to remove its transcript
-and saved audio from this computer. See [the prototype design notes](docs/DESIGN.md)
-for the product and interaction decisions behind this version.
-
-## Optional local AI
-
-The **AI study** tab is designed to use [Ollama](https://ollama.com/download/windows)
-on this laptop. It sends requests only to `http://127.0.0.1:11434`, never to a
-hosted AI provider. After installing Ollama, download the prototype's default
-Apache-2.0 model once:
-
-```powershell
-ollama pull qwen3:1.7b
-```
-
-Then refresh the browser app. The tab will offer locally generated notes and
-questions over the current class note and its recording transcripts. The model
-download is roughly 1.4 GB; it has no per-request cost, but does use this
-laptop's RAM and processor while responding.
+[MIT](LICENSE). Whisper models and other third-party software keep their own licenses; see
+[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).

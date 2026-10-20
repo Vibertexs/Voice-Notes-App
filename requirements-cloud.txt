@@ -1,5 +1,5 @@
-# The cloud API only (cloud_app.py). No Whisper, no PDF tooling: the desktop
-# app's requirements.txt pulls in hundreds of MB the server never touches.
+# The cloud API only (cloud_app.py). Transcription runs on the phone, so there is
+# no Whisper or audio tooling here.
 fastapi==0.128.8
 uvicorn[standard]==0.40.0
 pymongo==4.18.1

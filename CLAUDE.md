@@ -1,4 +1,4 @@
-# Ekho (internal code name: VoiceFlow)
+# Ekho (internal code name: Ekho)
 
 A lecture recorder that transcribes on the phone. No audio ever leaves the device.
 
@@ -58,10 +58,16 @@ Use `adb exec-out`, never `adb shell cat`, for anything binary — CRLF translat
 ## Cloud sync
 
 Accounts and sync live in `backend/cloud/` (FastAPI + MongoDB Atlas, entry point
-`cloud_app.py`) — a separate server from the desktop `app.py`. Read `docs/cloud-api.md`
-before touching it. Two rules that are easy to break:
+`cloud_app.py`). Read `docs/cloud-api.md` before touching it. Rules that are easy to break:
 
 - **Audio never syncs.** Only metadata and transcripts go up.
+- **Data belongs to one account per phone.** `cloudSync.js` remembers whose data is on the
+  phone (`data_owner`). A different account signing in is held at a question
+  (`switch_pending`, `claim`) and nothing uploads until it is answered; never seed the
+  outbox for a new account without that check.
+- **The legal pages describe real behaviour.** `backend/cloud/legal.py` says what is
+  collected, where it goes and how long it is kept. Change it in the same commit as any
+  change to that behaviour (a new data field, a new provider, a retention period).
 - **Every phone write goes through `exclusive()`** in `localApi.js`. Sync applies server
   changes in a transaction with the outbox triggers switched off; a write that slips in
   between its statements is silently never uploaded.
@@ -72,7 +78,7 @@ create/edit it without asking.
 ## Tests
 
 ```bash
-cd mobile && npm test          # six suites, all must pass
+cd mobile && npm test          # seven suites, all must pass
 python -m pytest               # cloud API, against a throwaway Atlas database
 cd mobile && npm run test:e2e  # two phones through the real server (needs .env)
 ```
@@ -93,4 +99,6 @@ that was expensive to find.
 | `mobile/src/cloudSync.js` | the phone's sync client and `/api/account`; no Expo imports, tested under Node |
 | `mobile/patches/` | Java fixes to the capture module; needs an EAS build |
 | `backend/cloud/` | the cloud API: accounts, sync, search (MongoDB) |
-| `backend/` (rest) | Python/FastAPI, serves the desktop app only |
+| `backend/cloud/legal.py` | privacy policy, terms, recording notice (served by the API) |
+| `backend/mongo*.py` | helper scripts for exploring the database |
+| `docs/` | API reference, benchmark, store assets, the original design handoff |

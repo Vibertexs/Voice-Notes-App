@@ -1,4 +1,4 @@
-# The VoiceFlow cloud API. Build from the repo root:
+# The Ekho cloud API. Build from the repo root:
 #
 #   docker build -t voiceflow-api .
 #   docker run --env-file .env -e ENVIRONMENT=production -p 8000:8000 voiceflow-api

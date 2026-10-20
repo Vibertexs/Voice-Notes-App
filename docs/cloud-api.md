@@ -1,4 +1,4 @@
-# VoiceFlow Cloud API
+# Ekho Cloud API
 
 Accounts and sync for the phone app, on FastAPI and MongoDB Atlas. Transcripts
 and metadata only: **audio never leaves the phone that recorded it.**
@@ -43,27 +43,42 @@ behaviour - unique indexes deciding races, upserts turning into duplicate-key
 errors, validators refusing documents. Each run creates `voiceflow_test_<random>`
 and drops it afterwards.
 
-## 3. Deploy (Render + Atlas)
+## 3. Deploy (one server: Docker + Caddy + Atlas)
 
-1. **Push the repo to GitHub.** `.env` is gitignored; check `git status` shows no
-   secrets before pushing.
-2. **Atlas → Network Access → Add IP Address → `0.0.0.0/0`.** Render's free tier
-   has no fixed outbound IP, so the cluster has to accept any address and rely on
-   the database password. That is the honest trade-off of a free host; a paid
-   plan with static IPs (or Atlas private endpoints) removes it.
-3. **Atlas → Database Access:** give the server its own database user with
+The API runs on a single Linux host (an EC2 instance, say) as two containers from
+`docker-compose.yml`: `api` (this app) and `caddy` (HTTPS in front, with a free
+Let's Encrypt certificate it fetches and renews itself). MongoDB stays on Atlas.
+
+1. **Atlas -> Database Access:** give the server its own database user with
    `readWrite` **and** `dbAdmin` on the `voiceflow` database only (Specific
    Privileges), not an Atlas admin. `dbAdmin` is what lets startup install the
    validators (`collMod`); without it the server refuses to start, with the reason
    in the log. If a password ever appeared in a screenshot or chat, rotate it.
-4. **Render → New → Blueprint →** pick the repo. `render.yaml` defines the
-   service. When asked, paste `MONGODB_URI`. `JWT_SECRET` is generated for you.
-   `RESEND_API_KEY` and `APPLE_CLIENT_IDS` can stay empty for now.
-5. Wait for the deploy, then open `https://<your-service>.onrender.com/readyz`.
-   It should answer `{"ok":true,"database":"ok"}`.
+2. **Atlas -> Network Access:** allow the server's fixed (Elastic) IP.
+3. **DNS:** point an `A` record such as `api.example.com` at the server. Caddy
+   needs the name to resolve before it can get a certificate.
+4. **On the server:** install Docker, clone the repo, and create `.env` next to
+   `docker-compose.yml` (it is never committed; see `.env.example`). The ones that
+   matter: `MONGODB_URI`, `JWT_SECRET` (32+ characters), `DOMAIN=api.example.com`,
+   `PUBLIC_URL=https://api.example.com`, `GOOGLE_CLIENT_IDS` (the Web client), and
+   the `LEGAL_*` values for the legal pages. `ALSO_DOMAIN` keeps an older address
+   working while apps move to a new one.
+5. `docker compose up -d --build`, then open `https://<your domain>/readyz`. It should
+   answer `{"ok":true,"database":"ok"}`. To update later: `git pull` and
+   `docker compose up -d --build`.
 
-The free plan sleeps after 15 idle minutes; the first request after that takes
-up to a minute. The phone retries, so it shows up as a slow sync, not a failure.
+The `.env` is read when the container starts, so changing it needs a restart
+(`docker compose up -d`).
+
+### The legal pages
+
+The API also serves `/privacy`, `/terms`, `/recording-consent` and
+`/delete-account` (`backend/cloud/legal.py`), so the app, Google's consent screen and
+a store listing can link to real addresses without a separate website. The operator
+name, contact email and governing-law line come from `LEGAL_OPERATOR`,
+`LEGAL_CONTACT_EMAIL` and `LEGAL_JURISDICTION`. The text describes what the app and
+server actually do; change it in the same commit as any behaviour it describes, and
+have a lawyer review it before a public launch.
 
 ### Point the phone at it
 
@@ -72,11 +87,10 @@ new native build:
 
 ```powershell
 cd mobile
-$env:EXPO_PUBLIC_CLOUD_API_URL="https://<your-service>.onrender.com"; npx expo start
+$env:EXPO_PUBLIC_CLOUD_API_URL="https://api.example.com"; npx expo start
 ```
 
-Then on the phone: Folders → the person icon → Create account. For a release
-build, set the same variable in the EAS build profile.
+For a release build, set the same variable in the EAS build profile.
 
 ### Email (password resets)
 

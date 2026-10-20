@@ -13,11 +13,7 @@ export default defineConfig({
     // data: URI inside the CSS or it never reaches the phone.
     assetsInlineLimit: (filePath) => (filePath.endsWith('.woff2') ? true : undefined),
   },
-  server: {
-    port: 5173,
-    proxy: {
-      '/api': 'http://127.0.0.1:8000',
-      '/health': 'http://127.0.0.1:8000',
-    },
-  },
+  // `npm run dev` serves the interface alone, for looking at layout. The phone shell
+  // supplies the /api routes (mobile/src/localApi.js), so data screens are empty here.
+  server: { port: 5173 },
 });

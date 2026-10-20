@@ -1,5 +1,5 @@
 /**
- * The phone's half of sync with the VoiceFlow cloud API (backend/cloud/).
+ * The phone's half of sync with the Ekho cloud API (backend/cloud/).
  *
  * The phone's SQLite stays the source of truth for the screen: the page reads
  * and writes it exactly as before and never waits on the network. Separately,
