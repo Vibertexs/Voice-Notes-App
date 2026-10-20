@@ -1174,19 +1174,31 @@ body.is-dragging { cursor: grabbing; user-select: none; -webkit-user-select: non
 .vf-sheet {
   position: absolute; left: var(--sheet-inset); right: var(--sheet-inset);
   bottom: calc(var(--sheet-inset) + var(--bot));
-  padding: 10px 20px 22px; border-radius: var(--r-sheet);
+  /* A column: the header stays put and the content under it scrolls. Its maximum height is set
+     in VFBottomSheet from the measured window, not here. */
+  display: flex; flex-direction: column; overflow: hidden;
+  padding: 0; border-radius: var(--r-sheet);
   background: var(--sheet);
   box-shadow: inset 0 0 0 1px var(--hairline-2), var(--sh-sheet);
   transform: translateY(calc(100% + 24px));
   transition: transform var(--d-sheet) var(--ease);
-  /* A sheet taller than the screen scrolls inside itself instead of running off the top. */
-  max-height: calc(100dvh - var(--top) - var(--sheet-inset) * 2 - var(--bot));
-  overflow-y: auto; overscroll-behavior: contain;
 }
+.vf-sheet-head { position: relative; flex: none; height: 38px; touch-action: none; }
+.vf-sheet-scroll {
+  flex: 1 1 auto; min-height: 0; padding: 0 20px 22px;
+  overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; touch-action: pan-y;
+}
+.vf-sheet-close {
+  position: absolute; top: 8px; right: 12px; display: grid; place-items: center;
+  width: 30px; height: 30px; border-radius: var(--r-full); background: var(--chip); color: var(--text-3);
+}
+.vf-sheet-close svg { width: 15px; height: 15px; }
+.vf-sheet-close:active { background: var(--raised); }
 .vf-sheet-layer.is-open .vf-sheet { transform: translateY(0); }
 .vf-grab {
+  position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
   display: block; width: var(--grab-w); height: var(--grab-h);
-  margin: 0 auto 14px; border-radius: 2px; background: var(--grab);
+  border-radius: 2px; background: var(--grab);
 }
 .vf-sheet-icon {
   display: grid; place-items: center;
