@@ -6,6 +6,8 @@
 
 **A lecture recorder that transcribes on your phone. Your audio never leaves it.**
 
+[![CI](https://github.com/Vibertexs/Voice-Notes-App/actions/workflows/ci.yml/badge.svg)](https://github.com/Vibertexs/Voice-Notes-App/actions/workflows/ci.yml)
+
 </div>
 
 Ekho is an Android-first app for students. Press record in class, and the words are written
