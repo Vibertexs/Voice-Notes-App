@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import VFSearchField from '../components/VFSearchField';
 import { Icon } from '../components/Icon';
+import FavoriteMark from '../components/FavoriteMark';
 import { COPY, fill } from '../lib/copy';
 import { dateLabel, mmss } from '../lib/format';
 import { accountApi, libraryApi } from '../lib/api';
@@ -34,7 +35,7 @@ function ResultList({ items, term, onOpen, folderOf }) {
       {items.map((result) => (
         <li key={`${result.lecture_id}-${result.start_seconds ?? 'x'}`}>
           <button type="button" className="result" onClick={() => onOpen(result)}>
-            <strong>{result.title || result.workspace_title}</strong>
+            <strong className="title-line"><span className="title-text">{result.title || result.workspace_title}</span>{result.favorite && <FavoriteMark />}</strong>
             <span className="result-meta">
               {folderOf(result) && <i className="result-dot" data-tone={folderOf(result).color} />}
               {[folderOf(result)?.name, dateLabel(result.created_at)].filter(Boolean).join(' · ')}
@@ -66,6 +67,9 @@ function ResultList({ items, term, onOpen, folderOf }) {
  * box turns them off for people who only want exact matches (each one is a metered
  * request); the choice is remembered on this device.
  *
+ * A "Favourites" pill limits everything to favourite recordings; with nothing typed it
+ * simply lists them, which is how you get back to the ones you marked.
+ *
  * Recent searches are kept per device in localStorage. They are a convenience,
  * not data - if the store is unavailable the screen still works, it just
  * offers nothing to tap.
@@ -78,6 +82,7 @@ export default function SearchScreen({ onBack, onOpenResult, folders = [] }) {
   const [similar, setSimilar] = useState([]);
   const [similarState, setSimilarState] = useState('idle');   // idle | loading | done
   const [meaning, setMeaning] = useState(readMeaning);
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [recents, setRecents] = useState(readRecents);
   const ticket = useRef(0);
   const similarTicket = useRef(0);
@@ -85,11 +90,11 @@ export default function SearchScreen({ onBack, onOpenResult, folders = [] }) {
   const term = query.trim();
 
   useEffect(() => {
-    if (!term) { ticket.current += 1; setResults([]); setSearched(false); setNote(''); return undefined; }
+    if (!term && !favoritesOnly) { ticket.current += 1; setResults([]); setSearched(false); setNote(''); return undefined; }
     const mine = ++ticket.current;
     const timer = window.setTimeout(async () => {
       try {
-        const found = await libraryApi.search(term);
+        const found = await libraryApi.search(term, { favorite: favoritesOnly });
         if (mine !== ticket.current) return;
         setResults(found.results ?? []);
         setSearched(true);
@@ -99,7 +104,7 @@ export default function SearchScreen({ onBack, onOpenResult, folders = [] }) {
       }
     }, 220);
     return () => window.clearTimeout(timer);
-  }, [term]);
+  }, [term, favoritesOnly]);
 
   // Slower than the exact search: each one is a round trip and a (tiny) metered
   // embedding, so it waits for a pause in typing and for a word worth meaning-matching.
@@ -130,9 +135,10 @@ export default function SearchScreen({ onBack, onOpenResult, folders = [] }) {
   // A recording that already matched the words is not offered again as "similar".
   const seen = new Set(results.map((result) => result.workspace_id));
   const related = similar
-    .filter((passage) => !seen.has(passage.recordingId))
+    .filter((passage) => !seen.has(passage.recordingId) && (!favoritesOnly || passage.favorite))
     .map((passage) => ({
       lecture_id: passage.recordingId, workspace_id: passage.recordingId, folder_id: passage.folderId ?? null,
+      favorite: Boolean(passage.favorite),
       title: passage.title, created_at: passage.createdAt, start_seconds: passage.startSeconds,
       excerpt: passage.passage.length > 180 ? `${passage.passage.slice(0, 180).trimEnd()}…` : passage.passage,
     }));
@@ -162,13 +168,18 @@ export default function SearchScreen({ onBack, onOpenResult, folders = [] }) {
       />
 
       <div className="chips search-options">
+        <button type="button" className={`chip chip--fav${favoritesOnly ? ' is-on' : ''}`} aria-pressed={favoritesOnly}
+          onClick={() => setFavoritesOnly((on) => !on)}>
+          <Icon name={favoritesOnly ? 'heartOn' : 'heart'} strokeWidth={2} />
+          Favourites
+        </button>
         <button type="button" className="meaning-toggle" role="switch" aria-checked={meaning} onClick={toggleMeaning}>
           Also match by meaning
           <span className="meaning-switch" aria-hidden="true" />
         </button>
       </div>
 
-      {!term && recents.length > 0 && (
+      {!term && !favoritesOnly && recents.length > 0 && (
         <section className="vf-section">
           <h2 className="vf-label">Recent</h2>
           <div className="chips">
@@ -179,9 +190,9 @@ export default function SearchScreen({ onBack, onOpenResult, folders = [] }) {
         </section>
       )}
 
-      {!term && <p className="vf-empty-line">{COPY.searchHint}</p>}
+      {!term && !favoritesOnly && <p className="vf-empty-line">{COPY.searchHint}</p>}
 
-      {term && results.length > 0 && <ResultList items={results} term={term} onOpen={open} folderOf={folderOf} />}
+      {(term || favoritesOnly) && results.length > 0 && <ResultList items={results} term={term} onOpen={open} folderOf={folderOf} />}
 
       {term && related.length > 0 && (
         <section className="vf-section">
@@ -190,10 +201,19 @@ export default function SearchScreen({ onBack, onOpenResult, folders = [] }) {
         </section>
       )}
 
-      {term && searched && !results.length && !related.length && similarState !== 'loading' && (
+      {(term || favoritesOnly) && searched && !results.length && !related.length && similarState !== 'loading' && (
         <div className="vf-empty">
-          <strong>{COPY.noResTitle}</strong>
-          <p>{note || fill(COPY.noResSub, { q: term })}</p>
+          {favoritesOnly && !term ? (
+            <>
+              <strong>No favourites yet</strong>
+              <p>{note || 'Open a recording’s menu and choose Add to favourites.'}</p>
+            </>
+          ) : (
+            <>
+              <strong>{COPY.noResTitle}</strong>
+              <p>{note || fill(COPY.noResSub, { q: term })}</p>
+            </>
+          )}
         </div>
       )}
     </main>

@@ -57,7 +57,7 @@ export const libraryApi = {
   generateNotes: (workspaceId, model) => api(`/api/workspaces/${workspaceId}/ai/notes`, { method: 'POST', body: { model } }),
   askQuestion: (workspaceId, model, question) => api(`/api/workspaces/${workspaceId}/ai/questions`, { method: 'POST', body: { model, question } }),
   aiStatus: () => api('/api/ai/status'),
-  search: (query) => api(`/api/search?q=${encodeURIComponent(query)}`),
+  search: (query, { favorite = false } = {}) => api(`/api/search?q=${encodeURIComponent(query)}${favorite ? '&favorite=1' : ''}`),
   aiMessages: (workspaceId) => api(`/api/workspaces/${workspaceId}/ai/messages`),
   clearAiMessages: (workspaceId) => api(`/api/workspaces/${workspaceId}/ai/messages`, { method: 'DELETE' }),
   saveAiNotes: (workspaceId, model, noteBody) => api(`/api/workspaces/${workspaceId}/ai/notes`, { method: 'PUT', body: { model, note_body: noteBody } }),

@@ -292,6 +292,7 @@ async def test_the_rest_endpoint_says_where_each_passage_lives(client, monkeypat
     (hit,) = response.json()["results"]                                         # the deleted recording is not listed
     assert hit["recordingId"] == rid and hit["title"] == "Cell biology" and hit["startSeconds"] == 12.0
     assert hit["passage"] == "Mitochondria make ATP." and hit["createdAt"] and "folderId" in hit
+    assert hit["favorite"] is False                                             # so the app can limit meaning matches to favourites
 
 
 # ---------------------------------------------------------------------------

@@ -662,8 +662,9 @@ select.field { appearance: none; }
 .rec-dest small { color: var(--text-3); }
 .rec-status { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 10px; }
 .rec-dot { width: 9px; height: 9px; border-radius: var(--r-full); background: var(--text-4); }
-.rec-dot.is-live { background: var(--primary); animation: blink 1.4s ease-in-out infinite; }
-@keyframes blink { 50% { opacity: .25; } }
+.rec-dot.is-live { background: var(--primary); animation: blink 1.4s ease-in-out infinite, live-pulse 1.4s ease-out infinite; }
+@keyframes blink { 50% { opacity: .35; } }
+@keyframes live-pulse { 0% { box-shadow: 0 0 0 0 rgba(var(--primary-rgb), .6); } 100% { box-shadow: 0 0 0 9px rgba(var(--primary-rgb), 0); } }
 .rec-clock { font-size: var(--t-timer); font-weight: 600; font-variant-numeric: tabular-nums; }
 .rec-state { color: var(--text-3); font-size: var(--t-label); font-weight: 700; letter-spacing: var(--ls-label); }
 
@@ -841,6 +842,18 @@ select.field { appearance: none; }
 }
 .chip.is-on { background: var(--text); color: var(--bg); font-weight: 650; }
 .search-options { margin-top: 12px; }
+/* The small heart that marks a favourite, after a title. The title keeps its ellipsis. */
+.title-line { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.title-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* A title that may run to several lines (the recording's own screen) keeps wrapping; the heart follows it. */
+.title-line--wrap { align-items: baseline; }
+.title-line--wrap .title-text { overflow: visible; white-space: normal; }
+.fav-mark { display: inline-flex; flex: none; color: var(--primary); }
+.fav-mark svg { width: 15px; height: 15px; }
+/* The Favourites pill beside the meaning switch: red when it is limiting the search. */
+.chip--fav { gap: 6px; }
+.chip--fav svg { width: 15px; height: 15px; }
+.chip--fav.is-on { background: rgba(var(--primary-rgb), .18); color: var(--primary-txt); }
 /* A pill holding a label and a switch: neutral when off, the app's red when on. */
 .meaning-toggle {
   display: inline-flex; align-items: center; gap: 10px;
@@ -865,7 +878,7 @@ select.field { appearance: none; }
   border-radius: var(--r-row); background: var(--surface); text-align: left;
 }
 .result:hover { background: var(--row-hover); }
-.result strong { display: block; font-size: var(--t-row); font-weight: 600; letter-spacing: var(--ls-row); }
+.result strong { display: flex; font-size: var(--t-row); font-weight: 600; letter-spacing: var(--ls-row); }
 .result-meta { display: block; margin-top: 2px; color: var(--text-3); font-size: var(--t-meta); }
 .result-dot {
   display: inline-block; width: 8px; height: 8px; margin-right: 6px; vertical-align: 1px;
@@ -886,22 +899,8 @@ mark { background: rgba(var(--primary-rgb), .38); color: var(--text); border-rad
    The tray opens on the side of the screen away from the finger;
    removing a recording from its folder is the strip where the
    record button was (see .drop-out).                          */
-.drop-tray {
-  position: fixed; left: var(--gut); right: var(--gut); z-index: 80;
-  padding: 12px; border-radius: var(--r-sheet);
-  background: var(--sheet); box-shadow: var(--sh-sheet), inset 0 0 0 1px var(--hairline-2);
-  max-height: 52dvh; overflow: hidden;
-  animation: tray-in .22s var(--ease);
-}
-.drop-tray.is-top { top: calc(var(--top) + 10px); }
-.drop-tray.is-bottom { bottom: calc(var(--bot) + 108px); }
-.drop-tray-title {
-  margin: 2px 4px 10px; color: var(--text-3);
-  font-size: var(--t-label); font-weight: 700; letter-spacing: var(--ls-label); text-transform: uppercase;
-}
-.drop-tray-grid { display: grid; grid-template-columns: repeat(var(--cols, 3), 1fr); gap: var(--gap); }
-@keyframes tray-in { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: none; } }
-@media (prefers-reduced-motion: reduce) { .drop-tray { animation: none; } }
+@keyframes drop-in { from { opacity: 0; transform: translateY(-8px) scale(.98); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .drop-out-top { animation: none; } }
 .record-dock {
   position: fixed; inset: auto 0 0; z-index: 40;
   display: grid; place-items: center;
@@ -911,9 +910,14 @@ mark { background: rgba(var(--primary-rgb), .38); color: var(--text); border-rad
   pointer-events: none;
 }
 .record-dock > * { pointer-events: auto; }
+.drop-out-top {
+  position: fixed; top: calc(var(--top) + 8px); left: var(--gut); right: var(--gut); z-index: 60;
+  animation: drop-in .22s var(--ease);
+}
 .drop-out {
   display: grid; place-items: center;
   width: 100%; height: 84px; border-radius: var(--r-row);
+  background: var(--surface);
   border: 2px dashed var(--text-5); color: var(--text-3);
   font-size: var(--t-body); font-weight: 600;
   transition: border-color .15s, color .15s, background .15s;
@@ -1048,6 +1052,30 @@ body.is-dragging { cursor: grabbing; user-select: none; -webkit-user-select: non
   background: rgba(var(--primary-rgb), .12);
   box-shadow: inset 0 0 0 3px var(--primary), 0 0 40px rgba(var(--primary-rgb), .25);
 }
+/* While a take is running the button gives off echoes: two rings leave it one after the
+   other and fade as they spread, and a halo behind it swells and shrinks with how loud
+   the room is (--level, 0..1, from the microphone). All of it is drawn outside the button's
+   own box and ignores touches, so nothing about the layout or the thumb's target changes. */
+.vf-rec { position: relative; isolation: isolate; }
+.vf-rec--recording::before {
+  content: ''; position: absolute; inset: -34px; z-index: -1; border-radius: var(--r-full); pointer-events: none;
+  background: radial-gradient(circle, rgba(var(--primary-rgb), calc(.2 + var(--level, 0) * .5)) 0%, rgba(var(--primary-rgb), 0) 68%);
+  transform: scale(calc(.9 + var(--level, 0) * .5));
+  transition: transform .09s linear;
+}
+.vf-rec-ring {
+  position: absolute; inset: 0; z-index: -1; border-radius: var(--r-full); pointer-events: none;
+  border: 2px solid rgba(var(--primary-rgb), .6);
+  animation: echo 2.6s cubic-bezier(.2, .6, .3, 1) infinite;
+}
+.vf-rec-ring--late { animation-delay: 1.3s; }
+@keyframes echo { 0% { transform: scale(1); opacity: .65; } 100% { transform: scale(2.3); opacity: 0; } }
+.rec-wave { position: relative; isolation: isolate; }
+.rec-wave.is-live::before {
+  content: ''; position: absolute; inset: -30px -12px; z-index: -1; pointer-events: none;
+  background: radial-gradient(ellipse at 50% 50%, rgba(var(--primary-rgb), calc(.07 + var(--level, 0) * .2)), transparent 70%);
+}
+@media (prefers-reduced-motion: reduce) { .vf-rec-ring { display: none; } .rec-dot.is-live { animation: none; } }
 .vf-rec-bars { display: flex; gap: 7px; }
 .vf-rec-bars i { width: 7px; height: 26px; border-radius: 3px; background: #fff; }
 .vf-rec--paused {
@@ -1428,13 +1456,13 @@ body.is-dragging { cursor: grabbing; user-select: none; -webkit-user-select: non
   color: var(--text-4);
 }
 .lyric .w { transition: color .12s linear, text-shadow .15s; }
-/* Said already: soft. Not yet said: dim. The word being said: lit, with a red glow.
+/* Said already: soft. Not yet said: dim. The word being said: the accent red itself, glowing.
    It stays the same size as its neighbours: scaling it up made it grow into the spaces
    on either side, which read as the gap between words closing. */
 .lyric.is-active .w.on { color: var(--text-2); }
 .lyric.is-active .w.now {
-  color: #fff;
-  text-shadow: 0 0 18px rgba(var(--primary-rgb), .9), 0 0 3px rgba(var(--primary-rgb), .95);
+  color: var(--primary);
+  text-shadow: 0 0 16px rgba(var(--primary-rgb), .6), 0 0 2px rgba(var(--primary-rgb), .5);
   transition: color .12s linear, text-shadow .15s;
 }
 /* Searching, every matching line has to be readable, not receding. */

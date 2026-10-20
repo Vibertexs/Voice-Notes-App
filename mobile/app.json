@@ -48,7 +48,8 @@
           "imageWidth": 160,
           "resizeMode": "contain"
         }
-      ]
+      ],
+      "expo-sharing"
     ],
     "runtimeVersion": {
       "policy": "appVersion"

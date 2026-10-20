@@ -1,4 +1,5 @@
 import { Icon } from './Icon';
+import FavoriteMark from './FavoriteMark';
 
 /**
  * One recording, wherever recordings are listed.
@@ -17,6 +18,8 @@ import { Icon } from './Icon';
  * one. Its words are here, so it opens; but there is nothing to play, so the play
  * circle shows a cloud instead, and the line under the title says so.
  *
+ * `favorite` puts a small heart after the title.
+ *
  * `highlight` is the just-saved ring. It is a state of the row rather than an
  * animation, so returning to a folder can point at the new recording.
  *
@@ -24,7 +27,7 @@ import { Icon } from './Icon';
  */
 export default function VFRecordingRow({
   title = 'Recording', date, duration, meta, snippet = '',
-  playing = false, progress = -1, highlight = false, dragging = false, cloudOnly = false,
+  playing = false, progress = -1, highlight = false, dragging = false, cloudOnly = false, favorite = false,
   onPress, onPlay, onMore, onHold, guard,
 }) {
   const base = meta ?? [date, duration].filter(Boolean).join(' · ');
@@ -59,7 +62,7 @@ export default function VFRecordingRow({
         onClick={() => { if (!guard?.()) onPress?.(); }}
       >
         <span className="vf-row-copy">
-          <strong>{title}</strong>
+          <strong className="title-line"><span className="title-text">{title}</span>{favorite && <FavoriteMark />}</strong>
           <span className="vf-row-meta">{line}</span>
           {Boolean(snippet) && <span className="vf-row-snippet">{snippet}</span>}
           {playing && progress >= 0 && (

@@ -23,6 +23,9 @@ waiting steps (marked ⏳) are why it takes weeks, so start them first.
       permanent once uploaded. Today it is `com.classnotes.app`; changing it makes a new install, so
       do it before any real users. Update `android.package` / `ios.bundleIdentifier` in
       `mobile/app.json`, the Google Android OAuth client, and the EAS project.
+- [ ] **A new native build is needed** (JS reloads are not enough) for: the new icon and splash, and
+      **Share audio**, which uses the `expo-sharing` native module. Until then Share transcript works
+      (it uses React Native's own share sheet) and Share audio says the app needs updating.
 - [ ] Build: `npx eas build --profile production --platform android` (an app bundle for Play).
 - [ ] Look at it on a real phone: the new icon and splash (need a native build), the account-switch
       screen, the recording notice, the search toggle, and that the Android status bar icons are

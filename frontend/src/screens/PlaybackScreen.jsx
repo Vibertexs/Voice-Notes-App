@@ -3,6 +3,7 @@ import WaveScrubber from '../components/WaveScrubber';
 import SyncedTranscript from '../components/SyncedTranscript';
 import VFSearchField from '../components/VFSearchField';
 import { Icon } from '../components/Icon';
+import FavoriteMark from '../components/FavoriteMark';
 import { dateLabel, mmss } from '../lib/format';
 import { libraryApi } from '../lib/api';
 
@@ -143,7 +144,6 @@ export default function PlaybackScreen({
 
   function openOptions() {
     onMore?.({
-      audioUrl: selected?.audio_url ?? null,
       subtitle: [folder?.name, dateLabel(workspace.updated_at)].filter(Boolean).join(' · '),
       extras: [{
         icon: 'bookmark',
@@ -209,7 +209,7 @@ export default function PlaybackScreen({
         </p>
       ) : (
         <div className="play-head">
-          <h1>{workspace.title}</h1>
+          <h1 className="title-line title-line--wrap"><span className="title-text">{workspace.title}</span>{workspace.favorite && <FavoriteMark />}</h1>
           <p>{[folder?.name, dateLabel(workspace.updated_at), duration ? mmss(duration) : null]
             .filter(Boolean).join(' · ')}</p>
         </div>

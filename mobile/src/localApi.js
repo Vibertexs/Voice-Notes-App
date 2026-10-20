@@ -687,16 +687,22 @@ async function route({ method, path, body }) {
   // ---- search ----
   if (head === 'search' && method === 'GET') {
     const term = (query.get('q') ?? '').trim();
-    if (!term) return ok({ query: '', results: [] });
+    // favorite=1 limits the search to favourite recordings; with no words it simply lists them.
+    const favoritesOnly = ['1', 'true'].includes(query.get('favorite') ?? '');
+    if (!term && !favoritesOnly) return ok({ query: '', results: [] });
     const like = `%${term}%`;
-    const rows = await db.getAllAsync(
+    const found = await db.getAllAsync(
       `SELECT l.id, l.title, l.workspace_id, l.created_at, l.note_body, l.transcript,
-              l.segments_json, w.title AS workspace_title, w.folder_id AS folder_id
+              l.segments_json, w.title AS workspace_title, w.folder_id AS folder_id, w.favorite AS favorite
          FROM lectures l LEFT JOIN workspaces w ON w.id = l.workspace_id
-        WHERE l.title LIKE ? OR l.note_body LIKE ? OR l.transcript LIKE ?
+        WHERE (l.title LIKE ? OR l.note_body LIKE ? OR l.transcript LIKE ?)
+          AND (? = 0 OR w.favorite = 1)
         ORDER BY l.created_at DESC LIMIT 40`,
-      like, like, like,
+      like, like, like, favoritesOnly ? 1 : 0,
     );
+    // Listing favourites with no words: one row per recording, not one per session.
+    const seen = new Set();
+    const rows = term ? found : found.filter((row) => !seen.has(row.workspace_id) && seen.add(row.workspace_id));
     return ok({
       query: term,
       results: rows.map((row) => {
@@ -716,6 +722,7 @@ async function route({ method, path, body }) {
           folder_id: row.folder_id ?? null,
           title: row.title,
           workspace_title: row.workspace_title,
+          favorite: Boolean(row.favorite),
           created_at: row.created_at,
           start_seconds: hit ? hit.start_seconds ?? 0 : null,
           excerpt: hit

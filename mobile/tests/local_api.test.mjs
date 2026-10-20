@@ -192,6 +192,24 @@ check('hit carries an excerpt', res.body.results[0].excerpt.includes('spindle'),
 res = await GET('/api/search?q=' + encodeURIComponent('nothing-matches-this'));
 check('no false positives', res.body.results.length === 0);
 
+console.log('\n== search can be limited to favourites ==');
+res = await GET('/api/search?q=' + encodeURIComponent('spindle'));
+const spindleWorkspace = res.body.results[0].workspace_id;
+await PATCH(`/api/workspaces/${spindleWorkspace}`, { favorite: false });
+res = await GET('/api/search?q=' + encodeURIComponent('spindle'));
+check('a result says whether its recording is a favourite', res.body.results[0].favorite === false, res.body.results[0]);
+res = await GET('/api/search?favorite=1');
+check('no favourites yet: the list is empty, not everything', res.body.results.length === 0, res.body.results);
+await PATCH(`/api/workspaces/${spindleWorkspace}`, { favorite: true });
+res = await GET('/api/search?favorite=1');
+check('favourites with no words are listed', res.body.results.length >= 1 && res.body.results.every((r) => r.favorite === true), res.body.results);
+check('...one row per recording', new Set(res.body.results.map((r) => r.workspace_id)).size === res.body.results.length);
+res = await GET('/api/search?favorite=1&q=' + encodeURIComponent('nothing-matches-this'));
+check('favourites still have to match the words', res.body.results.length === 0, res.body.results);
+res = await GET('/api/search?favorite=1&q=' + encodeURIComponent('spindle'));
+check('...and a matching favourite is found', res.body.results.length === 1 && res.body.results[0].favorite === true, res.body.results);
+await PATCH(`/api/workspaces/${spindleWorkspace}`, { favorite: false });
+
 console.log('\n== unavailable features and legacy formats explain themselves ==');
 for (const [label, call] of [
   ['ai questions', () => POST(`/api/workspaces/${workspaceId}/ai/questions`, { question: 'x' })],

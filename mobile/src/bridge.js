@@ -62,6 +62,10 @@ export const BRIDGE_JS = String.raw`
     });
   }
 
+  // Opens the phone's share sheet. payload is { kind: 'text', title, text } or
+  // { kind: 'audio', title, uri }; the promise rejects with a message if it cannot.
+  window.__cnShare = function (payload) { return call('share', payload); };
+
   // Native calls this to answer a pending request.
   window.__cnSettle = function (id, ok, data) {
     var entry = pending[id];

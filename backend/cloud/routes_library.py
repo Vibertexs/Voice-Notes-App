@@ -121,10 +121,11 @@ async def search_similar(
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(error)) from None
     recordings = {r["_id"]: r async for r in database.recordings.find(
         {"_id": {"$in": [p["recordingId"] for p in found]}, "userId": principal.user_id, "deletedAt": None},
-        projection={"title": 1, "folderId": 1, "createdAt": 1})}
+        projection={"title": 1, "folderId": 1, "createdAt": 1, "favorite": 1})}
     return {"query": q, "results": [
         {"recordingId": p["recordingId"], "title": recordings[p["recordingId"]]["title"],
          "folderId": recordings[p["recordingId"]].get("folderId"),
+         "favorite": bool(recordings[p["recordingId"]].get("favorite")),
          "createdAt": recordings[p["recordingId"]].get("createdAt"),
          "startSeconds": p["start"], "passage": p["text"], "score": p.get("score")}
         for p in found if p["recordingId"] in recordings]}

@@ -328,6 +328,9 @@ export default function RecordScreen({ folder, onSaved, onLeave, onDenied, notif
   const opening = phase === 'ready';
   const { past, current } = splitLines(transcript.text, transcript.interim);
   const hasWords = Boolean(past.length || current);
+  // How loud it is right now, 0..1: the average of the newest few bars, lifted a little because
+  // speech rarely fills the scale. It drives the glow behind the button and the trace.
+  const level = running ? Math.min(1, (levels.slice(-5).reduce((sum, value) => sum + value, 0) / 5) * 1.5) : 0;
 
   const waiting = noRecorder
     ? 'This build has no recorder yet — rebuild the development client to record.'
@@ -397,11 +400,13 @@ export default function RecordScreen({ folder, onSaved, onLeave, onDenied, notif
           </div>
         )}
 
-        <VFWaveform
-          height={120}
-          levels={levels}
-          dim={!running}
-        />
+        <div className={`rec-wave${running ? ' is-live' : ''}`} style={{ '--level': level.toFixed(2) }}>
+          <VFWaveform
+            height={120}
+            levels={levels}
+            dim={!running}
+          />
+        </div>
 
         <div className="rec-controls">
           {/* Both side slots stay in the layout and only change opacity, so the
@@ -413,7 +418,7 @@ export default function RecordScreen({ folder, onSaved, onLeave, onDenied, notif
             ><Icon name="bookmark" strokeWidth={2} /></button>
           </span>
 
-          <VFRecordButton state={opening ? 'idle' : running ? 'recording' : 'paused'} onPress={toggle} />
+          <VFRecordButton state={opening ? 'idle' : running ? 'recording' : 'paused'} level={level} onPress={toggle} />
 
           <span className="rec-side">
             <button

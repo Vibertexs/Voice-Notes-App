@@ -138,6 +138,8 @@ await Promise.race([
 
 check('start, pause, and stop reach native in order',
   operations.join(',') === 'mic.permission,rec.start,rec.pause,rec.stop', operations);
+const shared = await window.__cnShare({ kind: 'text', title: 'Lecture', text: 'hello' });
+check('the page can ask the phone to open its share sheet', operations.includes('share') && shared?.ok === true, operations);
 check('stop produces the native-file token as its first audio data',
   tokenBlob?.size > 0 && tokenBlob.type === 'audio/mp4', tokenBlob?.size);
 dom.window.close();

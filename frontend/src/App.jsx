@@ -10,7 +10,7 @@ import AccountSwitchGate from './screens/AccountSwitchGate';
 import RecordingNoticeSheet, { recordingNoticeSeen } from './components/RecordingNoticeSheet';
 import RecordDock from './components/RecordDock';
 import DragGhost from './components/DragGhost';
-import DropTray from './components/DropTray';
+import DropOutZone from './components/DropOutZone';
 import VFToast from './components/VFToast';
 import FolderEditSheet from './components/FolderEditSheet';
 import RecordingActionsSheet from './components/RecordingActionsSheet';
@@ -289,7 +289,6 @@ export default function App() {
   if (!library && screen.name !== 'play' && screen.name !== 'record') return <Boot />;
 
   const showDock = ['home', 'folder'].includes(screen.name);
-  const dragFrom = drag?.item?.folder_id ?? null;
   const overLabel = drag?.over
     ? (drag.over === '__out'
         ? `Remove from ${currentFolder?.name ?? 'folder'}`
@@ -377,12 +376,7 @@ export default function App() {
         : <Boot />)}
 
       {showDock && (
-        <RecordDock
-          onPress={startRecording}
-          drag={drag}
-          dropOut={Boolean(drag) && dragFrom !== null}
-          over={drag?.over === '__out'}
-        />
+        <RecordDock onPress={startRecording} drag={drag} />
       )}
 
       <FolderEditSheet
@@ -396,7 +390,6 @@ export default function App() {
       <RecordingActionsSheet
         open={Boolean(actionSheet)}
         recording={actionSheet?.recording}
-        audioUrl={actionSheet?.audioUrl}
         subtitle={actionSheet?.subtitle}
         extras={actionSheet?.extras ?? []}
         notify={notify}
@@ -409,8 +402,9 @@ export default function App() {
       <RecordingNoticeSheet open={noticeOpen} serverUrl={serverUrl} onClose={() => setNoticeOpen(false)}
         onAccept={() => { setNoticeOpen(false); beginRecording(); }} />
 
-      {/* On Home the folders are already on screen and take the drop themselves. */}
-      {screen.name !== 'home' && <DropTray drag={drag} folders={folders} />}
+      {/* On Home the folders are on screen and take the drop themselves. Inside a folder the only
+          place to drop is out of it, at the top. */}
+      {screen.name === 'folder' && drag && <DropOutZone over={drag.over === '__out'} />}
       <DragGhost drag={drag} label={overLabel} />
 
       {toast && (

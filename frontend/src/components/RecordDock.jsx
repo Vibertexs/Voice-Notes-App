@@ -1,5 +1,4 @@
 import VFRecordButton from './VFRecordButton';
-import { COPY } from '../lib/copy';
 
 /**
  * The persistent record button, and the only thing allowed in that strip.
@@ -10,18 +9,11 @@ import { COPY } from '../lib/copy';
  * screens reserve `--record-space` at their bottom so nothing ends up hidden
  * behind it rather than under it.
  *
- * During a drag it is replaced, not covered: the same strip becomes the
- * drop-out zone, because that is where the thumb already is. A recording
- * that is already in no folder has nowhere to be removed to, so it gets no zone.
+ * During a drag it is emptied rather than covered, so a recording is never dropped on
+ * the record button by accident. (Where a recording can be dropped is on the folder
+ * cards on Home, or the "remove from folder" box at the top of an open folder.)
  */
-export default function RecordDock({ onPress, drag = null, dropOut = false, over = false }) {
-  if (drag && dropOut) {
-    return (
-      <div className="record-dock" data-drop="__out">
-        <div className={`drop-out${over ? ' is-over' : ''}`}>{COPY.dropOut}</div>
-      </div>
-    );
-  }
+export default function RecordDock({ onPress, drag = null }) {
   if (drag) return <div className="record-dock" aria-hidden="true" />;
   return (
     <div className="record-dock">

@@ -18,6 +18,7 @@ import { transcribeOnDevice } from './src/onDeviceWhisper';
 import { createCloud } from './src/cloudSync';
 import { google } from './src/googleAuth';
 import { createProgressSmoother } from './src/progressSmoother';
+import { shareAudio, shareText } from './src/shareFile';
 
 /**
  * The sync server: the EC2 instance (docker-compose.yml) behind Caddy, reached at
@@ -327,6 +328,15 @@ export default function App() {
           `window.__CN_CAPS__ = { transcription: false, pause: true, recorder: ${HAS_RECORDER} };`
           + 'window.dispatchEvent(new Event("cn:caps")); true;',
         );
+        reply(id, true, { ok: true });
+        return;
+      }
+      if (channel === 'share') {
+        if (payload?.kind === 'audio') {
+          await shareAudio({ uri: payload.uri, title: payload.title, allowedDirectory: AUDIO_DIR.uri });
+        } else {
+          await shareText({ title: payload?.title, text: payload?.text });
+        }
         reply(id, true, { ok: true });
         return;
       }
