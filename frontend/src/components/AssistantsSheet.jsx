@@ -14,9 +14,50 @@ import { accountApi } from '../lib/api';
  * only read - search, list, fetch transcripts - never change or delete. A token is
  * shown once, when it is made, because only a hash of it is kept, like a password.
  *
+ * Most people have never added a "custom connector", so the sheet walks through it: copy the
+ * address, then numbered steps for Claude and for ChatGPT, then a reminder to sign in with the
+ * same Google account as Ekho (the email is shown), because a different account has no lectures
+ * to read. The steps name the menus as they are at the time of writing; those change, so the
+ * guide says what to look for as well as where.
+ *
  * What an assistant reads leaves the app's own backup and goes to that
  * assistant's company. The sheet says so plainly rather than burying it.
  */
+const GUIDES = {
+  claude: {
+    label: 'Claude',
+    steps: [
+      'On a computer, go to claude.ai and sign in.',
+      'Open Settings, then Connectors.',
+      'Choose “Add custom connector”.',
+      'Name it Ekho, paste the address you copied, and click Add.',
+      'Click Connect next to Ekho. An Ekho page opens: sign in with Google and approve.',
+      'Start a chat, turn Ekho on from the tools menu, and ask something like “What did I learn about mitosis?”',
+    ],
+    note: 'Custom connectors may need a paid Claude plan.',
+  },
+  chatgpt: {
+    label: 'ChatGPT',
+    steps: [
+      'On a computer, go to chatgpt.com and sign in.',
+      'Open Settings, then Apps (or Connectors), then Advanced settings, and turn on Developer mode.',
+      'Choose Create (or Add), name it Ekho and paste the address you copied.',
+      'Set authentication to OAuth and create it. An Ekho page opens: sign in with Google and approve.',
+      'In a new chat, add Ekho from the tools menu and ask about your lectures.',
+    ],
+    note: 'ChatGPT’s menus change often, and Developer mode needs a plan that includes it.',
+  },
+  other: {
+    label: 'Other',
+    steps: [
+      'Look for “MCP”, “connector” or “tools” in the assistant’s settings.',
+      'Add a remote (HTTP) server and paste the address you copied.',
+      'When it asks you to sign in, use your Google account (see below).',
+    ],
+    note: 'If it can’t sign in, use an access token (below).',
+  },
+};
+
 function ago(iso) {
   if (!iso) return 'never used';
   const seconds = Math.max(0, (Date.now() - Date.parse(iso)) / 1000);
@@ -26,12 +67,13 @@ function ago(iso) {
   return `used ${new Date(iso).toLocaleDateString()}`;
 }
 
-export default function AssistantsSheet({ open, onClose, serverUrl, notify }) {
+export default function AssistantsSheet({ open, onClose, serverUrl, notify, email = '' }) {
   const [assistants, setAssistants] = useState(null);   // signed-in connections, then tokens
   const [name, setName] = useState('Claude');
   const [fresh, setFresh] = useState(null);       // the token just made, shown once
   const [busy, setBusy] = useState(false);
   const [showToken, setShowToken] = useState(false);   // the manual way, hidden until asked for
+  const [guide, setGuide] = useState('claude');
   const [error, setError] = useState('');
 
   const load = useCallback(async () => {
@@ -120,14 +162,30 @@ export default function AssistantsSheet({ open, onClose, serverUrl, notify }) {
           ))}
         </ul>
       )}
-      <label className="assist-label" htmlFor="assist-address">Connector address</label>
+      <label className="assist-label" htmlFor="assist-address">Step 1 · Copy your Ekho address</label>
       <input id="assist-address" className="sheet-input assist-secret" readOnly value={address}
         onFocus={(event) => event.target.select()} />
       <VFButton label="Copy address" variant="secondary" onPress={() => copy(address, 'Address')} />
-      <p className="sheet-note account-note">
-        In Claude or ChatGPT, add a custom connector with this address and sign in when asked.
-        No token is needed.
-      </p>
+
+      <p className="assist-label">Step 2 · Add it to your assistant</p>
+      <div className="chips assist-tabs" role="tablist" aria-label="Assistant">
+        {Object.entries(GUIDES).map(([key, item]) => (
+          <button key={key} type="button" role="tab" aria-selected={guide === key}
+            className={`chip${guide === key ? ' is-on' : ''}`} onClick={() => setGuide(key)}>{item.label}</button>
+        ))}
+      </div>
+      <ol className="assist-steps">
+        {GUIDES[guide].steps.map((step) => <li key={step}>{step}</li>)}
+      </ol>
+      <p className="assist-fine">{GUIDES[guide].note}</p>
+
+      <div className="assist-callout">
+        <strong>Sign in with the same Google account</strong>
+        <span>
+          {email ? <>Use <b>{email}</b>, the account you use in Ekho. </> : 'Use the Google account you use in Ekho. '}
+          A different account has no lectures for the assistant to read. No token is needed.
+        </span>
+      </div>
       {error && <p className="account-error" role="alert">{error}</p>}
       {showToken ? (
         <>

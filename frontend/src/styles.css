@@ -649,6 +649,26 @@ select.field { appearance: none; }
 }
 .gate-note { text-align: center; color: var(--text-3); font-size: var(--t-meta-lg); line-height: 1.45; }
 /* A quiet text button under a sheet's main content, for the way most people will not need. */
+/* The how-to: numbered steps for the chosen assistant, and the reminder about which Google account. */
+.assist-tabs { margin: 4px 0 12px; }
+.assist-steps { list-style: none; counter-reset: step; display: grid; gap: 12px; margin: 0 0 8px; padding: 0; }
+.assist-steps li {
+  position: relative; padding-left: 34px; counter-increment: step;
+  color: var(--text-2); font-size: var(--t-body); line-height: 1.4;
+}
+.assist-steps li::before {
+  content: counter(step); position: absolute; left: 0; top: -1px;
+  display: grid; place-items: center; width: 24px; height: 24px; border-radius: var(--r-full);
+  background: var(--chip); color: var(--text); font-size: 13px; font-weight: 700;
+}
+.assist-fine { margin: 0 0 14px; color: var(--text-3); font-size: var(--t-meta-lg); }
+.assist-callout {
+  display: grid; gap: 4px; margin: 4px 0 14px; padding: 12px 14px; border-radius: var(--r-input);
+  background: rgba(var(--primary-rgb), .12); box-shadow: inset 0 0 0 1px rgba(var(--primary-rgb), .3);
+  font-size: var(--t-body); line-height: 1.4; color: var(--text-2);
+}
+.assist-callout strong { color: var(--primary-txt); font-weight: 700; }
+.assist-callout b { color: var(--text); font-weight: 650; overflow-wrap: anywhere; }
 .assist-more { display: block; margin: 4px auto 0; padding: 6px 8px; }
 .legal-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 16px; margin-top: 4px; }
 .legal-links a, .legal-inline { color: var(--text-3); font-size: var(--t-meta-lg); text-decoration: underline; }
@@ -1159,6 +1179,9 @@ body.is-dragging { cursor: grabbing; user-select: none; -webkit-user-select: non
   box-shadow: inset 0 0 0 1px var(--hairline-2), var(--sh-sheet);
   transform: translateY(calc(100% + 24px));
   transition: transform var(--d-sheet) var(--ease);
+  /* A sheet taller than the screen scrolls inside itself instead of running off the top. */
+  max-height: calc(100dvh - var(--top) - var(--sheet-inset) * 2 - var(--bot));
+  overflow-y: auto; overscroll-behavior: contain;
 }
 .vf-sheet-layer.is-open .vf-sheet { transform: translateY(0); }
 .vf-grab {

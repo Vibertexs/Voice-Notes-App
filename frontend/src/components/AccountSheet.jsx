@@ -109,7 +109,7 @@ export default function AccountSheet({ open, onClose, notify }) {
     const who = account.user?.email ?? 'Signed in with Apple';
     if (mode === 'assistants') {
       return (
-        <AssistantsSheet open={open} serverUrl={account.server} notify={notify}
+        <AssistantsSheet open={open} serverUrl={account.server} notify={notify} email={account.user?.email ?? ''}
           onClose={() => setMode('signin')} />
       );
     }
