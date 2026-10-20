@@ -834,6 +834,7 @@ select.field { appearance: none; }
   background: var(--chip); color: var(--text-2); font-size: 14px; font-weight: 500;
 }
 .chip.is-on { background: var(--text); color: var(--bg); font-weight: 650; }
+.search-options { margin-top: 12px; }
 
 .results { display: grid; gap: var(--gap); margin-top: 18px; }
 .result {

@@ -6,10 +6,17 @@ import { dateLabel, mmss } from '../lib/format';
 import { accountApi, libraryApi } from '../lib/api';
 
 const RECENTS_KEY = 'vf.recent-searches';
+const MEANING_KEY = 'vf.search-by-meaning';
 
 function readRecents() {
   try { return JSON.parse(window.localStorage.getItem(RECENTS_KEY) ?? '[]').slice(0, 8); }
   catch { return []; }
+}
+
+/** On unless the person has turned it off. Like recents, a convenience: unavailable storage means "on". */
+function readMeaning() {
+  try { return window.localStorage.getItem(MEANING_KEY) !== 'off'; }
+  catch { return true; }
 }
 
 /** Wraps every occurrence of the term so the reason a result matched is visible. */
@@ -55,7 +62,9 @@ function ResultList({ items, term, onOpen, folderOf }) {
  * Below the exact matches, when signed in and online, passages that mean the same
  * thing are offered too ("bread" finds the lecture about sandwiches). They come
  * from the server, which holds the transcripts, and are a bonus: if the call fails
- * or nothing is close enough, the section is simply absent.
+ * or nothing is close enough, the section is simply absent. A pill under the search
+ * box turns them off for people who only want exact matches (each one is a metered
+ * request); the choice is remembered on this device.
  *
  * Recent searches are kept per device in localStorage. They are a convenience,
  * not data - if the store is unavailable the screen still works, it just
@@ -68,6 +77,7 @@ export default function SearchScreen({ onBack, onOpenResult, folders = [] }) {
   const [note, setNote] = useState('');
   const [similar, setSimilar] = useState([]);
   const [similarState, setSimilarState] = useState('idle');   // idle | loading | done
+  const [meaning, setMeaning] = useState(readMeaning);
   const [recents, setRecents] = useState(readRecents);
   const ticket = useRef(0);
   const similarTicket = useRef(0);
@@ -95,7 +105,7 @@ export default function SearchScreen({ onBack, onOpenResult, folders = [] }) {
   // embedding, so it waits for a pause in typing and for a word worth meaning-matching.
   useEffect(() => {
     const mine = ++similarTicket.current;
-    if (term.length < 3) { setSimilar([]); setSimilarState('idle'); return undefined; }
+    if (!meaning || term.length < 3) { setSimilar([]); setSimilarState('idle'); return undefined; }
     setSimilarState('loading');
     const timer = window.setTimeout(async () => {
       try {
@@ -109,7 +119,13 @@ export default function SearchScreen({ onBack, onOpenResult, folders = [] }) {
       setSimilarState('done');
     }, 650);
     return () => window.clearTimeout(timer);
-  }, [term]);
+  }, [term, meaning]);
+
+  const toggleMeaning = () => {
+    const next = !meaning;
+    setMeaning(next);
+    try { window.localStorage.setItem(MEANING_KEY, next ? 'on' : 'off'); } catch { /* private mode */ }
+  };
 
   // A recording that already matched the words is not offered again as "similar".
   const seen = new Set(results.map((result) => result.workspace_id));
@@ -143,6 +159,12 @@ export default function SearchScreen({ onBack, onOpenResult, folders = [] }) {
         autoFocus value={query} onChange={setQuery}
         placeholder="Search recordings & transcripts" label={COPY.searchHint}
       />
+
+      <div className="chips search-options">
+        <button type="button" className={`chip${meaning ? ' is-on' : ''}`} aria-pressed={meaning} onClick={toggleMeaning}>
+          Also match by meaning
+        </button>
+      </div>
 
       {!term && recents.length > 0 && (
         <section className="vf-section">
