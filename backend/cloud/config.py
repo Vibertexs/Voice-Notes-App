@@ -56,6 +56,12 @@ class Settings(BaseSettings):
     oauth_access_minutes: int = 60
     oauth_refresh_days: int = 90
 
+    # ---- legal pages (/privacy, /terms, ...) ----------------------------------
+    # Who is named in them and how to reach them. Kept in settings, not the repository.
+    legal_operator: str = ""            # e.g. "Jane Doe" or "Acme LLC"
+    legal_contact_email: str = ""       # published in the privacy policy and terms
+    legal_jurisdiction: str = ""        # e.g. "the State of Texas, USA"
+
     # ---- HTTP -----------------------------------------------------------
     # The phone app talks to this server from native code, which CORS does
     # not apply to. Origins are only needed for a future browser client.

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import VFBottomSheet from './VFBottomSheet';
 import VFButton from './VFButton';
 import AssistantsSheet from './AssistantsSheet';
+import LegalLinks from './LegalLinks';
 import { accountApi } from '../lib/api';
 
 /**
@@ -153,6 +154,7 @@ export default function AccountSheet({ open, onClose, notify }) {
         <p className="sheet-note account-note">{TRANSCRIPTION}</p>
         <VFButton label="Delete account" variant="danger" size="sm"
           onPress={() => { setMode('delete'); setPassword(''); setError(''); }} />
+        <LegalLinks serverUrl={account.server} />
       </VFBottomSheet>
     );
   }

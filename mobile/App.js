@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator, AppState, Platform, Pressable, SafeAreaView, StatusBar, StyleSheet, Text, View,
+  ActivityIndicator, AppState, Linking, Platform, Pressable, SafeAreaView, StatusBar, StyleSheet, Text, View,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useKeepAwake } from 'expo-keep-awake';
@@ -389,6 +389,16 @@ export default function App() {
         // off disk, which is how playback avoids a server.
         source={{ html: WEB_APP_HTML, baseUrl: AUDIO_DIR.uri }}
         originWhitelist={['*']}
+        // The page never navigates anywhere: audio, the API and sign-in all go around the
+        // WebView. So a link to a web address (the privacy policy, say) is the person
+        // asking to read something, and it opens in their browser rather than replacing the app.
+        onShouldStartLoadWithRequest={(request) => {
+          if (/^https?:\/\//i.test(request.url)) {
+            Linking.openURL(request.url).catch(() => {});
+            return false;
+          }
+          return true;
+        }}
         injectedJavaScriptBeforeContentLoaded={
           // Recording supports a pause-safe native WAV on every app build.
           // Whisper runs after save rather than showing an unreliable live

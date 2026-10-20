@@ -16,7 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-from backend.cloud import mcp_server, routes_auth, routes_library, routes_oauth
+from backend.cloud import mcp_server, routes_auth, routes_legal, routes_library, routes_oauth
 from backend.cloud.apple import AppleVerifier
 from backend.cloud.google import GoogleVerifier
 from backend.cloud.config import Settings, get_settings
@@ -169,6 +169,7 @@ def create_app(
     app.include_router(routes_auth.router)
     app.include_router(routes_library.router)
     app.include_router(routes_oauth.router)
+    app.include_router(routes_legal.router)
     if mcp_app is not None:
         # Last, because it answers everything the routes above did not: its
         # discovery document has to sit at the server root.

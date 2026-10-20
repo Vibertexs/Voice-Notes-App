@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import VFButton from '../components/VFButton';
 import { Icon } from '../components/Icon';
+import LegalLinks from '../components/LegalLinks';
 import { accountApi } from '../lib/api';
 
 /**
@@ -11,7 +12,7 @@ import { accountApi } from '../lib/api';
  * transcribing and everything already on the phone stay on the phone; the
  * account is what backs the library up and what lets an assistant read it.
  */
-export default function SignInGate({ onSignedIn }) {
+export default function SignInGate({ onSignedIn, serverUrl = '' }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -43,6 +44,8 @@ export default function SignInGate({ onSignedIn }) {
         {error && <p className="account-error" role="alert">{error}</p>}
         <VFButton label={busy ? 'One moment…' : 'Continue with Google'} disabled={busy} onPress={signIn} />
         <p className="gate-note">Sign in to start. You only need the internet for this step.</p>
+        {serverUrl && <p className="gate-note">By continuing you agree to the Terms and Privacy Policy.</p>}
+        <LegalLinks serverUrl={serverUrl} />
       </div>
     </main>
   );

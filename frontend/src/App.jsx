@@ -7,6 +7,7 @@ import SearchScreen from './screens/SearchScreen';
 import MicDeniedScreen from './screens/MicDeniedScreen';
 import SignInGate from './screens/SignInGate';
 import AccountSwitchGate from './screens/AccountSwitchGate';
+import RecordingNoticeSheet, { recordingNoticeSeen } from './components/RecordingNoticeSheet';
 import RecordDock from './components/RecordDock';
 import DragGhost from './components/DragGhost';
 import DropTray from './components/DropTray';
@@ -95,11 +96,14 @@ export default function App() {
   const [signIn, setSignIn] = useState('checking');   // checking | needed | open
   // Another account's recordings are on this phone and the person has not said what to do with them.
   const [switching, setSwitching] = useState(null);     // { recordings, folders, email } | null
+  const [serverUrl, setServerUrl] = useState('');        // where the legal pages live; empty in a build with no server
+  const [noticeOpen, setNoticeOpen] = useState(false);   // the "get permission" notice before a first recording
   useEffect(() => {
     let alive = true;
     const decide = (status) => {
       if (!alive || !status) return;
       setSignIn(status.configured && status.google && !status.signedIn ? 'needed' : 'open');
+      setServerUrl(status.server ?? '');
       setSwitching(status.signedIn && status.switchPending
         ? { ...status.switchPending, email: status.user?.email ?? '' } : null);
     };
@@ -224,9 +228,14 @@ export default function App() {
     return screen.name === 'folder' ? currentFolder : null;
   }
   const [recordFolder, setRecordFolder] = useState(null);
-  function startRecording() {
+  function beginRecording() {
     setRecordFolder(recordTarget());
     setScreen({ name: 'record', folderId: screen.folderId });
+  }
+  // The first recording on a device starts with a reminder to get permission.
+  function startRecording() {
+    if (recordingNoticeSeen()) beginRecording();
+    else setNoticeOpen(true);
   }
 
   /* ---- render --------------------------------------------------------- */
@@ -237,7 +246,7 @@ export default function App() {
   if (signIn === 'needed' && screen.name !== 'record') {
     return (
       <div className="app-shell">
-        <SignInGate onSignedIn={() => setSignIn('open')} />
+        <SignInGate serverUrl={serverUrl} onSignedIn={() => setSignIn('open')} />
       </div>
     );
   }
@@ -388,6 +397,8 @@ export default function App() {
       />
 
       <AccountSheet open={accountOpen} onClose={() => setAccountOpen(false)} notify={notify} />
+      <RecordingNoticeSheet open={noticeOpen} serverUrl={serverUrl} onClose={() => setNoticeOpen(false)}
+        onAccept={() => { setNoticeOpen(false); beginRecording(); }} />
 
       <DropTray drag={drag} folders={folders} />
       <DragGhost drag={drag} label={overLabel} />

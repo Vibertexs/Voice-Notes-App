@@ -646,6 +646,8 @@ select.field { appearance: none; }
   width: 8px; height: 8px; border-radius: var(--r-full); background: var(--primary);
 }
 .gate-note { text-align: center; color: var(--text-3); font-size: var(--t-meta-lg); line-height: 1.45; }
+.legal-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 16px; margin-top: 4px; }
+.legal-links a, .legal-inline { color: var(--text-3); font-size: var(--t-meta-lg); text-decoration: underline; }
 
 /* ---- 5. Recording ----------------------------------------- */
 .rec {
