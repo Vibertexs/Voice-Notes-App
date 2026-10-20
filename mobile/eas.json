@@ -23,6 +23,16 @@
         "APP_VARIANT": "standalone"
       }
     },
+    "local-only": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "APP_VARIANT": "standalone",
+        "EXPO_PUBLIC_CLOUD_API_URL": "off"
+      }
+    },
     "production": {
       "autoIncrement": true,
       "android": {

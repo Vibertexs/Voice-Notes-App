@@ -83,6 +83,13 @@ const state = {
   listeners: new Set(),
   lastEmit: 0,
   emitEveryMs: 100,
+  // Timing of chunk arrivals, kept only to explain a take whose audio outruns the clock. Chunks of
+  // 4096 bytes at 16 kHz arrive about every 128 ms. Two recorders feeding one file would show as many
+  // very short gaps between chunks; bursts after a stall would show as a few. See getStats().
+  lastChunkAt: 0,
+  shortGaps: 0,
+  longestGap: 0,
+  starts: 0,
 };
 
 function emitLevel(level) {
@@ -95,8 +102,17 @@ function emitLevel(level) {
   });
 }
 
+const SHORT_GAP_MS = 40;
+
 function onChunk(base64) {
   if (!state.recording || state.paused || !state.handle) return;
+  const arrivedAt = Date.now();
+  if (state.lastChunkAt) {
+    const gap = arrivedAt - state.lastChunkAt;
+    if (gap < SHORT_GAP_MS) state.shortGaps += 1;
+    if (gap > state.longestGap) state.longestGap = gap;
+  }
+  state.lastChunkAt = arrivedAt;
   const buffer = Buffer.from(base64, 'base64');
   const bytes = new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
   try {
@@ -154,6 +170,10 @@ export function startRecording() {
   state.handle = handle;
   state.dataBytes = 0;
   state.chunks = 0;
+  state.lastChunkAt = 0;
+  state.shortGaps = 0;
+  state.longestGap = 0;
+  state.starts += 1;
   state.paused = false;
   state.recording = true;
 
@@ -239,7 +259,10 @@ export function getDuration(uri) {
  * and the duplication happened before it.
  */
 export function getStats() {
-  return { bytes: state.dataBytes, chunks: state.chunks };
+  return {
+    bytes: state.dataBytes, chunks: state.chunks,
+    shortGaps: state.shortGaps, longestGapMs: state.longestGap, takesThisRun: state.starts,
+  };
 }
 
 export const RECORDING_FORMAT = Object.freeze({

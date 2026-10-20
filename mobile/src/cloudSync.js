@@ -45,6 +45,20 @@ const text = (value, max) => String(value ?? '').slice(0, max);
 const idOrNull = (value) => (typeof value === 'string' && ID.test(value) ? value : null);
 
 /** Server timestamps can carry microseconds; not every JS engine parses those. */
+/**
+ * The server address a build talks to, from EXPO_PUBLIC_CLOUD_API_URL.
+ *
+ * Unset means the default. "off" (also "none", "local", "false") means no server at all: the app
+ * runs entirely on the phone, with no sign-in and no backup, which is what someone building their
+ * own copy without a backend wants. Anything else is the address, minus any trailing slash.
+ */
+export function resolveApiUrl(value, fallback = '') {
+  if (value === undefined || value === null) return String(fallback ?? '').replace(/\/+$/, '');
+  const text = String(value).trim();
+  if (['', 'off', 'none', 'local', 'false'].includes(text.toLowerCase())) return '';
+  return text.replace(/\/+$/, '');
+}
+
 export function toMs(iso) {
   if (!iso) return 0;
   const ms = Date.parse(String(iso).replace(/(\.\d{3})\d+/, '$1'));

@@ -12,7 +12,15 @@
 import { checker, loadCloudSync, makePhone, recordLecture } from './harness.mjs';
 
 const { check, done } = checker();
-const { createCloud, segmentToCloud, segmentFromCloud, toMs } = loadCloudSync();
+const { createCloud, segmentToCloud, segmentFromCloud, toMs, resolveApiUrl } = loadCloudSync();
+
+console.log('== the server address a build uses ==');
+check('unset: the default, without a trailing slash', resolveApiUrl(undefined, 'https://api.example.com/') === 'https://api.example.com');
+check('an address is kept, tidied', resolveApiUrl(' https://mine.example.com/// ', 'https://api.example.com') === 'https://mine.example.com');
+for (const off of ['off', 'OFF', 'none', 'local', 'false', '', '   ']) {
+  check(`"${off}" means no server at all (a local-only build)`, resolveApiUrl(off, 'https://api.example.com') === '', off);
+}
+console.log('');
 
 /** Answers like backend/cloud, scripted. Accepts everything it is sent. */
 function fakeServer() {

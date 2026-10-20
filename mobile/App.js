@@ -15,7 +15,7 @@ import {
   recoverInterrupted, saveTranscript,
 } from './src/localApi';
 import { transcribeOnDevice } from './src/onDeviceWhisper';
-import { createCloud } from './src/cloudSync';
+import { createCloud, resolveApiUrl } from './src/cloudSync';
 import { google } from './src/googleAuth';
 import { createProgressSmoother } from './src/progressSmoother';
 import { shareAudio, shareText } from './src/shareFile';
@@ -28,10 +28,12 @@ import { shareAudio, shareText } from './src/shareFile';
  *
  *   EXPO_PUBLIC_CLOUD_API_URL=http://192.168.1.20:8000 npx expo start
  *
+ * or set it to "off" for a build with no server at all (local only; the `local-only` build profile).
+ *
  * Expo inlines it at bundle time, so a JS reload picks it up. No data leaves
  * the phone until the user signs in from the account sheet.
  */
-const CLOUD_API_URL = process.env.EXPO_PUBLIC_CLOUD_API_URL ?? 'https://api.ekhoapp.tech';
+const CLOUD_API_URL = resolveApiUrl(process.env.EXPO_PUBLIC_CLOUD_API_URL, 'https://api.ekhoapp.tech');
 const DEVICE_NAME = Platform.OS === 'ios' ? 'iPhone' : (Platform.constants?.Model ?? 'Android phone');
 
 /** Tell the page something happened, as a DOM event it listens for. */
@@ -260,7 +262,12 @@ export default function App() {
         || `capture: ${durationSeconds.toFixed(1)}s of audio from ${wallSeconds.toFixed(1)}s of recording `
         + `(${(durationSeconds / Math.max(0.1, wallSeconds)).toFixed(2)}x). `
         + `${stats.chunks ?? '?'} chunks, ${written} bytes written vs ${onDisk} on disk `
-        + `- ${faithful ? 'duplicated before the recorder' : 'written more than once'}`);
+        + `- ${faithful ? 'duplicated before the recorder' : 'written more than once'}. `
+        // Many chunks under 40 ms apart means two recorders feeding one file; a long gap followed by a
+        // burst means the recorder stalled and caught up. Take number: more than 1 means an earlier take
+        // in this run could still have been finishing.
+        + `${stats.shortGaps ?? '?'} chunks arrived <40ms after the last, longest gap ${stats.longestGapMs ?? '?'}ms, `
+        + `take ${stats.takesThisRun ?? '?'} this run`);
     }
     await source.move(destination);
     await finishRecording({
