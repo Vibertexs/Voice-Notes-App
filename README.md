@@ -95,7 +95,7 @@ sequenceDiagram
   participant Ekho as Ekho server (MCP + OAuth)
   participant DB as MongoDB Atlas
   You->>AI: Add Ekho as a connector
-  AI->>Ekho: discover (RFC 9728, RFC 8414); register or fetch client metadata
+  AI->>Ekho: discover (RFC 9728, RFC 8414), then register or fetch client metadata
   AI->>You: open the Ekho sign-in page
   You->>Ekho: Sign in with Google, approve (read-only)
   Ekho->>AI: one-time code, then a short-lived token (PKCE, bound to this server)
