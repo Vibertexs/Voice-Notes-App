@@ -143,6 +143,7 @@ cd mobile && npm run test:e2e       # two simulated phones through the real serv
 
 - [`docs/cloud-api.md`](docs/cloud-api.md): the API, data model, sync protocol, MCP and OAuth, deploy, backups
 - [`docs/benchmark.md`](docs/benchmark.md): the 10,000-lecture benchmark and what it found
+- [`docs/launch-checklist.md`](docs/launch-checklist.md) and [`docs/store/listing.md`](docs/store/listing.md): what remains before a Play Store release
 - [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md): open-source software and models used
 
 ## Privacy and recording
