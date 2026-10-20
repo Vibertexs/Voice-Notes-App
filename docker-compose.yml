@@ -30,6 +30,8 @@ services:
       - "443:443"
     environment:
       DOMAIN: ${DOMAIN:?set DOMAIN in .env, e.g. 3-91-20-14.sslip.io}
+      # Optional: a second address that also reaches this server (see deploy/Caddyfile).
+      ALSO_DOMAIN: ${ALSO_DOMAIN:-}
     volumes:
       - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
       # Certificates live here, so a restart does not ask Let's Encrypt again.

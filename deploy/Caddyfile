@@ -3,7 +3,9 @@
 # Naming the site by its domain is all Caddy needs to fetch a certificate from
 # Let's Encrypt and keep it renewed. Phones require HTTPS: iOS refuses plain
 # HTTP outright, and Android release builds do too.
-{$DOMAIN} {
+# ALSO_DOMAIN is an optional second name for the same site (an old address that
+# installed apps may still use). Left empty, it disappears from this line.
+{$DOMAIN} {$ALSO_DOMAIN} {
 	encode gzip
 	reverse_proxy api:8000
 }
